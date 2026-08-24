@@ -737,9 +737,7 @@ fn run_new_drill(track_id: &str, drill_name: &str, title: Option<&str>) {
     let _ = fs::write(target_dir.join(format!("solution{}", ext)), solution_content);
 
     // 3. hints.md
-    let hints_content = format!(
-        "## Hint 1 (Architectural Nudge)\nUnderstand why this pattern fails under asynchronous latency and network jitter.\n\n## Hint 2 (API Pattern)\nLook at the recommended synchronization or assertion pattern.\n\n## Hint 3 (Code Diff)\n```diff\n- // Old brittle code\n+ // New resilient code\n```\n"
-    );
+    let hints_content = "## Hint 1 (Architectural Nudge)\nUnderstand why this pattern fails under asynchronous latency and network jitter.\n\n## Hint 2 (API Pattern)\nLook at the recommended synchronization or assertion pattern.\n\n## Hint 3 (Code Diff)\n```diff\n- // Old brittle code\n+ // New resilient code\n```\n";
     let _ = fs::write(target_dir.join("hints.md"), hints_content);
 
     // 4. theory.md

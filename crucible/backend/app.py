@@ -673,6 +673,139 @@ async def post_graphql(req: GraphQLRequest) -> JSONResponse:
     return JSONResponse(status_code=status_code, content=result)
 
 
+@app.get("/api/llm/stream")
+async def stream_llm_tokens(prompt: str = "Explain test automation") -> StreamingResponse:
+    """Simulates LLM streaming response with time-to-first-token (TTFT) and token intervals."""
+    tokens = [
+        "Test", " automation", " provides", " rapid", " deterministic",
+        " feedback", " on", " software", " quality", " across", " all", " regression", " suites."
+    ]
+
+    async def token_generator():
+        # TTFT: Initial inference latency
+        await asyncio.sleep(0.3)
+        for idx, token in enumerate(tokens):
+            chunk = {"index": idx, "token": token, "done": idx == len(tokens) - 1}
+            yield f"data: {json.dumps(chunk)}\n\n"
+            await asyncio.sleep(0.05)
+
+    return StreamingResponse(
+        token_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
+    )
+
+
+@app.post("/api/llm/agent")
+async def post_llm_agent(req: dict[str, Any]) -> JSONResponse:
+    """Agent simulation with guardrails against direct prompt injection."""
+    user_prompt = str(req.get("prompt", ""))
+    system_role = "QA Assistant"
+
+    injection_patterns = [
+        r"ignore\s+(all\s+)?previous\s+instructions",
+        r"reveal\s+(system\s+)?prompt",
+        r"bypass\s+safety",
+        r"admin\s+override",
+    ]
+
+    is_injection = any(re.search(pat, user_prompt, re.IGNORECASE) for pat in injection_patterns)
+
+    if is_injection:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status": "blocked",
+                "error": "PROMPT_INJECTION_DETECTED",
+                "message": "Direct prompt injection attempt neutralized by agent input guardrails.",
+                "safe_response": "I am a helpful QA Assistant and cannot disregard my security instructions.",
+            },
+        )
+
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "role": system_role,
+            "response": f"Processed query safely: '{user_prompt[:50]}...'",
+            "grounding_score": 0.98,
+        },
+    )
+
+
+@app.get("/api/security/user-lookup")
+async def get_user_lookup(user_id: str = "1") -> JSONResponse:
+    """Security drill endpoint simulating parameterized vs blind SQL injection vulnerability."""
+    # Simulated vulnerable check
+    if "SLEEP(" in user_id.upper() or "PG_SLEEP" in user_id.upper():
+        await asyncio.sleep(1.0)
+        return JSONResponse(
+            status_code=200,
+            content={"id": 1, "username": "admin", "warning": "Blind timing SQLi detected in legacy query handler!"},
+        )
+
+    users_db = {"1": "alice_qa", "2": "bob_sdet", "3": "carol_lead"}
+    username = users_db.get(user_id, "unknown_user")
+    return JSONResponse(status_code=200, content={"id": user_id, "username": username, "status": "active"})
+
+
+@app.post("/api/security/fetch-url")
+async def post_fetch_url(req: dict[str, Any]) -> JSONResponse:
+    """Security drill endpoint demonstrating SSRF prevention against cloud metadata."""
+    target_url = str(req.get("url", ""))
+
+    blocked_hosts = ["169.254.169.254", "localhost", "127.0.0.1", "metadata.google.internal"]
+    is_ssrf = any(host in target_url.lower() for host in blocked_hosts)
+
+    if is_ssrf:
+        return JSONResponse(
+            status_code=403,
+            content={
+                "status": "blocked",
+                "error": "SSRF_ATTEMPT_PREVENTED",
+                "message": f"Access to private/cloud metadata URL '{target_url}' is strictly forbidden.",
+            },
+        )
+
+    return JSONResponse(
+        status_code=200,
+        content={"status": "fetched", "url": target_url, "content_type": "text/html", "bytes_received": 1420},
+    )
+
+
+@app.get("/api/security/cors-sensitive")
+async def get_cors_sensitive(request: Request) -> JSONResponse:
+    """Security drill endpoint demonstrating secure CORS vs wildcard credentials vulnerability."""
+    origin = request.headers.get("origin", "")
+    allowed_origins = ["http://localhost:8080", "http://127.0.0.1:8080"]
+
+    if origin and origin not in allowed_origins:
+        return JSONResponse(
+            status_code=403,
+            content={"error": "CORS_ORIGIN_DENIED", "message": f"Untrusted origin '{origin}' rejected."},
+        )
+
+    return JSONResponse(
+        status_code=200,
+        content={
+            "user_id": "USR-9941",
+            "email": "lead-sdet@cherenkov.dev",
+            "roles": ["ADMIN", "TEST_ENGINEER"],
+            "api_key_last_4": "8931",
+        },
+    )
+
+
+@app.get("/api/pact/orders")
+async def get_pact_orders() -> JSONResponse:
+    """Consumer-Driven Contract test provider endpoint."""
+    orders = [
+        {"id": "ORD-101", "total": 149.00, "status": "COMPLETED", "currency": "USD"},
+        {"id": "ORD-102", "total": 299.50, "status": "PENDING", "currency": "USD"},
+    ]
+    return JSONResponse(status_code=200, content={"orders": orders, "count": len(orders)})
+
+
 @app.get("/api/progress")
 async def get_progress() -> JSONResponse:
     """Retrieve learner progress, XP, level, streak, and achievements."""

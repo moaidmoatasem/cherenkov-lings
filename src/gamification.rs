@@ -49,7 +49,7 @@ pub const ALL_ACHIEVEMENTS: [(&str, &str, &str); 8] = [
 ];
 
 /// Known curriculum tracks
-pub const ALL_TRACKS: [&str; 9] = [
+pub const ALL_TRACKS: [&str; 11] = [
     "foundations",
     "playwright-ts",
     "restassured-java",
@@ -59,6 +59,8 @@ pub const ALL_TRACKS: [&str; 9] = [
     "devsecops-python",
     "jmeter",
     "tool-decisions",
+    "contract-pact",
+    "a11y-axe",
 ];
 
 /// Tool Decisions drills required for "the_architect"
@@ -1071,6 +1073,22 @@ pub fn default_curriculum_tracks() -> Vec<crate::config::TrackConfig> {
             extension: ".py".to_string(),
             command: "python -m pytest {file} --json-report --json-report-file=report.json".to_string(),
         },
+        crate::config::TrackConfig {
+            id: "contract-pact".to_string(),
+            name: "Consumer-Driven Contract Testing (Python / Pact)".to_string(),
+            runner: "python".to_string(),
+            exercise_dir: "exercises/07_contract_pact".to_string(),
+            extension: ".py".to_string(),
+            command: "python -m pytest {file} --json-report --json-report-file=report.json".to_string(),
+        },
+        crate::config::TrackConfig {
+            id: "a11y-axe".to_string(),
+            name: "Accessibility & Visual Testing (Playwright TypeScript)".to_string(),
+            runner: "node".to_string(),
+            exercise_dir: "exercises/08_a11y_axe".to_string(),
+            extension: ".ts".to_string(),
+            command: "npx playwright test {file} --reporter=json".to_string(),
+        },
     ]
 }
 
@@ -1846,7 +1864,7 @@ mod tests {
             state.record_drill_run(&ctx);
         }
 
-        assert_eq!(state.distinct_tracks_count(), 9);
+        assert_eq!(state.distinct_tracks_count(), ALL_TRACKS.len());
         assert!(state.has_achievement("sdet_master"));
     }
 

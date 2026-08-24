@@ -89,3 +89,20 @@ runner = "python"
 exercise_dir = "exercises/06_tool_decisions"
 extension = ".py"
 command = "python -m pytest {file} --json-report --json-report-file=report.json"
+
+[[tracks]]
+id = "contract-pact"
+name = "Consumer-Driven Contract Testing (Python / Pact)"
+runner = "python"
+exercise_dir = "exercises/07_contract_pact"
+extension = ".py"
+command = "python -m pytest {file} --json-report --json-report-file=report.json"
+
+[[tracks]]
+id = "a11y-axe"
+name = "Accessibility & Visual Testing (Playwright TypeScript)"
+runner = "node"
+exercise_dir = "exercises/08_a11y_axe"
+extension = ".ts"
+command = "npx playwright test {file} --reporter=json"
+

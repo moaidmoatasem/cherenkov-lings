@@ -230,7 +230,7 @@ fn test_track_drill_discovery_all_curriculum_tracks() {
     let config = sample_config();
     let summaries = get_track_summaries(&config, &GamificationState::default());
 
-    assert_eq!(summaries.len(), 9, "Should produce summary for all 9 tracks");
+    assert_eq!(summaries.len(), config.tracks.len(), "Should produce summary for all curriculum tracks");
 
     for sum in summaries {
         assert!(

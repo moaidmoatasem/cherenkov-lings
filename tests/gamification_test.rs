@@ -16,7 +16,7 @@ use std::path::PathBuf;
 fn test_constants_and_tier_mapping() {
     assert_eq!(PROGRESS_FILE, ".cherenkov-progress.json");
     assert_eq!(ALL_ACHIEVEMENTS.len(), 8);
-    assert_eq!(ALL_TRACKS.len(), 9);
+    assert_eq!(ALL_TRACKS.len(), 11);
     assert_eq!(TOOL_DECISIONS_DRILLS.len(), 4);
 
     assert_eq!(tier_for_track_or_drill("foundations", "01_assert"), 1);
