@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- JMeter Test Plan: GUI Mode Anti-Pattern -->
+<!-- PROBLEM: This plan is designed to be run inside the JMeter GUI application.
+     Running JMeter in GUI mode during a load test consumes 20-30% extra CPU
+     and memory on the load generator itself, skewing your results.
+     The GUI is for DESIGNING tests. CLI is for RUNNING them.
+
+     TODO: Document the correct non-GUI command to run this plan.
+     Answer: jmeter -n -t test_plan.jmx -l results.jtl -e -o report/
+-->
+<jmeterTestPlan version="1.2" properties="5.0">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="Checkout Load Test">
+      <elementProp name="TestPlan.arguments" elementType="Arguments">
+        <collectionProp name="Arguments.arguments"/>
+      </elementProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+    </TestPlan>
+    <hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testname="Users" num_threads="10" ramp_time="5">
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController">
+          <intProp name="LoopController.loops">10</intProp>
+        </elementProp>
+      </ThreadGroup>
+      <hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testname="GET Checkout" protocol="http"
+          domain="localhost" port="8081" path="/checkout" method="GET"/>
+        <hashTree/>
+      </hashTree>
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>

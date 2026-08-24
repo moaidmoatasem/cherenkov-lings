@@ -66,38 +66,94 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     match &cli.command {
         Commands::Init { name } => {
             let project_name = name.clone().unwrap_or_else(|| "my-sdet-journey".to_string());
-            println!("{}", "Initializing workspace...".bold().cyan());
-            println!("  Project Name: {}", project_name.bright_yellow());
 
-            // Initialize exercise directories from configuration or standard defaults
-            let default_dirs = vec![
+            // Create exercise directories
+            let exercise_dirs = vec![
+                "exercises/00_foundations",
                 "exercises/01_web_playwright_ts",
                 "exercises/02_api_restassured_java",
+                "exercises/03_mobile_maestro",
                 "exercises/04_perf_k6_js",
+                "exercises/05_perf_jmeter",
+                "exercises/06_tool_decisions",
             ];
-
-            let exercise_dirs: Vec<String> = if let Ok(cfg) = config::load_config("lings.toml") {
-                cfg.tracks.into_iter().map(|t| t.exercise_dir).collect()
-            } else {
-                default_dirs.into_iter().map(|s| s.to_string()).collect()
-            };
-
             for dir in &exercise_dirs {
                 let p = Path::new(dir);
                 if !p.exists() {
                     std::fs::create_dir_all(p)?;
-                    println!("  {} Created exercise directory: {:?}", "✓".green(), dir);
-                } else {
-                    println!("  {} Exercise directory already exists: {:?}", "✓".green(), dir);
                 }
             }
 
-            println!("  {} Embedded Micro-Crucible Sandbox ready at http://localhost:8080", "✓".green());
-            println!("  {} Monaco Code Engine & Polyglot Test Runners initialized", "✓".green());
+            // Rich Manual-QA-first welcome banner
             println!();
-            println!("🚀 {}", format!("Workspace '{}' initialized successfully.", project_name).bold().green());
-            println!("   Run: {}  to begin!", "cherenkov-lings watch --track=playwright-ts".bright_cyan());
+            println!("{}", "╔══════════════════════════════════════════════════════════════════╗".bright_cyan());
+            println!("{}", "║      ⚡  CHERENKOV-LINGS  — Interactive QA Learning Platform      ║".bright_cyan());
+            println!("{}", "╚══════════════════════════════════════════════════════════════════╝".bright_cyan());
+            println!();
+            println!("  {} Workspace {} ready.", "✓".green(), project_name.bright_yellow());
+            println!();
+            println!("{}", "  YOUR LEARNING PATH (start here, go in order):".bold().white());
+            println!();
+            println!("  {}  {}  {}",
+                "STEP 1".bright_white().bold(),
+                "Foundations — What IS an automated test?".bright_yellow(),
+                "(no tools needed, just Python)".dimmed()
+            );
+            println!("         {}", "cherenkov-lings watch --track=foundations".bright_cyan());
+            println!("         Open: {}", "exercises/00_foundations/01_what_is_a_test/exercise.py".dimmed());
+            println!();
+            println!("  {}  {}  {}",
+                "STEP 2".bright_white().bold(),
+                "UI Automation — Playwright TypeScript".bright_yellow(),
+                "(needs Node.js)".dimmed()
+            );
+            println!("         {}", "cherenkov-lings watch --track=playwright-ts".bright_cyan());
+            println!("         Open: {}", "exercises/01_web_playwright_ts/04_first_playwright_test/exercise.ts".dimmed());
+            println!();
+            println!("  {}  {}  {}",
+                "STEP 3".bright_white().bold(),
+                "API Automation — REST Assured Java".bright_yellow(),
+                "(needs Java + Maven)".dimmed()
+            );
+            println!("         {}", "cherenkov-lings watch --track=restassured-java".bright_cyan());
+            println!();
+            println!("  {}  {}  {}",
+                "STEP 4".bright_white().bold(),
+                "Mobile Automation — Maestro YAML".bright_yellow(),
+                "(needs Maestro CLI)".dimmed()
+            );
+            println!("         {}", "cherenkov-lings watch --track=maestro-mobile".bright_cyan());
+            println!();
+            println!("  {}  {}  {}",
+                "STEP 5".bright_white().bold(),
+                "Performance — k6 (modern) or JMeter (enterprise)".bright_yellow(),
+                "(needs k6 or JMeter)".dimmed()
+            );
+            println!("         {}   or   {}",
+                "cherenkov-lings watch --track=k6-js".bright_cyan(),
+                "cherenkov-lings watch --track=jmeter".bright_cyan()
+            );
+            println!();
+            println!("  {}  {}",
+                "STEP 6".bright_white().bold(),
+                "Which tool is right for which job?".bright_yellow()
+            );
+            println!("         {}", "cherenkov-lings watch --track=tool-decisions".bright_cyan());
+            println!();
+            println!("{}", "  ─────────────────────────────────────────────────────────────────".dimmed());
+            println!();
+            println!("  {} Start the Micro-Crucible sandbox FIRST:", "⚡".yellow());
+            println!("    {}", ".\\crucible\\start.bat".bright_white());
+            println!();
+            println!("  {} When you are stuck on any drill:", "💡".yellow());
+            println!("    Check {} in the same folder as your exercise.", "hints.md".bright_white());
+            println!("    Or run: {}", "cherenkov-lings diagnose --file=<path/to/exercise>".bright_cyan());
+            println!();
+            println!("{}", "  🚀 Begin your journey:".bold().green());
+            println!("     {}", "cherenkov-lings watch --track=foundations".bold().bright_cyan());
+            println!();
         }
+
         Commands::Watch { track } => {
             println!("Starting watcher for track: {}", track.bright_cyan());
 

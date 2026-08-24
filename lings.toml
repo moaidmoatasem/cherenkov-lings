@@ -66,4 +66,26 @@ exercise_dir = "exercises/06_cloud_devsecops"
 extension = ".py"
 command = "python -m pytest {file} --json-report --json-report-file=report.json"
 
+[[tracks]]
+id = "foundations"
+name = "Automation Foundations — Manual QA On-Ramp (Python / Pytest)"
+runner = "python"
+exercise_dir = "exercises/00_foundations"
+extension = ".py"
+command = "python -m pytest {file} --json-report --json-report-file=report.json"
 
+[[tracks]]
+id = "jmeter"
+name = "Enterprise Performance Testing (JMeter)"
+runner = "python"
+exercise_dir = "exercises/05_perf_jmeter"
+extension = ".jmx"
+command = "python -m pytest {file} --json-report --json-report-file=report.json"
+
+[[tracks]]
+id = "tool-decisions"
+name = "Cross-Tool Decision Framework (Python / Pytest)"
+runner = "python"
+exercise_dir = "exercises/06_tool_decisions"
+extension = ".py"
+command = "python -m pytest {file} --json-report --json-report-file=report.json"
