@@ -1,3 +1,10 @@
+"""
+PRODUCTION STORY:
+Boeing 737 MAX MCAS Simulation (2018)
+Ambiguous test suite naming and unspecified failure criteria obscured automated simulation test results,
+allowing automated trim software anomalies (MCAS activation bugs) to pass without clear diagnostic alarms.
+"""
+
 # Drill 02: Test Naming Matters
 # Good test names are the first line of documentation for your team.
 # When a test fails in CI, the name tells you WHAT broke WITHOUT reading the code.

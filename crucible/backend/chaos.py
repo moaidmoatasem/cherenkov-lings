@@ -30,6 +30,8 @@ def parse_chaos_header(header_val: str | None) -> dict[str, Any]:
       - token_expire=immediate: causes JWT expiration immediately
       - kafka_lag=<ms|s>: async settlement delay (e.g. '1500ms')
       - idempotency_conflict=true: triggers 409 Conflict on checkout
+      - drop_partial=true: triggers partial upload failure (HTTP 400)
+      - drop_after=<n>: drops SSE stream after N emitted events
     """
     if not header_val:
         return {}
@@ -49,8 +51,13 @@ def parse_chaos_header(header_val: str | None) -> dict[str, Any]:
                     directives[k] = parse_duration_ms(v)
                 except ValueError:
                     directives[k] = 0.0
-            elif k in ("stale_dom", "idempotency_conflict"):
+            elif k in ("stale_dom", "idempotency_conflict", "drop_partial"):
                 directives[k] = v.lower() in ("true", "1", "yes")
+            elif k == "drop_after":
+                try:
+                    directives[k] = int(v)
+                except ValueError:
+                    directives[k] = 0
             elif k == "token_expire":
                 directives[k] = v.lower()
             else:

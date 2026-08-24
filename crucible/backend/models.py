@@ -1,5 +1,7 @@
 """Pydantic schemas for Micro-Crucible API endpoints."""
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -148,4 +150,52 @@ class LlmResponse(BaseModel):
     confidence: float = Field(default=0.94, description="Classification confidence score (0.0 - 1.0)")
     raw_text: str = Field(description="Generative natural language text with varied phrasing")
     model: str = Field(default="mock-llm-v1", description="Identifier of simulated LLM model")
+
+
+class UploadResponse(BaseModel):
+    """File upload response schema."""
+
+    filename: str = Field(description="Name of the uploaded file")
+    content_type: str | None = Field(
+        default="application/octet-stream", description="MIME content type"
+    )
+    size_bytes: int = Field(description="Size of the uploaded content in bytes")
+    status: str = Field(default="uploaded", description="Upload status")
+    message: str = Field(
+        default="File uploaded successfully", description="Status message"
+    )
+
+
+class ProductItem(BaseModel):
+    """Product catalog item schema."""
+
+    id: str
+    name: str
+    price: float
+    category: str = "automation"
+    in_stock: bool = True
+
+
+class ProductListResponse(BaseModel):
+    """Paginated product list response schema."""
+
+    total: int = Field(description="Total number of items in catalog")
+    page: int = Field(description="Current page index (1-indexed)")
+    per_page: int = Field(description="Number of items per page")
+    total_pages: int = Field(description="Total number of available pages")
+    products: list[ProductItem] = Field(
+        default_factory=list, description="Page item slice"
+    )
+
+
+class GraphQLRequest(BaseModel):
+    """GraphQL POST request schema."""
+
+    query: str = Field(description="GraphQL query string")
+    variables: dict[str, Any] | None = Field(
+        default=None, description="Optional query variables"
+    )
+    operation_name: str | None = Field(
+        default=None, description="Optional operation name"
+    )
 

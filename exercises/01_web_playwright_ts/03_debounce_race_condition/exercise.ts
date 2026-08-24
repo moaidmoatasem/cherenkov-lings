@@ -1,3 +1,10 @@
+/**
+ * PRODUCTION STORY:
+ * Twitter / X Search Autocomplete Bug (2020)
+ * Fast typing triggered multiple concurrent debounced autocomplete requests. A slow initial request ('p')
+ * resolved after a fast subsequent request ('playwright'), overwriting the UI with obsolete stale data.
+ */
+
 import { test, expect } from '@playwright/test';
 
 test('debounced search displays accurate results without out-of-order race', async ({ page }) => {

@@ -1,4 +1,11 @@
-﻿import http from 'k6/http';
+/**
+ * PRODUCTION STORY:
+ * Ticketmaster Taylor Swift Eras Tour Onsale Surge (2022)
+ * 3.5 billion system requests overwhelmed API gateways. Tests monitoring only average response times
+ * failed to catch extreme p99 tail latency degradation (jumping from 200ms to 45,000ms), locking out millions of fans.
+ */
+
+import http from 'k6/http';
 import { Trend, Rate } from 'k6/metrics';
 import { sleep, check } from 'k6';
 

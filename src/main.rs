@@ -1,5 +1,6 @@
 mod config;
 pub mod feedback;
+pub mod gamification;
 pub mod mcp;
 pub mod proxy;
 pub mod runner;
@@ -57,6 +58,8 @@ enum Commands {
     },
     /// Start the Model Context Protocol (MCP) JSON-RPC stdio server
     Mcp,
+    /// View interactive QA learning progress, XP level, badges, and curriculum completion
+    Dashboard,
 }
 
 #[tokio::main]
@@ -206,6 +209,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 };
 
                 let platform_version = cfg.platform.version.clone();
+                let track_id = track_config.id.clone();
                 let track_name = track_config.name.clone();
                 let track_ext = track_config.extension.clone();
                 let chaos_latency = cfg.evaluation.chaos_latency_ms;
@@ -255,6 +259,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let runner = runner::PytestRunner::new();
                     println!("{} Pytest Runner initialized.", "✓".green());
                     Some(Arc::new(runner::AnyRunner::Pytest(Arc::new(runner))))
+                } else if track_config.runner == "jmeter" {
+                    println!("{} Initializing JMeter Runner...", "⚡".yellow());
+                    let runner = runner::JMeterRunner::new();
+                    println!("{} JMeter Runner initialized.", "✓".green());
+                    Some(Arc::new(runner::AnyRunner::Jmeter(Arc::new(runner))))
                 } else {
                     None
                 };
@@ -263,6 +272,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 // Spawn a background task to process file-change events from the watcher
                 let runner_for_task = runner_arc.clone();
+                let task_track_id = track_id.clone();
                 tokio::spawn(async move {
                     while let Some(path) = rx.recv().await {
                         // Filter out build artifacts, target/ directory, .class files, or non-matching extensions
@@ -304,6 +314,48 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     // Print the full terminal scorecard
                                     let rendered = feedback::render_scorecard(&scorecard);
                                     print!("{}", rendered);
+
+                                    // Gamification: Record progress and render progression scorecard on pass
+                                    let drill_id = gamification::extract_drill_id_from_path(&path);
+                                    let tier = gamification::tier_for_track_or_drill(&task_track_id, &drill_id);
+
+                                    if scorecard.passed {
+                                        let mut state = gamification::load_progress(None::<&Path>).unwrap_or_default();
+                                        let run_ctx = gamification::DrillRunContext {
+                                            track_id: task_track_id.clone(),
+                                            drill_id: drill_id.clone(),
+                                            file_path: path.clone(),
+                                            passed: true,
+                                            total_score: scorecard.total_score,
+                                            correctness_score: scorecard.correctness.score,
+                                            flakiness_score: scorecard.flakiness.score,
+                                            locator_score: scorecard.locator_quality.score,
+                                            speed_score: scorecard.speed.score,
+                                            passed_iterations: response.passed_iterations,
+                                            iterations: response.iterations,
+                                            avg_duration_ms: if response.iterations > 0 {
+                                                response.total_duration_ms / (response.iterations as u64)
+                                            } else {
+                                                response.total_duration_ms
+                                            },
+                                            baseline_duration_ms: 1000,
+                                            tier,
+                                            timestamp: None,
+                                        };
+
+                                        let (xp_earned, newly_unlocked) = state.record_drill_run(&run_ctx);
+                                        if let Err(e) = gamification::save_progress(&state, None::<&Path>) {
+                                            eprintln!("{} Failed to save progress to {}: {}", "⚠️".yellow(), gamification::PROGRESS_FILE, e);
+                                        }
+
+                                        let gamification_footer = gamification::render_gamification_scorecard_with_tier(
+                                            xp_earned,
+                                            tier,
+                                            &state,
+                                            &newly_unlocked,
+                                        );
+                                        print!("{}", gamification_footer);
+                                    }
                                 }
                                 Err(err) => {
                                     eprintln!("{} Runner communication error: {}", "✗".bold().red(), err);
@@ -413,6 +465,37 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Commands::Mcp => {
             mcp::run_mcp_server();
+        }
+        Commands::Dashboard => {
+            let cfg = config::load_config("lings.toml").unwrap_or_else(|_| {
+                config::Config {
+                    platform: config::PlatformConfig {
+                        name: "cherenkov-lings".to_string(),
+                        version: "1.0.0".to_string(),
+                        sandbox_port: 8080,
+                        chaos_proxy_port: 8086,
+                        telemetry: false,
+                    },
+                    evaluation: config::EvaluationConfig {
+                        pass_threshold: 85.0,
+                        flakiness_iterations: 5,
+                        flakiness_timeout_ms: 5000,
+                        chaos_latency_ms: 200,
+                        chaos_jitter_ms: 75,
+                    },
+                    ui: config::UiConfig {
+                        theme: "cherenkov-blue".to_string(),
+                        show_hints_on_failure: true,
+                        enable_audio_bell: false,
+                        language: "en".to_string(),
+                    },
+                    tracks: gamification::default_curriculum_tracks(),
+                }
+            });
+
+            let state = gamification::load_progress(None::<&Path>).unwrap_or_default();
+            let dashboard_output = gamification::render_dashboard(&state, &cfg);
+            print!("{}", dashboard_output);
         }
     }
 

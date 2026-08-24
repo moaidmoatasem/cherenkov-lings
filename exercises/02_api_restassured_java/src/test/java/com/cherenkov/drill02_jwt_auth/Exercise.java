@@ -12,6 +12,11 @@ import static org.hamcrest.Matchers.equalTo;
 /**
  * Drill 02: JWT Refresh Filters (Broken Anti-Pattern)
  *
+ * PRODUCTION STORY:
+ * Twitter / X OAuth Expiration Cascade (2022)
+ * Automated integration test suites and backend workers crashed when short-lived access tokens expired
+ * mid-session under load without transparent automatic token refresh handlers.
+ *
  * ANTI-PATTERN:
  * This test acquires an authentication token with no automatic refresh handling.
  * When the server issues an expired token (simulating mid-session token expiry),

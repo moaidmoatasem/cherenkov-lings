@@ -1,3 +1,4 @@
+import json
 import time
 from fastapi.testclient import TestClient
 from crucible.backend.app import app
@@ -12,13 +13,15 @@ def test_parse_duration_ms():
     assert parse_duration_ms("300") == 300.0
 
 def test_parse_chaos_header_compound():
-    header = "delay=500ms;jitter=75ms;stale_dom=true;token_expire=immediate;kafka_lag=1000ms"
+    header = "delay=500ms;jitter=75ms;stale_dom=true;token_expire=immediate;kafka_lag=1000ms;drop_partial=true;drop_after=3"
     parsed = parse_chaos_header(header)
     assert parsed["delay"] == 500.0
     assert parsed["jitter"] == 75.0
     assert parsed["stale_dom"] is True
     assert parsed["token_expire"] == "immediate"
     assert parsed["kafka_lag"] == 1000.0
+    assert parsed["drop_partial"] is True
+    assert parsed["drop_after"] == 3
 
 def test_parse_chaos_header_malformed():
     parsed = parse_chaos_header("invalid;;;foo=bar;delay=notanumber")
@@ -251,6 +254,173 @@ def test_genai_endpoints_chaos_delay():
     elapsed = time.perf_counter() - start
     assert resp.status_code == 200
     assert elapsed >= 0.18
+
+
+# ---------------------------------------------------------------------------
+# R4 Crucible Backend Expansion Tests
+# ---------------------------------------------------------------------------
+
+
+def test_upload_endpoint_success():
+    """Verify multipart file upload returns proper metadata."""
+    file_bytes = b"Sample upload content for Micro-Crucible."
+    resp = client.post(
+        "/upload",
+        files={"file": ("test_file.txt", file_bytes, "text/plain")},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["filename"] == "test_file.txt"
+    assert data["content_type"] == "text/plain"
+    assert data["size_bytes"] == len(file_bytes)
+    assert data["status"] == "uploaded"
+    assert data["message"] == "File uploaded successfully"
+
+
+def test_upload_endpoint_chaos_drop_partial():
+    """Verify drop_partial chaos header aborts upload with 400 error."""
+    file_bytes = b"Partial upload content simulation."
+    resp = client.post(
+        "/upload",
+        files={"file": ("partial_file.dat", file_bytes, "application/octet-stream")},
+        headers={"X-Chaos": "drop_partial=true"},
+    )
+    assert resp.status_code == 400
+    data = resp.json()
+    assert data["status"] == "error"
+    assert data["error"] == "PARTIAL_UPLOAD_DROPPED"
+    assert "dropped" in data["message"].lower() or "aborted" in data["message"].lower()
+    assert data["bytes_received"] == 0
+
+
+def test_products_pagination_navigation():
+    """Verify paginated product list navigation across pages."""
+    resp1 = client.get("/products?page=1&per_page=5")
+    assert resp1.status_code == 200
+    data1 = resp1.json()
+    assert data1["total"] == 25
+    assert data1["page"] == 1
+    assert data1["per_page"] == 5
+    assert data1["total_pages"] == 5
+    assert len(data1["products"]) == 5
+    assert data1["products"][0]["id"] == "prod-001"
+
+    resp2 = client.get("/products?page=2&per_page=5")
+    assert resp2.status_code == 200
+    data2 = resp2.json()
+    assert data2["page"] == 2
+    assert len(data2["products"]) == 5
+    assert data2["products"][0]["id"] == "prod-006"
+    assert data2["products"][0]["id"] != data1["products"][0]["id"]
+
+
+def test_products_pagination_defaults_and_out_of_bounds():
+    """Verify default query parameters and out-of-bounds page handling."""
+    resp_default = client.get("/products")
+    assert resp_default.status_code == 200
+    data_default = resp_default.json()
+    assert data_default["page"] == 1
+    assert data_default["per_page"] == 10
+    assert len(data_default["products"]) == 10
+    assert data_default["total"] == 25
+    assert data_default["total_pages"] == 3
+
+    resp_oob = client.get("/products?page=999&per_page=10")
+    assert resp_oob.status_code == 200
+    data_oob = resp_oob.json()
+    assert data_oob["page"] == 999
+    assert data_oob["products"] == []
+    assert data_oob["total"] == 25
+
+
+def test_events_stream_sse_protocol():
+    """Verify Server-Sent Events stream emits formatted event payloads."""
+    with client.stream("GET", "/events/stream", headers={"X-Chaos": "drop_after=1"}) as resp:
+        assert resp.status_code == 200
+        assert "text/event-stream" in resp.headers.get("content-type", "")
+        lines = [line for line in resp.iter_lines() if line]
+        assert any(line_item.startswith("id: 1") for line_item in lines)
+        assert any(line_item.startswith("event: message") for line_item in lines)
+        data_lines = [line_item for line_item in lines if line_item.startswith("data: ")]
+        assert len(data_lines) >= 1
+        data_json = json.loads(data_lines[0][len("data: "):])
+        assert data_json["id"] == 1
+        assert "telemetry" in data_json["data"].lower()
+
+
+def test_events_stream_chaos_drop_after():
+    """Verify drop_after chaos header disconnects SSE stream after N events."""
+    with client.stream("GET", "/events/stream", headers={"X-Chaos": "drop_after=2"}) as resp:
+        assert resp.status_code == 200
+        lines = [line for line in resp.iter_lines() if line]
+        id_lines = [line_item for line_item in lines if line_item.startswith("id: ")]
+        assert len(id_lines) == 2
+        assert id_lines[0] == "id: 1"
+        assert id_lines[1] == "id: 2"
+
+
+def test_graphql_query_user_direct():
+    """Verify direct GraphQL query resolves user entity fields."""
+    query = "{ user { id name email role status } }"
+    resp = client.post("/graphql", json={"query": query})
+    assert resp.status_code == 200
+    res_data = resp.json()
+    assert "data" in res_data
+    assert "user" in res_data["data"]
+    user = res_data["data"]["user"]
+    assert user["id"] == "usr-4819"
+    assert user["name"] == "sdet_student"
+    assert user["email"] == "student@cherenkov.qa"
+    assert user["role"] == "sdet_engineer"
+    assert user["status"] == "active"
+
+
+def test_graphql_aliased_query_me():
+    """Verify aliased GraphQL query resolves correctly with custom target key."""
+    query = "{ me: user { id name role } }"
+    resp = client.post("/graphql", json={"query": query})
+    assert resp.status_code == 200
+    res_data = resp.json()
+    assert "data" in res_data
+    assert "me" in res_data["data"]
+    assert "user" not in res_data["data"]
+    me = res_data["data"]["me"]
+    assert me["id"] == "usr-4819"
+    assert me["name"] == "sdet_student"
+    assert me["role"] == "sdet_engineer"
+
+
+def test_graphql_query_with_named_operation():
+    """Verify query with 'query OperationName' prefix resolves correctly."""
+    query = """
+    query GetUserProfile {
+        profile: user {
+            id
+            name
+        }
+    }
+    """
+    resp = client.post("/graphql", json={"query": query})
+    assert resp.status_code == 200
+    res_data = resp.json()
+    assert "profile" in res_data["data"]
+    assert res_data["data"]["profile"]["name"] == "sdet_student"
+
+
+def test_graphql_errors_and_invalid_queries():
+    """Verify unknown fields and invalid GraphQL queries return 400 with errors."""
+    # Unknown field on Query
+    resp_unknown = client.post("/graphql", json={"query": "{ unknown_field { id } }"})
+    assert resp_unknown.status_code == 400
+    data_unknown = resp_unknown.json()
+    assert "errors" in data_unknown
+    assert "unknown_field" in data_unknown["errors"][0]["message"]
+
+    # Malformed syntax
+    resp_syntax = client.post("/graphql", json={"query": "this is not valid graphql"})
+    assert resp_syntax.status_code == 400
+    data_syntax = resp_syntax.json()
+    assert "errors" in data_syntax
 
 
 

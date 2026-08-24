@@ -5,13 +5,16 @@ Intentionally broken, chaos-capable target sandbox backend for QA/SDET drills.
 
 import asyncio
 from datetime import datetime, timedelta, timezone
+import json
+import math
 import random
+import re
 import time
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 import jwt
 
 from crucible.backend.chaos import ChaosMiddleware
@@ -20,16 +23,20 @@ from crucible.backend.models import (
     CheckoutRequest,
     CheckoutResponse,
     CheckoutStateResponse,
+    GraphQLRequest,
     HealthResponse,
     LlmEntities,
     LlmResponse,
     LoginRequest,
     LoginResponse,
+    ProductItem,
+    ProductListResponse,
     RagResponse,
     ResetResponse,
     SearchResponse,
     TransferRequest,
     TransferResponse,
+    UploadResponse,
     UserMeResponse,
 )
 
@@ -492,4 +499,175 @@ async def api_llm(prompt: str = "") -> LlmResponse:
         raw_text=_LLM_RESPONSE_VARIANTS[variant_idx],
         model="mock-llm-v1",
     )
+
+
+# ---------------------------------------------------------------------------
+# R4 Crucible Backend Expansion
+# ---------------------------------------------------------------------------
+
+PRODUCT_CATALOG: list[dict[str, Any]] = [
+    {
+        "id": f"prod-{i:03d}",
+        "name": f"SDET Automation Toolset Item {i}",
+        "price": round(19.99 + (i * 7.50) % 150.0, 2),
+        "category": "testing-tools" if i % 2 == 0 else "hardware",
+        "in_stock": i % 7 != 0,
+    }
+    for i in range(1, 26)
+]
+
+GRAPHQL_USER_ENTITY: dict[str, Any] = {
+    "id": "usr-4819",
+    "name": "sdet_student",
+    "email": "student@cherenkov.qa",
+    "role": "sdet_engineer",
+    "status": "active",
+}
+
+
+def execute_minimal_graphql(query_str: str) -> dict[str, Any]:
+    """Parse and resolve minimal GraphQL queries and field aliases."""
+    if not query_str or not isinstance(query_str, str):
+        return {"errors": [{"message": "Empty GraphQL query."}]}
+
+    q = query_str.strip()
+    q = re.sub(r"^(query|mutation)\s*[A-Za-z0-9_]*\s*", "", q).strip()
+    if q.startswith("{") and q.endswith("}"):
+        q = q[1:-1].strip()
+
+    if not q:
+        return {"errors": [{"message": "Empty GraphQL selection set."}]}
+
+    pattern = r"^(?:(?P<alias>[A-Za-z0-9_]+)\s*:\s*)?(?P<field>[A-Za-z0-9_]+)\s*\{(?P<subfields>[^}]+)\}"
+    match = re.search(pattern, q, re.DOTALL)
+    if not match:
+        return {
+            "errors": [
+                {
+                    "message": f"Syntax error or unsupported GraphQL query: {query_str}"
+                }
+            ]
+        }
+
+    alias = match.group("alias")
+    field = match.group("field")
+    subfields_raw = match.group("subfields")
+    requested_fields = [
+        f.strip() for f in re.split(r"[\s,]+", subfields_raw) if f.strip()
+    ]
+
+    if field == "user":
+        data_obj = {
+            k: GRAPHQL_USER_ENTITY[k]
+            for k in requested_fields
+            if k in GRAPHQL_USER_ENTITY
+        }
+        target_key = alias if alias else "user"
+        return {"data": {target_key: data_obj}}
+
+    return {
+        "errors": [
+            {"message": f"Cannot query field '{field}' on type 'Query'."}
+        ]
+    }
+
+
+@app.post("/upload", response_model=UploadResponse)
+async def post_upload(
+    request: Request,
+    file: UploadFile = File(...),
+) -> Any:
+    """Handle multipart file uploads with chaos partial-drop simulation."""
+    chaos = getattr(request.state, "chaos", {})
+    if chaos.get("drop_partial"):
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status": "error",
+                "error": "PARTIAL_UPLOAD_DROPPED",
+                "message": "Upload aborted: connection dropped mid-transfer (partial upload simulated)",
+                "bytes_received": 0,
+            },
+        )
+
+    content = await file.read()
+    return UploadResponse(
+        filename=file.filename or "unknown",
+        content_type=file.content_type or "application/octet-stream",
+        size_bytes=len(content),
+        status="uploaded",
+        message="File uploaded successfully",
+    )
+
+
+@app.get("/products", response_model=ProductListResponse)
+async def get_products(
+    page: int = 1,
+    per_page: int = 10,
+) -> ProductListResponse:
+    """Retrieve paginated product catalog."""
+    safe_page = max(1, page)
+    safe_per_page = max(1, min(100, per_page))
+    total = len(PRODUCT_CATALOG)
+    total_pages = max(1, math.ceil(total / safe_per_page))
+
+    start_idx = (safe_page - 1) * safe_per_page
+    end_idx = start_idx + safe_per_page
+    items = PRODUCT_CATALOG[start_idx:end_idx] if start_idx < total else []
+
+    return ProductListResponse(
+        total=total,
+        page=safe_page,
+        per_page=safe_per_page,
+        total_pages=total_pages,
+        products=[ProductItem(**item) for item in items],
+    )
+
+
+@app.get("/events/stream")
+async def get_events_stream(request: Request) -> StreamingResponse:
+    """Server-Sent Events stream with chaos connection-drop simulation."""
+    chaos = getattr(request.state, "chaos", {})
+    drop_after_raw = chaos.get("drop_after")
+    drop_after: int | None = None
+    if drop_after_raw is not None:
+        try:
+            drop_after = int(drop_after_raw)
+        except (ValueError, TypeError):
+            drop_after = None
+
+    async def event_generator():
+        count = 0
+        while True:
+            if drop_after is not None and count >= drop_after:
+                break
+            count += 1
+            payload = {
+                "id": count,
+                "timestamp": int(time.time()),
+                "event": "tick",
+                "data": f"Crucible live telemetry stream event #{count}",
+            }
+            yield f"id: {count}\nevent: message\ndata: {json.dumps(payload)}\n\n"
+            if drop_after is not None and count >= drop_after:
+                break
+            await asyncio.sleep(1.0)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@app.post("/graphql")
+async def post_graphql(req: GraphQLRequest) -> JSONResponse:
+    """Execute minimal GraphQL query with field aliases."""
+    result = execute_minimal_graphql(req.query)
+    status_code = 400 if "errors" in result and "data" not in result else 200
+    return JSONResponse(status_code=status_code, content=result)
 

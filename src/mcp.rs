@@ -1,4 +1,4 @@
-﻿use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::io::{self, BufRead, Write};
 use crate::feedback;
@@ -6,6 +6,7 @@ use std::path::Path;
 use std::fs;
 
 #[derive(Deserialize, Debug)]
+#[allow(dead_code)]
 struct RpcRequest {
     jsonrpc: String,
     id: Option<Value>,

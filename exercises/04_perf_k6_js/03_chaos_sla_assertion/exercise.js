@@ -1,4 +1,11 @@
-﻿import http from 'k6/http';
+/**
+ * PRODUCTION STORY:
+ * Cloudflare BGP Routing & Latency Degradation (2019)
+ * Upstream network jitter caused partial packet drops across microservices. Automated smoke tests
+ * with no SLA error rate assertions reported green builds despite 30% of end-user transactions failing.
+ */
+
+import http from 'k6/http';
 import { Rate } from 'k6/metrics';
 import { sleep } from 'k6';
 

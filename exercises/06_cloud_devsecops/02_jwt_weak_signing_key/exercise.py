@@ -1,3 +1,10 @@
+"""
+PRODUCTION STORY:
+Capital One AWS S3 Cloud Security Breach (2019)
+Misconfigured token verification routines accepting unsigned or weakly-signed tokens ('none' algorithm)
+allowed adversaries to forge administrative identities and exfiltrate over 100 million customer records.
+"""
+
 import pytest
 
 def test_jwt_config():

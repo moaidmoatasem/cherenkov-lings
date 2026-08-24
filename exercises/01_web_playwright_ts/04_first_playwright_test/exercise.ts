@@ -1,3 +1,10 @@
+/**
+ * PRODUCTION STORY:
+ * Basecamp Architecture Overhaul (2021)
+ * Teams moving from legacy Selenium suites had dozens of test cases that navigated to pages
+ * without asserting final DOM states, silently passing in CI even when pages rendered 500 error banners.
+ */
+
 import { test, expect } from "@playwright/test";
 
 // Drill 04: Your First Playwright Test

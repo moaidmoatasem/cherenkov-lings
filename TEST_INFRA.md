@@ -1,34 +1,42 @@
-# E2E Test Infra: cherenkov-lings Sprint 3
+# E2E Test Infra: Cherenkov-Lings QA Learning Engine
 
 ## Test Philosophy
-- Polyglot, opaque-box, and requirement-driven testing across Web (Playwright TS), API (REST Assured Java), Load (k6 JS), Mobile (Maestro YAML), and GenAI QA (Playwright TS).
-- High-fidelity feedback matrix verification ensuring exact anti-pattern detection and SLA score computations.
+- Opaque-box, requirement-driven, and multi-tier verification.
+- Enforces strict zero-tolerance gate pass across Rust compiler/clippy, Python backend chaos test suite, Ruff linter, Playwright browser automation, and interactive CLI dashboard rendering.
 
-## Feature Inventory
-| # | Feature | Source | Tier 1 | Tier 2 | Tier 3 | Tier 4 |
-|---|---------|--------|:------:|:------:|:------:|:------:|
-| 1 | Micro-Crucible /api/rag | ORIGINAL_REQUEST §R3 | ✓ | ✓ | ✓ | ✓ |
-| 2 | Micro-Crucible /api/llm | ORIGINAL_REQUEST §R3 | ✓ | ✓ | ✓ | ✓ |
-| 3 | k6 Drills & Options | ORIGINAL_REQUEST §R1 | ✓ | ✓ | ✓ | ✓ |
-| 4 | k6 Runner & Summary JSON Parser | ORIGINAL_REQUEST §R1 | ✓ | ✓ | ✓ | ✓ |
-| 5 | Maestro Mobile Drills | ORIGINAL_REQUEST §R2 | ✓ | ✓ | ✓ | ✓ |
-| 6 | Maestro Runner & YAML Anti-Patterns | ORIGINAL_REQUEST §R2 | ✓ | ✓ | ✓ | ✓ |
-| 7 | GenAI QA Drills | ORIGINAL_REQUEST §R3 | ✓ | ✓ | ✓ | ✓ |
-| 8 | CLI Watch & Diagnose Multi-Track | ORIGINAL_REQUEST | ✓ | ✓ | ✓ | ✓ |
+## Verification Gate Commands
+```powershell
+# Gate 1: Rust Unit & Integration Tests (254+ existing tests + new tests)
+cargo test
 
-## Test Architecture
-- **Rust Integration Tests (`tests/`)**:
-  - `tests/adversarial_matrix_tests.rs`: Tests 4D Feedback Matrix, locator scoring, flakiness penalty, and anti-patterns.
-  - `tests/jvm_runner_test.rs`: Tests Surefire XML parsing, class mapping, and JVM runner lifecycle.
-  - `tests/k6_runner_test.rs` / `tests/maestro_runner_test.rs`: Tests k6 JSON summary parser, Maestro YAML flow validation, and runner dispatch.
-  - `tests/e2e_tier1_to_tier4_suite.rs`: End-to-end integration across all 5 tracks and CLI commands.
-- **Python Pytest Suite (`tests/test_micro_crucible_chaos.py`)**:
-  - Validates all Micro-Crucible endpoints including chaos directives and GenAI endpoints.
-- **Playwright Test Suite (`exercises/01_web_playwright_ts/`, `exercises/05_genai_qa/`)**:
-  - Validates drill pass/fail contracts.
+# Gate 2: Zero-Warning Compiler & Clippy Strict Linter
+cargo clippy -- -D warnings
 
-## Coverage Goals
-- `cargo test`: >= 145 passing tests (target 160+).
-- `cargo clippy -- -D warnings`: 0 warnings.
-- `cargo build --release`: 0 errors.
-- `python -m ruff check crucible/`: 0 errors.
+# Gate 3: Micro-Crucible Chaos Pytest Suite (17 existing + 8+ new endpoint tests)
+python -m pytest tests/test_micro_crucible_chaos.py
+
+# Gate 4: Python Ruff Linter for Crucible Backend
+python -m ruff check crucible/
+
+# Gate 5: Playwright TS E2E Tests in GenAI Track
+npx playwright test exercises/05_genai_qa/
+
+# Gate 6: Interactive Dashboard Subcommand
+cargo run -- dashboard
+```
+
+## Curriculum & Module Completeness Checks
+1. **Curriculum Completeness**:
+   - Track 1 Playwright: 10 drills
+   - Track 2 REST Assured: 7 drills
+   - Track 3 Maestro: 5 drills
+   - Track 4 k6: 5 drills
+   - JMeter: 8 drills (with complete exercise + solution + hints)
+   - Tool Decisions: 4 drills
+   - Track 0 (5), Track 5 (2), Track 6 (2)
+   - Total 48 drills.
+2. **Bundle Integrity**: Every drill directory contains `exercise.*`, `solution.*`, `hints.md`, and `theory.md`.
+3. **Production Story**: Every exercise file contains a named real-world incident comment block.
+4. **Theory Modules**: Every `theory.md` >= 200 words, contains incident story, mechanism, ASCII diagram, and closes with "You will now simulate this in the Crucible".
+5. **Gamification & Progress**: `.cherenkov-progress.json` format, XP calculations, 7 levels, 8 badges.
+6. **JMeter Runner**: Gracefully handles missing `jmeter` without panic.

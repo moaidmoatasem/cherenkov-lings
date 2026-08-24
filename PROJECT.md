@@ -1,67 +1,60 @@
-# Project: cherenkov-lings Sprint 3
+# Project: Cherenkov-Lings QA Learning Engine Expansion
 
 ## Architecture
-- **Layer 4/7 Chaos Proxy (`src/proxy.rs`)**: High-performance reverse proxy listening on `127.0.0.1:8086`, routing to Micro-Crucible backend on `127.0.0.1:8081`. Supports raw TCP drops, latency jitter, 502/504 gateway errors, and chaos header passthrough.
-- **Polyglot Runner Engine (`src/runner.rs`)**:
-  - `NodeRunner`: Subprocess NDJSON IPC over stdio to `workers/node_worker.js` for Playwright Web TS and GenAI QA TS.
-  - `JvmRunner`: Subprocess runner executing `mvn test -B -Dtest={class}` on `exercises/02_api_restassured_java/`.
-  - `K6Runner`: High-concurrency load testing runner invoking `k6 run --summary-export=summary.json` and parsing JSON metrics & thresholds.
-  - `MaestroRunner`: Mobile UI automation definition validator checking YAML flow syntax and structure.
-  - `AnyRunner`: Unified enum dispatching across all 4 runner engines.
-- **4D Feedback Matrix Engine (`src/feedback.rs`)**: Evaluates Correctness (35%), Flakiness (35%), Locator Quality (15%), Speed (15%). Analyzes TypeScript, Java, and YAML ASTs for anti-patterns (`waitForTimeout`, `Thread.sleep`, `MissingWhenCondition`, `MissingColdStartDeepLink`, `MissingActivityRecreation`).
-- **Micro-Crucible Backend (`crucible/backend/`)**: FastAPI server on port 8081 providing mock e-commerce, banking, chaos directives, and GenAI mock endpoints (`/api/rag`, `/api/llm`).
-
-## Code Layout
-- `src/proxy.rs`: Chaos proxy implementation, configuration, and background supervisor.
-- `src/main.rs`: CLI commands (`proxy`, `watch`, `diagnose`, `init`) and multi-track dispatch.
-- `src/runner.rs`: `NodeRunner`, `JvmRunner`, `K6Runner`, `MaestroRunner`, and `AnyRunner`.
-- `src/feedback.rs`: 4D Feedback Matrix, AST anti-pattern analysis for TS, Java, and YAML.
-- `src/config.rs`: `lings.toml` configuration parsing.
-- `crucible/backend/app.py`, `models.py`, `chaos.py`: Micro-Crucible backend endpoints.
-- `exercises/01_web_playwright_ts/`: 3 Web UI drills.
-- `exercises/02_api_restassured_java/`: 3 REST Assured Java drills.
-- `exercises/03_mobile_maestro/`: 3 Mobile YAML drills + `maestro_runner.sh`.
-- `exercises/04_perf_k6_js/`: 3 k6 Load Testing drills + `k6_runner.js`.
-- `exercises/05_genai_qa/`: 2 GenAI QA Playwright TS drills.
+Cherenkov-Lings is a high-performance interactive CLI daemon written in Rust (2024 edition) that guides QA engineers to SDET mastery across 9 tracks. It integrates with a sandboxed FastAPI backend (Micro-Crucible on port 8081), an L4/L7 Chaos Proxy (port 8086), AST static analysis, multi-language runners, and a gamified progress tracking engine.
 
 ## Feature Inventory
-| # | Feature | Description | Milestone | Source | Status |
-|---|---------|-------------|-----------|--------|:------:|
-| 1 | L4/L7 Chaos Proxy Core | Reverse proxy on 8086, routing to 8081 | Baseline | ORIGINAL_REQUEST | DONE |
-| 2 | Layer 4/7 Fault Injection | TCP drops, latency jitter, 502/504 errors | Baseline | ORIGINAL_REQUEST | DONE |
-| 3 | Java Track & JVM Runner | Maven REST Assured track and Surefire XML parser | Baseline | ORIGINAL_REQUEST | DONE |
-| 4 | Micro-Crucible GenAI Endpoints | `/api/rag` and `/api/llm` in FastAPI with Pydantic schemas | M1 | ORIGINAL_REQUEST §R3 | DONE |
-| 5 | k6 Load Testing Drills | 3 drills in `exercises/04_perf_k6_js/` (pool starvation, spike p99, chaos SLA) | M2 | ORIGINAL_REQUEST §R1 | DONE |
-| 6 | k6 Runner Engine & JSON Parser | `K6Runner` in `src/runner.rs` parsing `summary.json` for 4D matrix | M2 | ORIGINAL_REQUEST §R1 | DONE |
-| 7 | Maestro Mobile Track Drills | 3 drills in `exercises/03_mobile_maestro/` (biometric fallback, deep link, orientation) | M3 | ORIGINAL_REQUEST §R2 | DONE |
-| 8 | Maestro Runner & YAML Anti-Pattern AST | `MaestroRunner` in `src/runner.rs`, YAML anti-pattern detection in `src/feedback.rs` | M3 | ORIGINAL_REQUEST §R2 | DONE |
-| 9 | GenAI QA Track Drills & Runner | 2 drills in `exercises/05_genai_qa/` (RAG faithfulness, LLM flakiness) | M4 | ORIGINAL_REQUEST §R3 | DONE |
-| 10 | CLI Multi-Track Watcher & Diagnose | Dispatching all 5 tracks in `src/main.rs` | M2, M3, M4 | ORIGINAL_REQUEST | DONE |
-| 11 | Comprehensive E2E Verification & Audit | >= 145 Rust tests, Clippy 0 warnings, Release build, Ruff, drills pass/fail | M5 | Acceptance Criteria | DONE |
+Every requirement from ORIGINAL_REQUEST.md is inventoried below with its assigned milestone and completion status.
+
+| # | Feature | Description | Milestone | Status | Source |
+|---|---------|-------------|-----------|--------|--------|
+| 1 | R4.1 `POST /upload` Endpoint | Multipart upload with `X-Chaos: drop_partial=true` simulation | M1 | DONE | ORIGINAL_REQUEST §R4 |
+| 2 | R4.2 `GET /products` Pagination | Paginated catalog returning `total`, `page`, `per_page`, `total_pages`, `products` | M1 | DONE | ORIGINAL_REQUEST §R4 |
+| 3 | R4.3 `GET /events/stream` SSE | Server-Sent Events stream at 1 evt/s with `X-Chaos: drop_after={n}` connection cutoff | M1 | DONE | ORIGINAL_REQUEST §R4 |
+| 4 | R4.4 `POST /graphql` Endpoint | Minimal zero-dependency GraphQL query & field alias handler | M1 | DONE | ORIGINAL_REQUEST §R4 |
+| 5 | R4.5 Crucible Pytest & Ruff | 10 new pytest tests in `tests/test_micro_crucible_chaos.py` (27 total), 0 ruff errors | M1 | DONE | ORIGINAL_REQUEST §R4 |
+| 6 | R1.1 Playwright TS Drills 06–10 | POM, iframe cross-origin, network intercept, visual regression, parallel state isolation | M2 | DONE | ORIGINAL_REQUEST §R1 |
+| 7 | R1.2 REST Assured Java Drills 04–07 | Pagination boundary loop, JSON schema validator, GraphQL assertions, RequestSpec reuse | M2 | DONE | ORIGINAL_REQUEST §R1 |
+| 8 | R1.3 Maestro Mobile Drills 04–05 | Dynamic scroll-to-element, conditional push notification permission flow | M2 | DONE | ORIGINAL_REQUEST §R1 |
+| 9 | R1.4 k6 JS Drills 04–05 | Streaming SSE test against `/events/stream`, InfluxDB/Grafana metrics & thresholds | M2 | DONE | ORIGINAL_REQUEST §R1 |
+| 10 | R1.5 JMeter Drills 01–08 | Complete exercise.jmx + solution.jmx/solution.sh + hints for all 8 JMeter drills | M2 | DONE | ORIGINAL_REQUEST §R1 |
+| 11 | R1.6 Tool Decisions Drills 03–04 | Appium vs Maestro and Pact contract vs E2E test matrices | M2 | DONE | ORIGINAL_REQUEST §R1 |
+| 12 | R1.7 Production Stories | Comment block with named real-world incident at top of all 48 exercise files | M2 | DONE | ORIGINAL_REQUEST §R1 |
+| 13 | R3.1 Theoretical Context Modules | `theory.md` for all 48 drills (>=200 words, real incident, mechanism, ASCII diagram, crucible anchor) | M3 | DONE | ORIGINAL_REQUEST §R3 |
+| 14 | R6.1 JMeterRunner Implementation | Runner trait implementation in `src/runner.rs`, executes `jmeter -n -t ... -l results.jtl` | M4 | DONE | ORIGINAL_REQUEST §R6 |
+| 15 | R6.2 JTL CSV Parser | Parses `elapsed`, `success`, `label` from JTL CSV for p99, avg latency, error rate | M4 | DONE | ORIGINAL_REQUEST §R6 |
+| 16 | R6.3 JMeter PATH Graceful Handling | Detects missing `jmeter` binary without panicking, provides helpful install message | M4 | DONE | ORIGINAL_REQUEST §R6 |
+| 17 | R6.4 AnyRunner::Jmeter Variant | Adds `AnyRunner::Jmeter` variant, wires `lings.toml` runner mapping | M4 | DONE | ORIGINAL_REQUEST §R6 |
+| 18 | R6.5 Clippy Baseline Cleanup | Resolves `PytestRunner` missing `Default` and redundant closure warnings (0 warnings) | M4 | DONE | ORIGINAL_REQUEST §R6 |
+| 19 | R2.1 Gamification State & Storage | `.cherenkov-progress.json` schema & serialization in `src/gamification.rs` | M5 | DONE | ORIGINAL_REQUEST §R2 |
+| 20 | R2.2 XP Calculation & Tiers | `base_xp * (total_score / 100) * tier_multiplier` (Tier 1: 1.0x, Tier 2: 1.5x, Tier 3: 2.0x) | M5 | DONE | ORIGINAL_REQUEST §R2 |
+| 21 | R2.3 Level Progression (7 Ranks) | Trainee (0), Junior (500), Mid (1500), Senior (3000), Lead (6000), Architect (10000), SDET Master (20000) | M5 | DONE | ORIGINAL_REQUEST §R2 |
+| 22 | R2.4 8 Achievements / Badges | first_blood, flakiness_slayer, chaos_survivor, tool_polyglot, the_architect, perfect_locator, speed_demon, sdet_master | M5 | DONE | ORIGINAL_REQUEST §R2 |
+| 23 | R2.5 Terminal Scorecard & Reveals | Scorecard displays XP earned, ASCII progress bar, and multi-line ASCII badge reveal | M5 | DONE | ORIGINAL_REQUEST §R2 |
+| 24 | R5.1 Dashboard CLI Subcommand | `cherenkov-lings dashboard` in `src/main.rs` rendering ANSI stats from progress file | M6 | DONE | ORIGINAL_REQUEST §R5 |
+| 25 | R5.2 Dashboard ANSI Visuals | Header, level progress bar, curriculum progress table, top 3 badges, streak, next recommendation | M6 | DONE | ORIGINAL_REQUEST §R5 |
+| 26 | R.Final All Verification Gates Pass | cargo test, clippy, pytest, ruff, playwright, dashboard | M7 | DONE | ORIGINAL_REQUEST §Verification |
 
 ## Milestones
-| # | Name | Scope | Dependencies | Status | Key Outputs |
-|---|------|-------|-------------|:------:|-------------|
-| M1 | Crucible Backend GenAI Endpoints | `crucible/backend/app.py`, `models.py`, `tests/` | none | DONE | `/api/rag`, `/api/llm`, Pydantic schemas, 17 pytest tests |
-| M2 | k6 Load Testing Track & Rust Runner | `exercises/04_perf_k6_js/`, `src/runner.rs`, `src/main.rs` | none | DONE | `k6_runner.js`, 3 drills, `K6Runner`, `parse_k6_summary_json` |
-| M3 | Maestro Mobile Track & YAML Anti-Patterns | `exercises/03_mobile_maestro/`, `src/feedback.rs`, `src/runner.rs`, `src/main.rs` | none | DONE | `maestro_runner.sh`, 3 drills, `MaestroRunner`, YAML AST rules |
-| M4 | GenAI QA Track & Playwright Integration | `exercises/05_genai_qa/`, `crucible/backend/` | M1 | DONE | 2 GenAI drills, Playwright config, pass/fail validation |
-| M5 | Full Verification & E2E Acceptance | Rust test suite, Clippy, release build, Ruff, Forensic Audit | M1, M2, M3, M4 | DONE | 250 passing tests (>>145), 0 warnings, CLEAN audit |
+| # | Name | Scope | Dependencies | Status |
+|---|------|-------|-------------|--------|
+| M1 | Crucible Backend Expansion | Implement `/upload`, `/products`, `/events/stream`, `/graphql` in `crucible/backend/app.py`, update `chaos.py` and `models.py`, write 10 pytest tests, verify ruff | None | DONE |
+| M2 | Drill Curriculum Expansion | Author new drills for Playwright (06-10), REST Assured (04-07), Maestro (04-05), k6 (04-05), JMeter (01-08), Tool Decisions (03-04), update `lings.toml` | M1 | DONE |
+| M3 | Theoretical Context Modules | Author `theory.md` for all 48 drill directories with named incidents, mechanisms, ASCII diagrams, and crucible anchors | None | DONE |
+| M4 | JMeter Runner & Clippy Cleanup | Implement `JMeterRunner` in `src/runner.rs`, CSV JTL parser, `AnyRunner::Jmeter`, graceful PATH fallback, fix clippy warnings | None | DONE |
+| M5 | Gamification Engine | Implement `src/gamification.rs`, `.cherenkov-progress.json` persistence, XP formula, 7 levels, 8 badges, streak logic, terminal badge reveal | None | DONE |
+| M6 | Interactive Dashboard Subcommand | Implement `cherenkov-lings dashboard` in `src/main.rs`, ANSI scorecard rendering, track progress table, recommendation | M5 | DONE |
+| M7 | E2E Integration & Verification Gates | Run and verify all 6 gate commands: `cargo test`, `cargo clippy -- -D warnings`, `python -m pytest tests/test_micro_crucible_chaos.py`, `ruff check crucible/`, `npx playwright test exercises/05_genai_qa/`, `cargo run -- dashboard` | M1, M2, M3, M4, M5, M6 | DONE |
 
-## Interface Contracts
-### k6 Runner ↔ Summary JSON (`src/runner.rs`)
-- Command: `k6 run --summary-export=summary.json <file.js>`
-- Metric threshold parsing: inspects `metrics.*.thresholds.*.ok`. If any `ok == false`, mark drill iteration failed.
-- Speed/Duration: extracts `http_req_duration.values.avg` or `p(95)` for speed score.
-
-### Maestro YAML AST ↔ Feedback Matrix (`src/feedback.rs`)
-- Input: YAML source file (`.yaml` / `.yml`)
-- Anti-patterns detected:
-  - `MissingWhenCondition`: `Biometric` action without conditional `when:` / `runFlow` fallback.
-  - `MissingColdStartDeepLink`: `openLink` without cold start `launchApp` arguments.
-  - `MissingActivityRecreation`: Missing orientation change and re-assertion.
-- Penalty: Caps flakiness score at 40.0 pts.
-
-### Micro-Crucible GenAI Endpoints (`crucible/backend/`)
-- `GET /api/rag?query={q}` -> `RagResponse { query, answer, source_facts, grounded, document_title }`
-- `GET /api/llm?prompt={p}` -> `LlmResponse { prompt, intent, entities: { action, status, domain }, confidence, raw_text, model }`
+## Code Layout
+- `src/main.rs`: CLI commands (`watch`, `diagnose`, `init`, `proxy`, `mcp`, `dashboard`)
+- `src/lib.rs`: Library exports (`config`, `feedback`, `gamification`, `proxy`, `runner`, `watcher`)
+- `src/runner.rs`: Test runners (`NodeRunner`, `JvmRunner`, `K6Runner`, `MaestroRunner`, `PytestRunner`, `JMeterRunner`, `AnyRunner`)
+- `src/feedback.rs`: 4D Feedback Matrix & AST analyzer
+- `src/gamification.rs`: Gamification engine, XP, badges, progress storage, scorecard rendering, dashboard renderer
+- `crucible/backend/app.py`: FastAPI backend routes & GraphQL resolver
+- `crucible/backend/chaos.py`: Chaos headers & middleware
+- `crucible/backend/models.py`: Pydantic models
+- `tests/test_micro_crucible_chaos.py`: Pytest chaos integration suite (27 tests)
+- `exercises/`: 48 curriculum directories across 9 tracks
+- `lings.toml`: Curriculum and runner configuration

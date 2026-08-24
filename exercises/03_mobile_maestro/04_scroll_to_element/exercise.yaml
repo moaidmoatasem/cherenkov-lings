@@ -1,0 +1,20 @@
+# PRODUCTION STORY:
+# Instagram Dynamic Explore Grid Truncation (2021)
+# Automated UI test suites consistently passed on large tablet emulators but failed on 80% of real
+# mobile devices because the checkout and confirmation buttons were rendered below the fold and
+# test scripts lacked dynamic scrolling gestures.
+
+# Drill 04: Scroll Until Visible for Dynamic Viewports (Broken Anti-Pattern)
+# ANTI-PATTERN:
+# Attempting to tap on an element that is rendered off-screen below the fold without scrolling.
+# TODO: Use scrollUntilVisible with direction and maxRetries to bring the target element into view.
+---
+- launchApp:
+    appId: com.cherenkov.bankapp
+- tapOn:
+    text: View Products
+# Anti-pattern: Instantly attempts to tap on an element below the fold
+- tapOn:
+    id: btn-checkout
+- assertVisible:
+    text: Order Confirmed

@@ -13,6 +13,11 @@ import static org.hamcrest.Matchers.notNullValue;
 /**
  * Drill 01: Idempotency Collisions (Broken Anti-Pattern)
  *
+ * PRODUCTION STORY:
+ * Stripe Duplicate Payment Double-Charge (2017)
+ * Network timeout retry storms lacking unique idempotency keys caused thousands of customers
+ * to be double-charged during a downstream payment gateway partition.
+ *
  * ANTI-PATTERN:
  * This test naively assumes every checkout request and retry succeeds with HTTP 200 OK,
  * ignoring distributed transaction collisions and 409 Conflict responses.

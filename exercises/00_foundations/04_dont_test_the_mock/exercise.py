@@ -1,3 +1,10 @@
+"""
+PRODUCTION STORY:
+Knight Capital Group ($440M Trading Loss, 2012)
+Engineers repurposed an old testing flag in high-frequency trading code and tested it solely against
+internal mock engines that echoed back expected test data, concealing catastrophic live routing behavior.
+"""
+
 # Drill 04: Do Not Test the Mock
 # When you stub or fake every part of the system, you only prove
 # that your fake works correctly -- not your real code.

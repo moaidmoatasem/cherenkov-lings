@@ -10,17 +10,17 @@ def test_search_returns_200_for_empty_query():
     assert r.status_code == 200
 
 def test_search_returns_200_for_valid_query():
-    r = requests.get(f"{SEARCH_URL}?q=Pay", timeout=5)
+    r = requests.get(f"{SEARCH_URL}?q=Play", timeout=5)
     assert r.status_code == 200
 
 def test_search_results_field_present_in_response():
-    r = requests.get(f"{SEARCH_URL}?q=Pay", timeout=5)
+    r = requests.get(f"{SEARCH_URL}?q=Play", timeout=5)
     assert "results" in r.json()
 
 def test_search_returns_at_least_one_result():
-    r = requests.get(f"{SEARCH_URL}?q=Pay", timeout=5)
+    r = requests.get(f"{SEARCH_URL}?q=Play", timeout=5)
     assert len(r.json().get("results", [])) > 0
 
 def test_search_echoes_query_in_response():
-    r = requests.get(f"{SEARCH_URL}?q=Pay", timeout=5)
-    assert r.json().get("query") == "Pay"
+    r = requests.get(f"{SEARCH_URL}?q=Play", timeout=5)
+    assert r.json().get("query") == "Play"

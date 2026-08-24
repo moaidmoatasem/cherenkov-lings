@@ -1,3 +1,10 @@
+"""
+PRODUCTION STORY:
+Toyota Unintended Acceleration Firmware Investigation (2014)
+NASA and DOJ software forensics found spaghetti code where state mutation, telemetry recording,
+and throttle control checks were interleaved with no clean separation, masking memory corruption bugs.
+"""
+
 # Drill 03: The Arrange-Act-Assert Pattern
 # Every test in the world -- Playwright, REST Assured, k6, Postman -- follows AAA.
 # ARRANGE: Set up the data and state you need.

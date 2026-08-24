@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SDET Resilient Pattern: Constant Throughput Timer (Little's Law Pacing) -->
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.5">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="Little's Law Throughput Shaping (RESILIENT)" enabled="true">
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" enabled="true">
+        <collectionProp name="Arguments.arguments"/>
+      </elementProp>
+    </TestPlan>
+    <hashTree>
+      <!-- Threads = Target RPS * Latency (e.g., 50 RPS * 0.4s = 20 threads) -->
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Calculated 25 Threads" enabled="true">
+        <stringProp name="ThreadGroup.num_threads">25</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">5</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <intProp name="LoopController.loops">20</intProp>
+        </elementProp>
+      </ThreadGroup>
+      <hashTree>
+        <!-- SDET PATTERN: Constant Throughput Timer limits overall load to exact target (e.g. 600 samples/min = 10 RPS) -->
+        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="Constant Throughput Timer (600.0/min = 10 RPS)" enabled="true">
+          <intProp name="calcMode">1</intProp>
+          <doubleProp>
+            <name>throughput</name>
+            <value>600.0</value>
+            <savedValue>0.0</savedValue>
+          </doubleProp>
+        </ConstantThroughputTimer>
+        <hashTree/>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET /products" enabled="true">
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8081</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.path">/products</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+        </HTTPSamplerProxy>
+        <hashTree/>
+      </hashTree>
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>

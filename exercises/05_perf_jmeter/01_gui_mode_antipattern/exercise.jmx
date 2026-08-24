@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  PRODUCTION STORY:
+  Target Black Friday Concurrency Collapse (2013)
+  During pre-holiday load testing, performance engineers ran high-concurrency test plans inside the JMeter GUI.
+  The load generators exhausted JVM heap memory rendering Swing UI graphs, producing false-positive client-side bottlenecks.
+-->
 <!-- JMeter Test Plan: GUI Mode Anti-Pattern -->
 <!-- PROBLEM: This plan is designed to be run inside the JMeter GUI application.
      Running JMeter in GUI mode during a load test consumes 20-30% extra CPU

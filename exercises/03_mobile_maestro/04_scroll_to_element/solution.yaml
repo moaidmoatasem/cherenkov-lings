@@ -1,0 +1,17 @@
+# SDET Resilient Pattern: Dynamic Scroll Until Element Visible
+# Uses Maestro's scrollUntilVisible command to handle varying screen heights,
+# lazy-loading lists, and dynamic recycler views across Android & iOS devices.
+---
+- launchApp:
+    appId: com.cherenkov.bankapp
+- tapOn:
+    text: View Products
+- scrollUntilVisible:
+    element:
+      id: btn-checkout
+    direction: DOWN
+    maxRetries: 5
+- tapOn:
+    id: btn-checkout
+- assertVisible:
+    text: Order Confirmed

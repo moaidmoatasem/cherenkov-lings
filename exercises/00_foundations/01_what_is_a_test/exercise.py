@@ -1,3 +1,11 @@
+"""
+PRODUCTION STORY:
+NASA Mars Climate Orbiter (1999)
+A $327M spacecraft was destroyed in Mars' atmosphere because the ground software produced output
+in non-metric units (pound-seconds) while the trajectory models expected metric (newton-seconds).
+No automated assertions existed to verify unit conversions, causing the orbiter to disintegrate.
+"""
+
 # Drill 01: What is an Automated Test?
 # As a Manual QA engineer you know how to CHECK something manually.
 # An automated test is just that same check -- written as code.

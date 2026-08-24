@@ -1,3 +1,10 @@
+/**
+ * PRODUCTION STORY:
+ * Air Canada Chatbot False Refund Advice (2022)
+ * A generative customer service chatbot hallucinated a bereavement discount policy not present in the
+ * company's official knowledge base. Exact-match string assertions in QA failed to detect semantic unfaithfulness.
+ */
+
 import { test, expect } from '@playwright/test';
 
 test('RAG response is faithful to the source document', async ({ request }) => {

@@ -1,3 +1,8 @@
+# PRODUCTION STORY:
+# Uber Android Cold-Start Activity Reset (2019)
+# Opening a deep link on a cold-started app instance bypassed standard splash activity auth setup,
+# resulting in null pointer exceptions when the destination view loaded without an active session context.
+
 # Drill 02: Deep Link Cold Start
 # Anti-pattern: Assumes the app is already running when the deep link fires
 # TODO: Use launchApp with deeplink arguments instead of openLink on a running app

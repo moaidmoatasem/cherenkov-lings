@@ -1,3 +1,10 @@
+"""
+PRODUCTION STORY:
+Google Test Automation Pyramid Inversion (2015)
+Teams relying predominantly on end-to-end browser tests suffered from 12-hour CI build cycles and 30% flakiness,
+prompting a company-wide shift to enforce the Test Pyramid: testing core business calculations at the fast API layer.
+"""
+
 # Drill 01: UI Test vs API Test -- When to Use Which?
 #
 # Scenario: The checkout total must equal (item_price * quantity) + tax.

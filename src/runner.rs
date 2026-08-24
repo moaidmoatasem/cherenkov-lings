@@ -1291,16 +1291,435 @@ impl Default for MaestroRunner {
     }
 }
 
-/// Unified Runner enum supporting NodeRunner, JvmRunner, K6Runner, and MaestroRunner
-pub enum AnyRunner {
-    Node(Arc<NodeRunner>),
-    Jvm(Arc<JvmRunner>),
-    K6(Arc<K6Runner>),
-    Maestro(Arc<MaestroRunner>),
-    Pytest(Arc<PytestRunner>),
+#[derive(Debug, Clone, PartialEq)]
+pub struct JtlSample {
+    pub elapsed: u64,
+    pub label: String,
+    pub response_code: String,
+    pub response_message: String,
+    pub success: bool,
+    pub failure_message: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct JtlMetrics {
+    pub total_samples: usize,
+    pub passed_samples: usize,
+    pub failed_samples: usize,
+    pub error_rate: f64,
+    pub avg_elapsed_ms: u64,
+    pub min_elapsed_ms: u64,
+    pub max_elapsed_ms: u64,
+    pub p90_elapsed_ms: u64,
+    pub p95_elapsed_ms: u64,
+    pub p99_elapsed_ms: u64,
+    pub samples: Vec<JtlSample>,
+    pub first_failure_reason: Option<String>,
+}
+
+fn split_csv_line(line: &str) -> Vec<String> {
+    let mut fields = Vec::new();
+    let mut current = String::new();
+    let mut in_quotes = false;
+    let mut chars = line.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            '"' => {
+                if in_quotes && chars.peek() == Some(&'"') {
+                    current.push('"');
+                    chars.next();
+                } else {
+                    in_quotes = !in_quotes;
+                }
+            }
+            ',' if !in_quotes => {
+                fields.push(current.trim().to_string());
+                current.clear();
+            }
+            _ => {
+                current.push(c);
+            }
+        }
+    }
+    fields.push(current.trim().to_string());
+    fields
+}
+
+/// Parse JMeter JTL CSV format for elapsed, success, label, responseCode to compute latency and error metrics
+pub fn parse_jmeter_jtl_csv(csv_content: &str) -> Result<JtlMetrics, RunnerError> {
+    let mut lines = csv_content.lines().map(str::trim).filter(|l| !l.is_empty());
+    let header_line = match lines.next() {
+        Some(h) => h,
+        None => return Ok(JtlMetrics::default()),
+    };
+
+    let header_fields = split_csv_line(header_line);
+    let mut elapsed_idx = None;
+    let mut label_idx = None;
+    let mut response_code_idx = None;
+    let mut response_message_idx = None;
+    let mut success_idx = None;
+    let mut failure_message_idx = None;
+
+    for (idx, field) in header_fields.iter().enumerate() {
+        let lower = field.to_ascii_lowercase();
+        match lower.as_str() {
+            "elapsed" => elapsed_idx = Some(idx),
+            "label" => label_idx = Some(idx),
+            "responsecode" | "response_code" | "rc" => response_code_idx = Some(idx),
+            "responsemessage" | "response_message" | "rm" => response_message_idx = Some(idx),
+            "success" => success_idx = Some(idx),
+            "failuremessage" | "failure_message" => failure_message_idx = Some(idx),
+            _ => {}
+        }
+    }
+
+    // Default column indices based on standard JMeter CSV order if not explicitly matched
+    let elapsed_idx = elapsed_idx.unwrap_or(1);
+    let label_idx = label_idx.unwrap_or(2);
+    let response_code_idx = response_code_idx.unwrap_or(3);
+    let response_message_idx = response_message_idx.unwrap_or(4);
+    let success_idx = success_idx.unwrap_or(7);
+    let failure_message_idx = failure_message_idx.unwrap_or(8);
+
+    let mut samples = Vec::new();
+    let mut first_failure_reason = None;
+
+    for line in lines {
+        if line.starts_with('#') {
+            continue;
+        }
+        let fields = split_csv_line(line);
+        if fields.is_empty() {
+            continue;
+        }
+
+        let elapsed = fields
+            .get(elapsed_idx)
+            .and_then(|s| s.parse::<f64>().ok())
+            .map(|f| f.round() as u64)
+            .unwrap_or(0);
+
+        let label = fields.get(label_idx).cloned().unwrap_or_default();
+        let response_code = fields.get(response_code_idx).cloned().unwrap_or_default();
+        let response_message = fields.get(response_message_idx).cloned().unwrap_or_default();
+        let success = fields
+            .get(success_idx)
+            .map(|s| s.eq_ignore_ascii_case("true") || s == "1" || s.eq_ignore_ascii_case("ok"))
+            .unwrap_or(false);
+        let failure_message = fields.get(failure_message_idx).cloned().unwrap_or_default();
+
+        if !success && first_failure_reason.is_none() {
+            let reason = if !failure_message.is_empty() {
+                format!("Sample '{}' failed (HTTP {}): {}", label, response_code, failure_message)
+            } else if !response_message.is_empty() {
+                format!("Sample '{}' failed (HTTP {}): {}", label, response_code, response_message)
+            } else {
+                format!("Sample '{}' failed with response code '{}'", label, response_code)
+            };
+            first_failure_reason = Some(reason);
+        }
+
+        samples.push(JtlSample {
+            elapsed,
+            label,
+            response_code,
+            response_message,
+            success,
+            failure_message,
+        });
+    }
+
+    let total_samples = samples.len();
+    if total_samples == 0 {
+        return Ok(JtlMetrics::default());
+    }
+
+    let passed_samples = samples.iter().filter(|s| s.success).count();
+    let failed_samples = total_samples - passed_samples;
+    let error_rate = failed_samples as f64 / total_samples as f64;
+
+    let mut elapsed_list: Vec<u64> = samples.iter().map(|s| s.elapsed).collect();
+    elapsed_list.sort_unstable();
+
+    let min_elapsed_ms = *elapsed_list.first().unwrap_or(&0);
+    let max_elapsed_ms = *elapsed_list.last().unwrap_or(&0);
+    let sum_elapsed: u64 = elapsed_list.iter().sum();
+    let avg_elapsed_ms = (sum_elapsed as f64 / total_samples as f64).round() as u64;
+
+    let p90_idx = ((total_samples as f64 * 0.90).ceil() as usize).saturating_sub(1).min(total_samples - 1);
+    let p95_idx = ((total_samples as f64 * 0.95).ceil() as usize).saturating_sub(1).min(total_samples - 1);
+    let p99_idx = ((total_samples as f64 * 0.99).ceil() as usize).saturating_sub(1).min(total_samples - 1);
+
+    let p90_elapsed_ms = elapsed_list[p90_idx];
+    let p95_elapsed_ms = elapsed_list[p95_idx];
+    let p99_elapsed_ms = elapsed_list[p99_idx];
+
+    Ok(JtlMetrics {
+        total_samples,
+        passed_samples,
+        failed_samples,
+        error_rate,
+        avg_elapsed_ms,
+        min_elapsed_ms,
+        max_elapsed_ms,
+        p90_elapsed_ms,
+        p95_elapsed_ms,
+        p99_elapsed_ms,
+        samples,
+        first_failure_reason,
+    })
+}
+
+/// JMeterRunner executes Apache JMeter non-GUI test plans and parses the resulting JTL CSV output
+pub struct JMeterRunner {
+    jmeter_cmd: String,
+    request_counter: AtomicU64,
+}
+
+impl JMeterRunner {
+    pub fn new() -> Self {
+        Self {
+            jmeter_cmd: "jmeter".to_string(),
+            request_counter: AtomicU64::new(1),
+        }
+    }
+
+    pub fn with_jmeter_cmd<S: Into<String>>(cmd: S) -> Self {
+        Self {
+            jmeter_cmd: cmd.into(),
+            request_counter: AtomicU64::new(1),
+        }
+    }
+
+    pub fn jmeter_cmd(&self) -> &str {
+        &self.jmeter_cmd
+    }
+
+    pub fn parse_jtl_report<P: AsRef<Path>>(report_path: P) -> Result<JtlMetrics, RunnerError> {
+        let content = std::fs::read_to_string(report_path)?;
+        parse_jmeter_jtl_csv(&content)
+    }
+
+    pub async fn run_single_iteration(
+        &self,
+        file: &str,
+        chaos: &str,
+        timeout_ms: u64,
+        iteration: u32,
+    ) -> Result<RunResult, RunnerError> {
+        let start = std::time::Instant::now();
+        let exercise_path = Path::new(file);
+        if !exercise_path.exists() {
+            return Err(RunnerError::WorkerError(format!(
+                "Exercise file does not exist: {}",
+                file
+            )));
+        }
+
+        let req_id = self.request_counter.fetch_add(1, Ordering::SeqCst);
+        let jtl_file = std::env::temp_dir().join(format!(
+            "jmeter-results-{}-{}-{}.jtl",
+            std::process::id(),
+            req_id,
+            iteration
+        ));
+
+        let _ = std::fs::remove_file(&jtl_file);
+
+        let mut cmd = Command::new(&self.jmeter_cmd);
+        cmd.arg("-n")
+            .arg("-t")
+            .arg(file)
+            .arg("-l")
+            .arg(&jtl_file)
+            .env("X_CHAOS", chaos)
+            .env("PW_CHAOS_HEADER", chaos)
+            .env("CHAOS_DIRECTIVES", chaos)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+
+        let result_future = async {
+            let child = cmd.spawn()?;
+            let output = child.wait_with_output().await?;
+            Ok::<std::process::Output, std::io::Error>(output)
+        };
+
+        let dur_limit = Duration::from_millis(timeout_ms.max(1000));
+        let exec_result = match timeout(dur_limit, result_future).await {
+            Ok(Ok(output)) => output,
+            Ok(Err(e)) => {
+                let _ = std::fs::remove_file(&jtl_file);
+                return Err(RunnerError::Io(e));
+            }
+            Err(_) => {
+                let _ = std::fs::remove_file(&jtl_file);
+                return Err(RunnerError::Timeout(dur_limit));
+            }
+        };
+
+        let elapsed = start.elapsed().as_millis() as u64;
+
+        if jtl_file.exists() {
+            let content = std::fs::read_to_string(&jtl_file)
+                .map_err(RunnerError::Io)?;
+            let _ = std::fs::remove_file(&jtl_file);
+
+            let metrics = parse_jmeter_jtl_csv(&content)?;
+            let passed = exec_result.status.success() && metrics.total_samples > 0 && metrics.failed_samples == 0;
+            let error = if !passed {
+                if let Some(reason) = metrics.first_failure_reason {
+                    Some(reason)
+                } else if !exec_result.status.success() {
+                    let stderr = String::from_utf8_lossy(&exec_result.stderr);
+                    let stdout = String::from_utf8_lossy(&exec_result.stdout);
+                    let err_msg = if !stderr.trim().is_empty() {
+                        stderr.trim()
+                    } else {
+                        stdout.trim()
+                    };
+                    Some(format!("JMeter exited with non-zero status: {}", err_msg))
+                } else if metrics.total_samples == 0 {
+                    Some("JMeter produced no sample results in JTL report".to_string())
+                } else {
+                    Some("JMeter performance assertions failed".to_string())
+                }
+            } else {
+                None
+            };
+
+            let duration = if metrics.avg_elapsed_ms > 0 {
+                metrics.avg_elapsed_ms
+            } else {
+                elapsed
+            };
+
+            Ok(RunResult {
+                iteration,
+                passed,
+                duration_ms: duration,
+                error,
+            })
+        } else {
+            let passed = exec_result.status.success();
+            let error = if !passed {
+                let stderr = String::from_utf8_lossy(&exec_result.stderr);
+                let stdout = String::from_utf8_lossy(&exec_result.stdout);
+                let err_msg = if !stderr.trim().is_empty() {
+                    stderr.trim()
+                } else {
+                    stdout.trim()
+                };
+                Some(format!("JMeter failed without JTL output: {}", err_msg))
+            } else {
+                None
+            };
+
+            Ok(RunResult {
+                iteration,
+                passed,
+                duration_ms: elapsed,
+                error,
+            })
+        }
+    }
+
+    pub async fn run_drill(
+        &self,
+        file: &str,
+        chaos: &str,
+        iterations: u32,
+        timeout_ms: u64,
+    ) -> Result<DrillResponse, RunnerError> {
+        let req_id = format!("jmeter-req-{}", self.request_counter.fetch_add(1, Ordering::SeqCst));
+        let exercise_path = Path::new(file);
+        if !exercise_path.exists() {
+            return Ok(DrillResponse {
+                id: req_id,
+                ok: false,
+                passed: false,
+                iterations,
+                passed_iterations: 0,
+                failed_iterations: iterations,
+                total_duration_ms: 0,
+                runs: Vec::new(),
+                error: Some(format!("Exercise file does not exist: {}", file)),
+            });
+        }
+
+        let iterations = iterations.max(1);
+        let mut runs = Vec::with_capacity(iterations as usize);
+        let mut passed_iterations = 0;
+        let mut failed_iterations = 0;
+        let mut total_duration_ms = 0;
+        let mut first_error = None;
+
+        let timeout_per_iter = (timeout_ms / (iterations as u64)).max(5000);
+
+        for i in 1..=iterations {
+            match self.run_single_iteration(file, chaos, timeout_per_iter, i).await {
+                Ok(result) => {
+                    if result.passed {
+                        passed_iterations += 1;
+                    } else {
+                        failed_iterations += 1;
+                        if first_error.is_none() {
+                            first_error = result.error.clone();
+                        }
+                    }
+                    total_duration_ms += result.duration_ms;
+                    runs.push(result);
+                }
+                Err(RunnerError::Io(e)) if e.kind() == std::io::ErrorKind::NotFound => {
+                    return Ok(DrillResponse {
+                        id: req_id,
+                        ok: false,
+                        passed: false,
+                        iterations,
+                        passed_iterations: 0,
+                        failed_iterations: iterations,
+                        total_duration_ms: 0,
+                        runs: Vec::new(),
+                        error: Some(format!(
+                            "JMeter binary ('{}') was not found on PATH. Please install Apache JMeter (https://jmeter.apache.org/download_jmeter.cgi) and add its 'bin' directory to your system PATH (e.g. 'winget install Apache.JMeter' on Windows or 'brew install jmeter' on macOS).",
+                            self.jmeter_cmd
+                        )),
+                    });
+                }
+                Err(e) => return Err(e),
+            }
+        }
+
+        let overall_passed = failed_iterations == 0 && passed_iterations > 0;
+
+        Ok(DrillResponse {
+            id: req_id,
+            ok: true,
+            passed: overall_passed,
+            iterations,
+            passed_iterations,
+            failed_iterations,
+            total_duration_ms,
+            runs,
+            error: first_error,
+        })
+    }
+}
+
+impl Default for JMeterRunner {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 pub struct PytestRunner;
+
+impl Default for PytestRunner {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PytestRunner {
     pub fn new() -> Self { Self }
 }
@@ -1320,7 +1739,7 @@ impl Runner for PytestRunner {
                 .arg(&path)
                 .output()
                 .await
-                .map_err(|e| RunnerError::Io(e))?;
+                .map_err(RunnerError::Io)?;
             
             let stdout = String::from_utf8_lossy(&output.stdout);
             let passed = stdout.contains("\"passed\": true");
@@ -1340,7 +1759,15 @@ impl Runner for PytestRunner {
     }
 }
 
-
+/// Unified Runner enum supporting NodeRunner, JvmRunner, K6Runner, MaestroRunner, PytestRunner, and JMeterRunner
+pub enum AnyRunner {
+    Node(Arc<NodeRunner>),
+    Jvm(Arc<JvmRunner>),
+    K6(Arc<K6Runner>),
+    Maestro(Arc<MaestroRunner>),
+    Pytest(Arc<PytestRunner>),
+    Jmeter(Arc<JMeterRunner>),
+}
 
 impl AnyRunner {
     pub async fn run_drill(
@@ -1356,6 +1783,7 @@ impl AnyRunner {
             Self::K6(runner) => runner.run_drill(file, chaos, iterations, timeout_ms).await,
             Self::Maestro(runner) => runner.run_drill(file, chaos, iterations, timeout_ms).await,
             Self::Pytest(runner) => runner.run_drill(file, chaos, iterations, timeout_ms).await,
+            Self::Jmeter(runner) => runner.run_drill(file, chaos, iterations, timeout_ms).await,
         }
     }
 }
@@ -1407,6 +1835,18 @@ impl Runner for K6Runner {
 }
 
 impl Runner for MaestroRunner {
+    async fn run_drill(
+        &self,
+        file: &str,
+        chaos: &str,
+        iterations: u32,
+        timeout_ms: u64,
+    ) -> Result<DrillResponse, RunnerError> {
+        self.run_drill(file, chaos, iterations, timeout_ms).await
+    }
+}
+
+impl Runner for JMeterRunner {
     async fn run_drill(
         &self,
         file: &str,
@@ -1860,4 +2300,164 @@ Expected status code <200> but was <409>.
         assert!(!response.passed);
         assert!(response.error.is_some());
     }
+
+    #[test]
+    fn test_parse_jmeter_jtl_csv_all_passed() {
+        let csv_data = r#"timeStamp,elapsed,label,responseCode,responseMessage,threadName,dataType,success,failureMessage,bytes,sentBytes,grpThreads,allThreads,URL,Latency,IdleTime,Connect
+1700000000000,20,GET /api/v1/health,200,OK,Thread Group 1-1,text,true,,120,50,1,1,http://localhost:8081/api/v1/health,18,0,2
+1700000000100,40,GET /api/v1/products,200,OK,Thread Group 1-1,text,true,,2048,50,1,1,http://localhost:8081/api/v1/products,35,0,5
+1700000000200,80,POST /api/v1/orders,201,Created,Thread Group 1-1,text,true,,512,200,1,1,http://localhost:8081/api/v1/orders,75,0,5
+1700000000300,120,GET /api/v1/orders/1,200,OK,Thread Group 1-1,text,true,,400,50,1,1,http://localhost:8081/api/v1/orders/1,110,0,10
+"#;
+        let metrics = parse_jmeter_jtl_csv(csv_data).expect("Parse JTL CSV");
+        assert_eq!(metrics.total_samples, 4);
+        assert_eq!(metrics.passed_samples, 4);
+        assert_eq!(metrics.failed_samples, 0);
+        assert_eq!(metrics.error_rate, 0.0);
+        assert_eq!(metrics.min_elapsed_ms, 20);
+        assert_eq!(metrics.max_elapsed_ms, 120);
+        assert_eq!(metrics.avg_elapsed_ms, 65); // (20+40+80+120)/4 = 65
+        assert_eq!(metrics.p90_elapsed_ms, 120);
+        assert_eq!(metrics.p95_elapsed_ms, 120);
+        assert_eq!(metrics.p99_elapsed_ms, 120);
+        assert!(metrics.first_failure_reason.is_none());
+        assert_eq!(metrics.samples.len(), 4);
+        assert_eq!(metrics.samples[0].label, "GET /api/v1/health");
+        assert_eq!(metrics.samples[0].response_code, "200");
+    }
+
+    #[test]
+    fn test_parse_jmeter_jtl_csv_with_failures() {
+        let csv_data = r#"timeStamp,elapsed,label,responseCode,responseMessage,threadName,dataType,success,failureMessage
+1700000000000,50,GET /api/v1/catalog,200,OK,Thread Group 1-1,text,true,
+1700000000100,500,POST /api/v1/checkout,500,Internal Server Error,Thread Group 1-1,text,false,Test failed: code expected to match /200/
+1700000000200,30,GET /api/v1/cart,200,OK,Thread Group 1-1,text,true,
+1700000000300,600,POST /api/v1/payment,503,Service Unavailable,Thread Group 1-1,text,false,Gateway timeout
+1700000000400,20,GET /api/v1/user,200,OK,Thread Group 1-1,text,true,
+"#;
+        let metrics = parse_jmeter_jtl_csv(csv_data).expect("Parse JTL CSV");
+        assert_eq!(metrics.total_samples, 5);
+        assert_eq!(metrics.passed_samples, 3);
+        assert_eq!(metrics.failed_samples, 2);
+        assert!((metrics.error_rate - 0.4).abs() < 0.001);
+        assert_eq!(metrics.min_elapsed_ms, 20);
+        assert_eq!(metrics.max_elapsed_ms, 600);
+        assert_eq!(metrics.avg_elapsed_ms, 240); // (20+30+50+500+600)/5 = 240
+        assert!(metrics.first_failure_reason.is_some());
+        let reason = metrics.first_failure_reason.unwrap();
+        assert!(reason.contains("POST /api/v1/checkout"));
+        assert!(reason.contains("500"));
+        assert!(reason.contains("Test failed: code expected to match /200/"));
+    }
+
+    #[test]
+    fn test_parse_jmeter_jtl_csv_percentiles_100_samples() {
+        let mut csv_data = String::from("timeStamp,elapsed,label,responseCode,responseMessage,threadName,dataType,success,failureMessage\n");
+        for i in 1..=100 {
+            csv_data.push_str(&format!(
+                "1700000000000,{},Sample {},200,OK,Thread 1,text,true,\n",
+                i, i
+            ));
+        }
+
+        let metrics = parse_jmeter_jtl_csv(&csv_data).expect("Parse JTL CSV 100 samples");
+        assert_eq!(metrics.total_samples, 100);
+        assert_eq!(metrics.passed_samples, 100);
+        assert_eq!(metrics.failed_samples, 0);
+        assert_eq!(metrics.min_elapsed_ms, 1);
+        assert_eq!(metrics.max_elapsed_ms, 100);
+        assert_eq!(metrics.avg_elapsed_ms, 51); // (1+100)*100/2 / 100 = 50.5 -> 51
+        assert_eq!(metrics.p90_elapsed_ms, 90);
+        assert_eq!(metrics.p95_elapsed_ms, 95);
+        assert_eq!(metrics.p99_elapsed_ms, 99);
+    }
+
+    #[test]
+    fn test_parse_jmeter_jtl_csv_quoted_fields_and_commas() {
+        let csv_data = r#"timeStamp,elapsed,label,responseCode,responseMessage,threadName,dataType,success,failureMessage
+1700000000000,15,"GET /api/v1/items?filter=a,b,c",200,"OK, processed successfully",Thread Group 1-1,text,true,""
+1700000000100,250,"POST /api/v1/items,batch",400,"Bad Request, invalid JSON",Thread Group 1-1,text,false,"Validation failed, field 'name' is required"
+"#;
+        let metrics = parse_jmeter_jtl_csv(csv_data).expect("Parse JTL CSV with quotes");
+        assert_eq!(metrics.total_samples, 2);
+        assert_eq!(metrics.passed_samples, 1);
+        assert_eq!(metrics.failed_samples, 1);
+        assert_eq!(metrics.samples[0].label, "GET /api/v1/items?filter=a,b,c");
+        assert_eq!(metrics.samples[0].response_message, "OK, processed successfully");
+        assert_eq!(metrics.samples[1].label, "POST /api/v1/items,batch");
+        assert_eq!(metrics.samples[1].failure_message, "Validation failed, field 'name' is required");
+    }
+
+    #[test]
+    fn test_parse_jmeter_jtl_csv_empty_and_corrupt() {
+        let empty = "";
+        let metrics_empty = parse_jmeter_jtl_csv(empty).expect("Parse empty");
+        assert_eq!(metrics_empty.total_samples, 0);
+
+        let header_only = "timeStamp,elapsed,label,responseCode,responseMessage,threadName,dataType,success,failureMessage\n";
+        let metrics_header = parse_jmeter_jtl_csv(header_only).expect("Parse header only");
+        assert_eq!(metrics_header.total_samples, 0);
+    }
+
+    #[test]
+    fn test_jmeter_runner_options_and_default() {
+        let runner = JMeterRunner::new();
+        assert_eq!(runner.jmeter_cmd(), "jmeter");
+
+        let default_runner = JMeterRunner::default();
+        assert_eq!(default_runner.jmeter_cmd(), "jmeter");
+
+        let custom = JMeterRunner::with_jmeter_cmd("custom-jmeter-path");
+        assert_eq!(custom.jmeter_cmd(), "custom-jmeter-path");
+    }
+
+    #[tokio::test]
+    async fn test_jmeter_runner_missing_binary_graceful_handling() {
+        let runner = JMeterRunner::with_jmeter_cmd("nonexistent-jmeter-bin-xyz-99999");
+        let temp_dir = std::env::temp_dir();
+        let test_file = temp_dir.join("test_plan_sample.jmx");
+        std::fs::write(&test_file, "<jmeterTestPlan></jmeterTestPlan>").expect("Write test plan");
+
+        let response = runner
+            .run_drill(test_file.to_str().unwrap(), "", 2, 5000)
+            .await
+            .expect("Runner execution should not panic or return Err");
+
+        let _ = std::fs::remove_file(&test_file);
+
+        assert!(!response.ok);
+        assert!(!response.passed);
+        assert_eq!(response.passed_iterations, 0);
+        assert_eq!(response.failed_iterations, 2);
+        assert!(response.error.is_some());
+        let err = response.error.unwrap();
+        assert!(err.contains("not found on PATH"));
+        assert!(err.contains("Apache JMeter"));
+    }
+
+    #[tokio::test]
+    async fn test_jmeter_runner_nonexistent_exercise_file() {
+        let runner = JMeterRunner::new();
+        let response = runner
+            .run_drill("non_existent_plan.jmx", "", 1, 5000)
+            .await
+            .expect("Runner execution");
+        assert!(!response.ok);
+        assert!(!response.passed);
+        assert!(response.error.is_some());
+        assert!(response.error.unwrap().contains("does not exist"));
+    }
+
+    #[test]
+    fn test_any_runner_jmeter_wrapping() {
+        let runner = Arc::new(JMeterRunner::new());
+        let any_runner = AnyRunner::Jmeter(runner);
+        match any_runner {
+            AnyRunner::Jmeter(r) => {
+                assert_eq!(r.jmeter_cmd(), "jmeter");
+            }
+            _ => panic!("Expected AnyRunner::Jmeter"),
+        }
+    }
 }
+

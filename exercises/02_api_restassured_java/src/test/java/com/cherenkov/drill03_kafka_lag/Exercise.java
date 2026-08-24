@@ -12,6 +12,11 @@ import static org.hamcrest.Matchers.equalTo;
 /**
  * Drill 03: Kafka Lag Assertions (Broken Anti-Pattern)
  *
+ * PRODUCTION STORY:
+ * Revolut Async Ledger Balance Drift (2021)
+ * High-frequency ledger transfers processed asynchronously through message queues caused immediate
+ * read-after-write assertions to fail because read replicas lagged behind the Kafka ingestion pipeline.
+ *
  * ANTI-PATTERN:
  * This test naively relies on a hardcoded, brittle Thread.sleep(100) to wait for an
  * asynchronous ledger transfer to settle. Because the message queue introduces 1500ms

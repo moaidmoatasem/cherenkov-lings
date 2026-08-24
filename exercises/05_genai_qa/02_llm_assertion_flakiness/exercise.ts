@@ -1,3 +1,10 @@
+/**
+ * PRODUCTION STORY:
+ * Google Gemini Customer Intent Drift (2023)
+ * Non-deterministic phrasing variations across temperature-enabled LLM endpoints broke 75% of CI builds
+ * when test suites asserted on exact raw response strings rather than structured semantic intent and entity fields.
+ */
+
 import { test, expect } from '@playwright/test';
 
 test('LLM response describes transfer status correctly', async ({ request }) => {

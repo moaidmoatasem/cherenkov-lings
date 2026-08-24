@@ -1,0 +1,18 @@
+# PRODUCTION STORY:
+# Slack iOS 14 Notification Permission Deadlock (2020)
+# A major mobile release introduced asynchronous system notification prompts on initial launch.
+# Automated regression tests on cloud device farms locked up because the unexpected OS modal
+# obscured app login buttons, causing CI test timeouts across 50 device models.
+
+# Drill 05: Push Notification System Permission Handling (Broken Anti-Pattern)
+# ANTI-PATTERN:
+# Ignoring asynchronous system permission dialogs, which freeze test execution when present.
+# TODO: Use Maestro's runFlow with a conditional 'when: visible' check to dismiss permission popups if they appear.
+---
+- launchApp:
+    appId: com.cherenkov.bankapp
+# Anti-pattern: Fails to handle OS notification permission prompt that may appear asynchronously
+- tapOn:
+    text: View Alerts
+- assertVisible:
+    text: System Alerts

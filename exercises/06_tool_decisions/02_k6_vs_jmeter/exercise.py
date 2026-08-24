@@ -1,3 +1,10 @@
+"""
+PRODUCTION STORY:
+Monzo Modern Kubernetes Load Migration (2020)
+Legacy heavy JVM load test suites required dedicated infrastructure clusters and GUI-driven maintenance.
+Migrating to code-first, developer-friendly k6 scripts enabled version-controlled load testing directly inside PR pipelines.
+"""
+
 # Drill 02: k6 vs JMeter -- Which Performance Tool to Choose?
 #
 # Your team needs to run load tests in CI. Read each scenario and

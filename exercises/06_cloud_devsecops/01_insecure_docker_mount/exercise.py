@@ -1,3 +1,10 @@
+"""
+PRODUCTION STORY:
+Tesla Kubernetes Crypto-Mining Hijack (2018)
+Attackers gained access to an unauthenticated Kubernetes dashboard and compromised containers mounting
+the host's /var/run/docker.sock, escalating directly to root privileges on the underlying AWS EC2 cluster.
+"""
+
 import pytest
 
 def test_docker_mount_security():

@@ -1,0 +1,15 @@
+# SDET Resilient Pattern: Conditional System Permission Flow
+# Uses Maestro's runFlow with a 'when: visible' condition to handle optional
+# OS notification/location permission prompts gracefully without flakiness.
+---
+- launchApp:
+    appId: com.cherenkov.bankapp
+- runFlow:
+    when:
+      visible: "Allow.*notifications|Allow"
+    commands:
+      - tapOn: "Allow"
+- tapOn:
+    text: View Alerts
+- assertVisible:
+    text: System Alerts

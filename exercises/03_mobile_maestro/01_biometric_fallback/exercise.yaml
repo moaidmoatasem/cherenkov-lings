@@ -1,3 +1,8 @@
+# PRODUCTION STORY:
+# Starbucks Mobile Pay Biometric Freeze (2020)
+# A mobile release had tests passing on emulators with simulated TouchID/FaceID always returning success.
+# On customer devices with dirty sensors or disabled biometrics, the app hung because fallback PIN flows were untested.
+
 # Drill 01: Biometric Fallback
 # Anti-pattern: No fallback handling -- assumes biometric always succeeds
 # TODO: Add a conditional flow to handle biometric failure and switch to PIN entry

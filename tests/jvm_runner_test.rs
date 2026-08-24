@@ -131,7 +131,7 @@ fn test_ast_feedback_on_actual_java_drill_files() {
     assert!(ast_ex.has_wait_for_timeout, "Exercise.java must trigger timing anti-pattern flag");
     assert_eq!(ast_ex.anti_patterns.len(), 1);
     assert_eq!(ast_ex.anti_patterns[0].kind, AntiPatternKind::ThreadSleep { duration_ms: Some(100) });
-    assert_eq!(ast_ex.anti_patterns[0].line, 59);
+    assert_eq!(ast_ex.anti_patterns[0].line, 64);
 
     // Solution AST analysis
     let ast_sol = feedback::analyze_file(d3_sol).expect("Analyze Solution.java");

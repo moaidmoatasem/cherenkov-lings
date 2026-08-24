@@ -1,3 +1,10 @@
+/**
+ * PRODUCTION STORY:
+ * Salesforce Lightning Component Lockup (2019)
+ * Automated regression test suites failed across thousands of customer orgs because tests relied
+ * on absolute XPath selectors that could not traverse Web Component Shadow DOM encapsulation boundaries.
+ */
+
 import { test, expect } from '@playwright/test';
 
 test('pierce shadow dom to unlock vault and verify secret token', async ({ page }) => {

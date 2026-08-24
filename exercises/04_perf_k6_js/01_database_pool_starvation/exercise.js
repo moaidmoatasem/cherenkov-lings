@@ -1,4 +1,11 @@
-﻿import http from 'k6/http';
+/**
+ * PRODUCTION STORY:
+ * Coinbase Super Bowl LVI Traffic Crash (2022)
+ * A QR-code commercial drove 20 million hits in one minute. The database connection pool was instantly
+ * exhausted because the application had only been tested with static concurrency without realistic warm-up ramp stages.
+ */
+
+import http from 'k6/http';
 import { sleep } from 'k6';
 
 // Anti-pattern: 50 VUs hit the server instantly — no ramp-up
