@@ -1,0 +1,13 @@
+{
+  "editor.formatOnSave": true,
+  "rust-analyzer.checkOnSave.command": "clippy",
+  "files.associations": {
+    "lings.toml": "toml"
+  },
+  "github.copilot.chat.agent.mcpServers": {
+    "cherenkov-lings": {
+      "command": "cherenkov-lings",
+      "args": ["mcp"]
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "servers": {
+    "cherenkov-lings": {
+      "type": "stdio",
+      "command": "cherenkov-lings",
+      "args": ["mcp"]
+    }
+  }
+}

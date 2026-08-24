@@ -1,0 +1,10 @@
+# Drill 02: Deep Link Cold Start
+# Anti-pattern: Assumes the app is already running when the deep link fires
+# TODO: Use launchApp with deeplink arguments instead of openLink on a running app
+---
+- openLink:
+    link: cherenkov://account/ACC-001
+# Problem: if the app is not running, openLink may open a browser instead
+# This causes a flaky test that passes in dev (app warm) and fails in CI (cold start)
+- assertVisible:
+    text: Account Summary

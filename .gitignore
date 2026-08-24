@@ -1,0 +1,42 @@
+# Rust build artifacts
+/target/
+Cargo.lock
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+report.json
+
+# Node
+node_modules/
+playwright-report/
+test-results/
+summary.json
+
+# Java / Maven
+exercises/02_api_restassured_java/**/target/
+*.class
+*.jar
+
+# IDE
+.idea/
+*.iml
+
+# Surefire XML reports
+**/surefire-reports/
+
+# Playwright trace files
+trace.zip
+
+# Internal agent build artifacts
+.agents/
+ORIGINAL_REQUEST.md
+PROJECT.md
+TEST_INFRA.md
+TEST_READY.md
+.ruff_cache/
+.pytest_cache/
+report.json
+Cargo.lock

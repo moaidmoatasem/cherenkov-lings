@@ -1,0 +1,13 @@
+# Drill 03: Activity Recreation on Screen Rotation
+# Anti-pattern: Asserts state before rotation, never re-asserts after activity recreation
+# TODO: Trigger a screen rotation and re-assert that the UI state is preserved
+---
+- launchApp:
+    appId: com.cherenkov.bankapp
+- tapOn:
+    text: View Balance
+- assertVisible:
+    text: "Account Balance: USD 1000"
+# Missing: rotate the screen and re-assert after activity recreation
+# On rotation, Android destroys and recreates the Activity -- state can be lost
+

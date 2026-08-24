@@ -1,0 +1,25 @@
+import React from 'react';
+
+interface PaymentFrameProps {
+  src?: string;
+}
+
+export const PaymentFrame: React.FC<PaymentFrameProps> = ({
+  src = 'http://localhost:8081/embed/payment-frame',
+}) => {
+  return (
+    <div className="payment-frame-wrapper">
+      <div className="frame-container-header">
+        <span className="frame-tag">Cross-Origin Sandbox Frame</span>
+        <span className="frame-url">{src}</span>
+      </div>
+      <iframe
+        id="payment-gateway-frame"
+        data-testid="payment-frame"
+        src={src}
+        title="Crucible Secure Payment Gateway"
+        className="payment-iframe"
+      />
+    </div>
+  );
+};

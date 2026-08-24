@@ -1,0 +1,69 @@
+[platform]
+name = "cherenkov-lings"
+version = "1.0.0"
+sandbox_port = 8080
+chaos_proxy_port = 8086
+telemetry = false
+
+[evaluation]
+pass_threshold = 85.0
+flakiness_iterations = 5
+flakiness_timeout_ms = 5000
+chaos_latency_ms = 200
+chaos_jitter_ms = 75
+
+[ui]
+theme = "cherenkov-blue"
+show_hints_on_failure = true
+enable_audio_bell = false
+language = "en"
+
+[[tracks]]
+id = "playwright-ts"
+name = "Modern Web Automation (Playwright TypeScript)"
+runner = "node"
+exercise_dir = "exercises/01_web_playwright_ts"
+extension = ".ts"
+command = "npx playwright test {file} --reporter=json"
+
+[[tracks]]
+id = "restassured-java"
+name = "API Resilience & Security (REST Assured Java)"
+runner = "jvm"
+exercise_dir = "exercises/02_api_restassured_java"
+extension = ".java"
+command = "mvn test -Dtest={class}"
+
+[[tracks]]
+id = "k6-js"
+name = "High-Concurrency Load Testing (k6 JS)"
+runner = "k6"
+exercise_dir = "exercises/04_perf_k6_js"
+extension = ".js"
+command = "k6 run {file} --summary-export=summary.json"
+
+[[tracks]]
+id = "maestro-mobile"
+name = "Mobile UI Automation (Maestro YAML)"
+runner = "maestro"
+exercise_dir = "exercises/03_mobile_maestro"
+extension = ".yaml"
+command = "maestro test {file}"
+
+[[tracks]]
+id = "genai-qa"
+name = "GenAI QA Testing (Playwright TypeScript)"
+runner = "node"
+exercise_dir = "exercises/05_genai_qa"
+extension = ".ts"
+command = "npx playwright test {file} --reporter=json"
+
+[[tracks]]
+id = "devsecops-python"
+name = "Cloud-Native & DevSecOps (Python / Pytest)"
+runner = "python"
+exercise_dir = "exercises/06_cloud_devsecops"
+extension = ".py"
+command = "python -m pytest {file} --json-report --json-report-file=report.json"
+
+

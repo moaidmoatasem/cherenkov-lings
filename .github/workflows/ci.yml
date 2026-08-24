@@ -1,0 +1,48 @@
+﻿name: Cherenkov-lings CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build_and_test:
+    name: Rust Build & Test (Windows MSVC)
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup Rust Toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: stable-x86_64-pc-windows-msvc
+        components: clippy, rustfmt
+
+    - name: Rust Cache
+      uses: Swatinem/rust-cache@v2
+
+    - name: Check Formatting
+      run: cargo fmt --all -- --check
+
+    - name: Clippy Lints
+      run: cargo clippy -- -D warnings
+
+    - name: Run 4D Feedback Matrix Tests
+      run: cargo test --release
+
+  python_backend_lint:
+    name: Crucible Backend Lints
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    - name: Install Ruff
+      run: pip install ruff
+    - name: Lint Micro-Crucible
+      run: ruff check crucible/

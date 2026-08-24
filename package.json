@@ -1,0 +1,14 @@
+{
+  "name": "cherenkov-lings",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "test": "playwright test",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.46.0",
+    "@types/node": "^20.14.0",
+    "typescript": "^5.5.0"
+  }
+}

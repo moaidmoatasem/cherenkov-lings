@@ -1,0 +1,12 @@
+# Drill 01: Biometric Fallback
+# Anti-pattern: No fallback handling -- assumes biometric always succeeds
+# TODO: Add a conditional flow to handle biometric failure and switch to PIN entry
+---
+- launchApp:
+    appId: com.cherenkov.bankapp
+- tapOn:
+    text: Login with Biometric
+# Missing: when biometric fails, the app shows a PIN screen
+# This flow will hang or fail if biometric auth is unavailable
+- assertVisible:
+    text: Welcome, SDET Engineer
