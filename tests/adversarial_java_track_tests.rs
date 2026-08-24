@@ -439,6 +439,30 @@ fn test_all_3_drills_ast_and_scorecard_evaluations() {
             "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill03_kafka_lag/Solution.java",
             true, // Exercise 03 HAS Thread.sleep(100)
         ),
+        (
+            "Drill 04 Pagination",
+            "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill04_pagination_boundary/Exercise.java",
+            "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill04_pagination_boundary/Solution.java",
+            false,
+        ),
+        (
+            "Drill 05 JSON Schema",
+            "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill05_json_schema_validation/Exercise.java",
+            "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill05_json_schema_validation/Solution.java",
+            false,
+        ),
+        (
+            "Drill 06 GraphQL",
+            "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill06_graphql_assertions/Exercise.java",
+            "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill06_graphql_assertions/Solution.java",
+            false,
+        ),
+        (
+            "Drill 07 RequestSpecBuilder",
+            "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill07_request_spec_reuse/Exercise.java",
+            "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill07_request_spec_reuse/Solution.java",
+            false,
+        ),
     ];
 
     for (name, ex_path, sol_path, ex_has_sleep) in drills {

@@ -1,10 +1,10 @@
 # Drill 01: Biometric Fallback - Solution
 # Uses runFlow with a conditional when: clause to handle biometric failure gracefully
-# Tests web-based auth flow with fallback pattern
 ---
-- openLink: http://10.0.2.2:8080/mobile-test
+- launchApp:
+    appId: com.cherenkov.bankapp
 - tapOn:
-    id: login-biometric
+    text: Login with Biometric
 - runFlow:
     when:
       visible:

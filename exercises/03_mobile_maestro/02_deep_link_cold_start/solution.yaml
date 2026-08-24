@@ -1,6 +1,9 @@
 # Drill 02: Deep Link Cold Start - Solution
-# Tests URL-based navigation to simulate deep link handling
+# Uses launchApp with arguments.deeplink to handle cold start correctly
 ---
-- openLink: http://10.0.2.2:8080/mobile-test#account=ACC-001
+- launchApp:
+    appId: com.cherenkov.bankapp
+    clearState: true
+    deeplink: cherenkov://account/ACC-001
 - assertVisible:
     text: Account Summary

@@ -8,6 +8,9 @@ fn test_genai_qa_drill_files_exist_and_hints_contracts() {
     let drill_dirs = [
         "exercises/05_genai_qa/01_rag_context_faithfulness",
         "exercises/05_genai_qa/02_llm_assertion_flakiness",
+        "exercises/05_genai_qa/03_llm_hallucination_eval",
+        "exercises/05_genai_qa/04_prompt_injection_red_teaming",
+        "exercises/05_genai_qa/05_latency_streaming_ttft",
     ];
 
     for dir in drill_dirs {
@@ -115,6 +118,75 @@ fn test_genai_qa_drill02_llm_flakiness_contract() {
     assert!(
         sol_content.contains("body.confidence"),
         "Drill 02 solution.ts must assert body.confidence"
+    );
+}
+
+#[test]
+fn test_genai_qa_drill03_hallucination_eval_contract() {
+    let ex_path = "exercises/05_genai_qa/03_llm_hallucination_eval/exercise.ts";
+    let sol_path = "exercises/05_genai_qa/03_llm_hallucination_eval/solution.ts";
+
+    let ex_content = fs::read_to_string(ex_path).expect("read drill 03 exercise.ts");
+    let sol_content = fs::read_to_string(sol_path).expect("read drill 03 solution.ts");
+
+    assert!(
+        ex_content.contains("answer.length") && ex_content.contains(".toBeGreaterThan("),
+        "Drill 03 exercise.ts must contain naive length check anti-pattern"
+    );
+
+    assert!(
+        sol_content.contains("grounded"),
+        "Drill 03 solution.ts must assert grounded property"
+    );
+    assert!(
+        sol_content.contains("document_title") || sol_content.contains("source_facts"),
+        "Drill 03 solution.ts must assert citation metadata"
+    );
+}
+
+#[test]
+fn test_genai_qa_drill04_prompt_injection_contract() {
+    let ex_path = "exercises/05_genai_qa/04_prompt_injection_red_teaming/exercise.ts";
+    let sol_path = "exercises/05_genai_qa/04_prompt_injection_red_teaming/solution.ts";
+
+    let ex_content = fs::read_to_string(ex_path).expect("read drill 04 exercise.ts");
+    let sol_content = fs::read_to_string(sol_path).expect("read drill 04 solution.ts");
+
+    assert!(
+        ex_content.contains("res.status()") && ex_content.contains(".toBeLessThan("),
+        "Drill 04 exercise.ts must have naive status check anti-pattern"
+    );
+
+    assert!(
+        sol_content.contains("PROMPT_INJECTION_DETECTED") || sol_content.contains("blocked"),
+        "Drill 04 solution.ts must check for injection detection"
+    );
+    assert!(
+        sol_content.contains("400"),
+        "Drill 04 solution.ts must assert 400 status"
+    );
+}
+
+#[test]
+fn test_genai_qa_drill05_ttft_streaming_contract() {
+    let ex_path = "exercises/05_genai_qa/05_latency_streaming_ttft/exercise.ts";
+    let sol_path = "exercises/05_genai_qa/05_latency_streaming_ttft/solution.ts";
+
+    let ex_content = fs::read_to_string(ex_path).expect("read drill 05 exercise.ts");
+    let sol_content = fs::read_to_string(sol_path).expect("read drill 05 solution.ts");
+
+    assert!(
+        ex_content.contains("body.length") && ex_content.contains(".toBeGreaterThan("),
+        "Drill 05 exercise.ts must have naive length check anti-pattern"
+    );
+
+    assert!(
+        sol_content.contains("ttft") || sol_content.contains("start") && sol_content.contains("Date.now()"),
+        "Drill 05 solution.ts must measure TTFT"
+    );
+    assert!(
+        sol_content.contains("text/event-stream") || sol_content.contains("stream"),
+        "Drill 05 solution.ts must verify streaming format"
     );
 }
 
@@ -296,6 +368,12 @@ fn test_polyglot_5_tracks_manifest_and_config() {
         ("k6-js", "exercises/04_perf_k6_js", ".js"),
         ("maestro-mobile", "exercises/03_mobile_maestro", ".yaml"),
         ("genai-qa", "exercises/05_genai_qa", ".ts"),
+        ("devsecops-python", "exercises/06_cloud_devsecops", ".py"),
+        ("foundations", "exercises/00_foundations", ".py"),
+        ("jmeter", "exercises/05_perf_jmeter", ".jmx"),
+        ("tool-decisions", "exercises/06_tool_decisions", ".py"),
+        ("contract-pact", "exercises/07_contract_pact", ".py"),
+        ("a11y-axe", "exercises/08_a11y_axe", ".ts"),
     ];
 
     for (track_id, dir, ext) in expected_tracks {

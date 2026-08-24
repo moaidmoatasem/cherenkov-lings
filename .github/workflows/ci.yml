@@ -77,3 +77,53 @@ jobs:
         npm ci
         npx tsc --noEmit
         npm run build
+
+  python_exercise_validation:
+    name: Python Exercise Validation (4 tracks, 17 drills)
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install Dependencies
+      run: pip install pytest pytest-json-report
+
+    - name: Validate Foundations Track (5 drills)
+      run: |
+        for dir in exercises/00_foundations/*/; do
+          if [ -f "$dir/solution.py" ]; then
+            echo "Testing: $dir"
+            python -m pytest "$dir/solution.py" -v --tb=short || exit 1
+          fi
+        done
+
+    - name: Validate DevSecOps Track (5 drills)
+      run: |
+        for dir in exercises/06_cloud_devsecops/*/; do
+          if [ -f "$dir/solution.py" ]; then
+            echo "Testing: $dir"
+            python -m pytest "$dir/solution.py" -v --tb=short || exit 1
+          fi
+        done
+
+    - name: Validate Tool Decisions Track (4 drills)
+      run: |
+        for dir in exercises/06_tool_decisions/*/; do
+          if [ -f "$dir/solution.py" ]; then
+            echo "Testing: $dir"
+            python -m pytest "$dir/solution.py" -v --tb=short || exit 1
+          fi
+        done
+
+    - name: Validate Contract Pact Track (3 drills)
+      run: |
+        for dir in exercises/07_contract_pact/*/; do
+          if [ -f "$dir/solution.py" ]; then
+            echo "Testing: $dir"
+            python -m pytest "$dir/solution.py" -v --tb=short || exit 1
+          fi
+        done
