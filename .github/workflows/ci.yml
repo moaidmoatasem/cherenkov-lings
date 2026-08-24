@@ -1,16 +1,19 @@
-﻿name: Cherenkov-lings CI
+name: Cherenkov-lings CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
 
 jobs:
-  build_and_test:
-    name: Rust Build & Test (Windows MSVC)
-    runs-on: windows-latest
-    
+  rust_engine_and_audit:
+    name: Rust Engine & Curriculum Audit (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
@@ -18,7 +21,6 @@ jobs:
     - name: Setup Rust Toolchain
       uses: dtolnay/rust-toolchain@stable
       with:
-        toolchain: stable-x86_64-pc-windows-msvc
         components: clippy, rustfmt
 
     - name: Rust Cache
@@ -28,21 +30,50 @@ jobs:
       run: cargo fmt --all -- --check
 
     - name: Clippy Lints
-      run: cargo clippy -- -D warnings
+      run: cargo clippy --all-targets -- -D warnings
 
-    - name: Run 4D Feedback Matrix Tests
-      run: cargo test --release
+    - name: Run Full Rust Test Suite
+      run: cargo test
 
-  python_backend_lint:
-    name: Crucible Backend Lints
+    - name: Run 100% Curriculum Integrity Audit
+      run: cargo run -- audit
+
+  crucible_backend_tests:
+    name: Micro-Crucible Backend & Chaos Tests
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
+
     - uses: actions/setup-python@v5
       with:
         python-version: '3.11'
-    - name: Install Ruff
-      run: pip install ruff
-    - name: Lint Micro-Crucible
-      run: ruff check crucible/
+
+    - name: Install Dependencies
+      run: |
+        pip install -r crucible/backend/requirements.txt
+        pip install ruff pytest pytest-asyncio pytest-json-report
+
+    - name: Lint Backend Code
+      run: ruff check crucible/ tests/
+
+    - name: Run Chaos & Pathology Pytest Suite
+      run: pytest tests/test_micro_crucible_chaos.py -v
+
+  frontend_build_verification:
+    name: React Frontend Build & Type Safety
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install & Build Frontend
+      run: |
+        cd crucible/frontend
+        npm ci
+        npx tsc --noEmit
+        npm run build
