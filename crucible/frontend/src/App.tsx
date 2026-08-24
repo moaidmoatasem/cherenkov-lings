@@ -10,6 +10,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { PaymentPage } from './pages/PaymentPage';
 import { MissionControlPage } from './pages/MissionControlPage';
+import { MobileTestPage } from './pages/MobileTestPage';
 
 export const App: React.FC = () => {
   const [currentPath, setCurrentPath] = useState<string>(() => {
@@ -51,6 +52,8 @@ export const App: React.FC = () => {
         return <ProfilePage />;
       case '/payment':
         return <PaymentPage />;
+      case '/mobile-test':
+        return <MobileTestPage />;
       case '/':
       default:
         return <HomePage onNavigate={handleNavigate} />;

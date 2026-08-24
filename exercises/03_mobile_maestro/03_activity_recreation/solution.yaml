@@ -1,10 +1,9 @@
 # Drill 03: Activity Recreation on Screen Rotation - Solution
-# Rotates the screen and re-asserts that the balance is preserved after recreation
+# Tests state preservation across page reload (simulates activity recreation)
 ---
-- launchApp:
-    appId: com.cherenkov.bankapp
+- openLink: http://10.0.2.2:8080/mobile-test
 - tapOn:
-    text: View Balance
+    id: view-balance
 - assertVisible:
     text: "Account Balance: USD 1000"
 - setOrientation:
@@ -16,4 +15,3 @@
     orientation: portrait
 - assertVisible:
     text: "Account Balance: USD 1000"
-

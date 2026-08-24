@@ -2,10 +2,9 @@
 # Uses Maestro's scrollUntilVisible command to handle varying screen heights,
 # lazy-loading lists, and dynamic recycler views across Android & iOS devices.
 ---
-- launchApp:
-    appId: com.cherenkov.bankapp
+- openLink: http://10.0.2.2:8080/mobile-test
 - tapOn:
-    text: View Products
+    id: view-products
 - scrollUntilVisible:
     element:
       id: btn-checkout

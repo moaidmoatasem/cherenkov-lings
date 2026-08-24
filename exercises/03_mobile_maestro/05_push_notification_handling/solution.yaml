@@ -2,14 +2,13 @@
 # Uses Maestro's runFlow with a 'when: visible' condition to handle optional
 # OS notification/location permission prompts gracefully without flakiness.
 ---
-- launchApp:
-    appId: com.cherenkov.bankapp
+- openLink: http://10.0.2.2:8080/mobile-test
 - runFlow:
     when:
       visible: "Allow.*notifications|Allow"
     commands:
       - tapOn: "Allow"
 - tapOn:
-    text: View Alerts
+    id: view-alerts
 - assertVisible:
     text: System Alerts

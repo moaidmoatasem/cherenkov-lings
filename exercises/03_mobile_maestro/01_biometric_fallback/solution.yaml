@@ -1,14 +1,19 @@
 # Drill 01: Biometric Fallback - Solution
 # Uses runFlow with a conditional when: clause to handle biometric failure gracefully
+# Tests web-based auth flow with fallback pattern
 ---
-- launchApp:
-    appId: com.cherenkov.bankapp
+- openLink: http://10.0.2.2:8080/mobile-test
 - tapOn:
-    text: Login with Biometric
+    id: login-biometric
 - runFlow:
     when:
       visible:
         text: Biometric unavailable
-    file: pin_fallback_flow.yaml
+    commands:
+      - tapOn:
+          id: pin-input
+      - inputText: "1234"
+      - tapOn:
+          id: pin-submit
 - assertVisible:
     text: Welcome, SDET Engineer
