@@ -58,6 +58,22 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
             An intentionally broken, chaos-capable testing ground for mastering modern web automation,
             flakiness eradication, and synchronization patterns.
           </p>
+          <div style={{ marginTop: '16px', display: 'flex', gap: '12px' }}>
+            <button
+              onClick={() => onNavigate('/mission-control')}
+              className="primary-btn"
+              style={{ padding: '10px 20px', fontSize: '14px', fontWeight: 'bold' }}
+            >
+              🏆 Open Mission Control & Badges &rarr;
+            </button>
+            <button
+              onClick={() => onNavigate('/checkout')}
+              className="secondary-btn"
+              style={{ padding: '10px 20px', fontSize: '14px' }}
+            >
+              🛒 Try Hydration Sandbox
+            </button>
+          </div>
         </div>
       </div>
 
