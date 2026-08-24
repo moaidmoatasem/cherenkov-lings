@@ -17,6 +17,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate }) => {
     { path: '/dashboard', label: 'Dashboard (Visual)', icon: '📊' },
     { path: '/payment', label: 'Payment (frameLocator)', icon: '💳' },
     { path: '/profile', label: 'Profile (Isolation)', icon: '👤' },
+    { path: '/mobile-test', label: 'Mobile Test', icon: '📱' },
   ];
 
   return (

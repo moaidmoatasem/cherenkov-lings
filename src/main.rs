@@ -520,7 +520,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             } else {
                 eprintln!("Error: Track '{}' not found in lings.toml", track);
                 eprintln!(
-                    "Available tracks: playwright-ts, restassured-java, k6-js, maestro-mobile, genai-qa"
+                    "Available tracks: playwright-ts, restassured-java, k6-js, maestro-mobile, genai-qa, devsecops-python, foundations, jmeter, tool-decisions, contract-pact, a11y-axe"
                 );
             }
         }
@@ -736,7 +736,7 @@ fn run_curriculum_audit() {
 
     println!(
         " {:<46} │ {:<8} │ {:<14} │ {:<8}",
-        "Track Name", "Drills", "Contract Files", "Health"
+        "Track Name", "Drills", "Contract Checks", "Health"
     );
     println!(
         " ───────────────────────────────────────────────┼──────────┼────────────────┼────────"
@@ -832,7 +832,31 @@ fn run_curriculum_audit() {
                     issues.push(format!("Missing theory.md: {}", p.display()));
                 }
 
-                if dir_passed == 4 {
+                total_checks += 1;
+                if has_solution {
+                    let sol_path = p.join(&sol_name);
+                    if let Ok(content) = fs::read_to_string(&sol_path) {
+                        let has_content = match ext.as_str() {
+                            ".ts" => content.contains("import") || content.contains("test(") || content.contains("expect("),
+                            ".py" => content.contains("def test_") || content.contains("class Test") || content.contains("import pytest"),
+                            ".java" => content.contains("import") || content.contains("@Test"),
+                            ".jmx" => content.contains("<HTTPSamplerProxy") || content.contains("<TestPlan"),
+                            ".js" => content.contains("import") || content.contains("export") || content.contains("http.get"),
+                            ".yaml" => content.contains("launchApp") || content.contains("openLink") || content.contains("tapOn"),
+                            _ => !content.trim().is_empty(),
+                        };
+                        if has_content {
+                            passed_checks += 1;
+                            dir_passed += 1;
+                        } else {
+                            issues.push(format!("Solution file appears empty or invalid: {}", sol_path.display()));
+                        }
+                    } else {
+                        issues.push(format!("Cannot read solution file: {}", sol_path.display()));
+                    }
+                }
+
+                if dir_passed == 5 {
                     track_complete_count += 1;
                     complete_drills += 1;
                 }
