@@ -64,7 +64,7 @@ enum Commands {
     Audit,
     /// Scaffold a new drill with standard contracts (exercise, solution, hints, and theory)
     NewDrill {
-        /// Track ID (e.g. playwright-ts, restassured-java, k6-js, maestro-mobile, jmeter, foundations)
+        /// Track ID (e.g. playwright-ts, restassured-java, k6-js, maestro-mobile, genai-qa, devsecops-python, foundations, jmeter, tool-decisions, contract-pact, a11y-axe)
         #[arg(short, long)]
         track: String,
         /// Drill folder name (e.g. 11_network_throttling)
