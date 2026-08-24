@@ -10,10 +10,10 @@ Provider verification closes this safety gap by replaying consumer contracts dir
 
 ```
   [ Consumer Repo ] ----------? Generates Pact JSON ----------? [ Pact Broker ]
-                                                                      ¦
+                                                                      â”‚
                                                                       ?
   [ Provider CI Pipeline ] ?-- Replays Contract Against Provider -----+
-            ¦
+            â”‚
             +--? If Schema Matches: Provider Verified (Safe to Deploy)
             +--? If Field Missing: CI Fails -> Blocks Breaking PR
 ```
@@ -24,4 +24,4 @@ Key verification rules:
 3. **Status Enums**: Response status codes and state transitions must adhere to allowable contract sets.
 
 ## You will now simulate this in the Crucible
-Run `cherenkov-lings watch --track=contract-pact` and verify that provider endpoints strictly adhere to contract expectations across all order entries.
+Run `cherenkov-lings watch --track=contract-pact` and verify that provider endpoints strictly adhere to contract expectations across all order entries.

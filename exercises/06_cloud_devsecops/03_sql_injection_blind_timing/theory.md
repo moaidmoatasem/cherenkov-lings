@@ -17,13 +17,13 @@ If an attacker injects `' OR SLEEP(5)--`, the SQL AST is fundamentally restructu
 ```
   Vulnerable (String Interpolation):
   [ SELECT * FROM users WHERE id = ' ] + [ 1' OR SLEEP(5)-- ] 
-                   ¦
+                   â”‚
                    ?
   Parsed SQL AST Mutated -> Executes Database Sleep Command
 
   Secure (Parameterized Prepared Statement):
   [ SELECT * FROM users WHERE id = ? ]  <--- Bound Value: "1' OR SLEEP(5)--"
-                   ¦
+                   â”‚
                    ?
   Database treats entire input payload as literal string value
 ```
@@ -31,4 +31,4 @@ If an attacker injects `' OR SLEEP(5)--`, the SQL AST is fundamentally restructu
 Parameterized queries solve this by pre-compiling the SQL query template on the database server before variable values are transmitted across the wire. When variables arrive, the database runtime treats them exclusively as literal scalar values, completely neutralizing syntax injection.
 
 ## You will now simulate this in the Crucible
-Run `cherenkov-lings watch --track=devsecops-python` and verify that parameterized user lookups reject SQL injection payloads and return deterministic responses.
+Run `cherenkov-lings watch --track=devsecops-python` and verify that parameterized user lookups reject SQL injection payloads and return deterministic responses.

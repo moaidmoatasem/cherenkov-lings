@@ -238,6 +238,8 @@ def validate_workflow_yaml(yaml_content: str, strict: bool = False) -> PipelineV
     )
 
 
+MAX_MATRIX_COMBINATIONS = 32
+
 def simulate_pipeline_run(
     yaml_content: str,
     parallel: bool = True,
@@ -270,14 +272,17 @@ def simulate_pipeline_run(
         strategy = job_def.get("strategy", {})
         matrix = strategy.get("matrix", {}) if isinstance(strategy, dict) else {}
 
-        # Generate matrix combinations
         matrix_keys = list(matrix.keys()) if isinstance(matrix, dict) else []
         matrix_values = [matrix[k] if isinstance(matrix[k], list) else [matrix[k]] for k in matrix_keys]
-
-        combinations = [
-            dict(zip(matrix_keys, [str(v) for v in combo]))
-            for combo in itertools.product(*matrix_values)
-        ] if matrix_keys else [{}]
+        if matrix_keys:
+            total = 1
+            for vals in matrix_values:
+                total *= len(vals)
+                if total > MAX_MATRIX_COMBINATIONS:
+                    raise ValueError(f"Matrix explosion: {total} combinations exceeds cap {MAX_MATRIX_COMBINATIONS}")
+            combinations = [dict(zip(matrix_keys, [str(v) for v in combo])) for combo in itertools.product(*matrix_values)]
+        else:
+            combinations = [{}]
 
         steps_raw = job_def.get("steps", [])
 

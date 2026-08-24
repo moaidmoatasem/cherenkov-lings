@@ -15,10 +15,10 @@ When context retrieval fails or prompt entropy is high, models invent plausible-
 
 ```
   [ User Query ] --? [ RAG Retriever ] --? [ Prompt Context ] --? [ LLM Generator ]
-                            ¦                                            ¦
+                            â”‚                                            â”‚
                             ?                                            ?
                     Source Documents                            Hallucination Check
 ```
 
 ## You will now simulate this in the Crucible
-Run `cherenkov-lings watch --track=genai-qa` and verify the grounding assertion against the Micro-Crucible RAG endpoint.
+Run `cherenkov-lings watch --track=genai-qa` and verify the grounding assertion against the Micro-Crucible RAG endpoint.

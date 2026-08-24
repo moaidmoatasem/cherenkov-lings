@@ -112,12 +112,16 @@ export const PipelineBuilderPage: React.FC = () => {
   const [selectedStageId, setSelectedStageId] = useState<string | null>('stage-matrix');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Simulation State
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
   const [simProgress, setSimProgress] = useState<number>(0);
   const [runnerJobs, setRunnerJobs] = useState<RunnerJob[]>([]);
   const [selectedRunnerId, setSelectedRunnerId] = useState<string | null>(null);
   const simulationTimerRef = useRef<number | null>(null);
+  useEffect(() => {
+    return () => {
+      if (simulationTimerRef.current !== null) window.clearInterval(simulationTimerRef.current);
+    };
+  }, []);
 
   // Generate GitHub Actions YAML from Stages
   const generateYamlFromStages = (currentStages: PipelineStage[]): string => {
@@ -858,9 +862,13 @@ export const PipelineBuilderPage: React.FC = () => {
               <div className="yaml-actions">
                 <button
                   className="secondary-btn"
-                  onClick={() => {
-                    navigator.clipboard.writeText(yamlCode);
-                    showToast('YAML copied to clipboard!');
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(yamlCode);
+                      showToast('YAML copied to clipboard!');
+                    } catch {
+                      showToast('Copy failed — please copy manually');
+                    }
                   }}
                 >
                   📋 Copy YAML

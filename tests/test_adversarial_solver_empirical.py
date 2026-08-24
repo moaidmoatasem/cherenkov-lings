@@ -50,14 +50,17 @@ def calculate_dir_hashes(directory: Path) -> Dict[str, str]:
 
 def run_verifier(track: str = "00_foundations", cwd: Path = WORKSPACE_ROOT) -> Tuple[int, str, str]:
     """Executes verify_all_exercises.py as a subprocess and captures output."""
-    cmd = [sys.executable, str(VERIFIER_SCRIPT), "--track", track, "--json"]
+    cmd = [sys.executable, "-B", str(VERIFIER_SCRIPT), "--track", track, "--json"]
+    env = os.environ.copy()
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
     proc = subprocess.run(
         cmd,
         cwd=str(cwd),
         capture_output=True,
         text=True,
         encoding="utf-8",
-        errors="replace"
+        errors="replace",
+        env=env
     )
     return proc.returncode, proc.stdout, proc.stderr
 
@@ -208,7 +211,9 @@ def test_suite():
             ex_py = drill / "exercise.py"
             content = ex_py.read_text(encoding="utf-8")
             has_todo = "TODO" in content or "I AM NOT DONE" in content
-            proc = subprocess.run([sys.executable, "-m", "pytest", str(ex_py), "-q"], capture_output=True, text=True)
+            pytest_env = os.environ.copy()
+            pytest_env["PYTHONDONTWRITEBYTECODE"] = "1"
+            proc = subprocess.run([sys.executable, "-B", "-m", "pytest", str(ex_py), "-q", "-p", "no:cacheprovider"], capture_output=True, text=True, env=pytest_env)
             pytest_failed = (proc.returncode != 0)
             is_pending = has_todo or pytest_failed
             print(f"  Drill [{drill.name}]: pytest_exit={proc.returncode}, has_todo={has_todo} -> pending={is_pending}")
