@@ -929,13 +929,16 @@ async def get_curriculum() -> JSONResponse:
         },
         {
             "id": "genai-qa",
-            "name": "GenAI QA Testing",
+            "name": "GenAI QA & LLM Red-Teaming",
             "stack": "Playwright TypeScript",
             "tier": "Tier 3 — Advanced",
-            "description": "Testing non-deterministic LLM applications: RAG context faithfulness and structured intent assertion.",
+            "description": "Testing non-deterministic LLM applications: RAG context faithfulness, prompt injection red-teaming, and token streaming TTFT.",
             "drills": [
                 {"id": "01_rag_context_faithfulness", "name": "RAG Answer Faithfulness Verification", "path": "exercises/05_genai_qa/01_rag_context_faithfulness"},
                 {"id": "02_llm_assertion_flakiness", "name": "Structured Intent Assertions for LLM Output", "path": "exercises/05_genai_qa/02_llm_assertion_flakiness"},
+                {"id": "03_llm_hallucination_eval", "name": "G-Eval Grounding & Citation Fact-Checking", "path": "exercises/05_genai_qa/03_llm_hallucination_eval"},
+                {"id": "04_prompt_injection_red_teaming", "name": "Direct Prompt Injection Defense Guardrails", "path": "exercises/05_genai_qa/04_prompt_injection_red_teaming"},
+                {"id": "05_latency_streaming_ttft", "name": "Time-To-First-Token (TTFT) Streaming Latency", "path": "exercises/05_genai_qa/05_latency_streaming_ttft"},
             ],
         },
         {
@@ -943,16 +946,19 @@ async def get_curriculum() -> JSONResponse:
             "name": "Cloud-Native & DevSecOps",
             "stack": "Python / Pytest",
             "tier": "Tier 3 — Advanced",
-            "description": "Security testing in CI/CD pipelines: container socket privilege escalation and JWT signing vulnerabilities.",
+            "description": "Security testing in CI/CD pipelines: container socket mounts, JWT signature bypass, SQL injection, SSRF, and CORS origins.",
             "drills": [
                 {"id": "01_insecure_docker_mount", "name": "Docker Socket Mount Privilege Escalation", "path": "exercises/06_cloud_devsecops/01_insecure_docker_mount"},
                 {"id": "02_jwt_weak_signing_key", "name": "JWT Algorithm None Signature Bypass", "path": "exercises/06_cloud_devsecops/02_jwt_weak_signing_key"},
+                {"id": "03_sql_injection_blind_timing", "name": "SQL Injection Parameterized Prepared Statements", "path": "exercises/06_cloud_devsecops/03_sql_injection_blind_timing"},
+                {"id": "04_ssrf_metadata_service", "name": "SSRF Cloud Metadata (169.254.169.254) Interception", "path": "exercises/06_cloud_devsecops/04_ssrf_metadata_service"},
+                {"id": "05_cors_misconfiguration_exploit", "name": "CORS Origin Whitelisting & Credential Isolation", "path": "exercises/06_cloud_devsecops/05_cors_misconfiguration_exploit"},
             ],
         },
         {
             "id": "tool-decisions",
             "name": "Cross-Tool Decision Framework",
-            "stack": "Python",
+            "stack": "Python / Pytest",
             "tier": "Tier 3 — QA Architect",
             "description": "Architectural decision making: when to choose UI vs API, k6 vs JMeter, Appium vs Maestro, and Contract vs E2E.",
             "drills": [
@@ -962,7 +968,73 @@ async def get_curriculum() -> JSONResponse:
                 {"id": "04_contract_vs_e2e", "name": "Pact Contract Testing vs Microservice E2E", "path": "exercises/06_tool_decisions/04_contract_vs_e2e"},
             ],
         },
+        {
+            "id": "contract-pact",
+            "name": "Consumer-Driven Contract Testing",
+            "stack": "Python / Pact",
+            "tier": "Tier 2 to 3 — Intermediate to Advanced",
+            "description": "Independent microservice deployment safety: consumer contract definitions, provider verification, and schema evolution.",
+            "drills": [
+                {"id": "01_pact_consumer_definition", "name": "Consumer Contract Schema Definition", "path": "exercises/07_contract_pact/01_pact_consumer_definition"},
+                {"id": "02_pact_provider_verification", "name": "Automated Provider Verification CI Gates", "path": "exercises/07_contract_pact/02_pact_provider_verification"},
+                {"id": "03_breaking_schema_evolution", "name": "Detecting Destructive vs Additive Schema Changes", "path": "exercises/07_contract_pact/03_breaking_schema_evolution"},
+            ],
+        },
+        {
+            "id": "a11y-axe",
+            "name": "Accessibility & Visual Testing",
+            "stack": "Playwright TypeScript / Axe",
+            "tier": "Tier 1 to 2 — Beginner to Intermediate",
+            "description": "Inclusive quality engineering: WCAG 2.1 AA accessibility trees, keyboard Tab focus traps, and ARIA live regions.",
+            "drills": [
+                {"id": "01_wcag_color_contrast_axe", "name": "WCAG Semantic Accessibility Tree & Roles", "path": "exercises/08_a11y_axe/01_wcag_color_contrast_axe"},
+                {"id": "02_keyboard_focus_trap_aria", "name": "Sequential Keyboard Tab Navigation & Focus Traps", "path": "exercises/08_a11y_axe/02_keyboard_focus_trap_aria"},
+                {"id": "03_screen_reader_live_regions", "name": "Dynamic UI Announcements via ARIA Live Regions", "path": "exercises/08_a11y_axe/03_screen_reader_live_regions"},
+            ],
+        },
     ]
-    return JSONResponse(status_code=200, content={"tracks": tracks_data, "total_drills": sum(len(t["drills"]) for t in tracks_data)})
+    total = sum(len(t["drills"]) for t in tracks_data)
+    return JSONResponse(status_code=200, content={"tracks": tracks_data, "total_drills": total})
+
+
+@app.get("/api/drill/theory")
+async def get_drill_theory(path: str) -> JSONResponse:
+    """Retrieve full theoretical markdown, hints, and production story for a specific drill."""
+    drill_path = Path(path).resolve()
+    base_path = Path("exercises").resolve()
+
+    # Path traversal protection
+    try:
+        drill_path.relative_to(base_path)
+    except ValueError:
+        return JSONResponse(status_code=400, content={"error": "INVALID_PATH", "message": "Access restricted to exercises directory."})
+
+    if not drill_path.exists() or not drill_path.is_dir():
+        return JSONResponse(status_code=404, content={"error": "DRILL_NOT_FOUND", "message": f"Drill directory '{path}' not found."})
+
+    theory_file = drill_path / "theory.md"
+    hints_file = drill_path / "hints.md"
+
+    theory_content = theory_file.read_text(encoding="utf-8") if theory_file.exists() else "# Theoretical Context\nNo theory module available for this drill."
+    hints_content = hints_file.read_text(encoding="utf-8") if hints_file.exists() else "No progressive hints available."
+
+    # Extract title from theory.md
+    title = drill_path.name
+    for line in theory_content.splitlines():
+        if line.startswith("# "):
+            title = line[2:].strip()
+            break
+
+    return JSONResponse(
+        status_code=200,
+        content={
+            "drill_id": drill_path.name,
+            "title": title,
+            "theory_markdown": theory_content,
+            "hints_markdown": hints_content,
+            "has_theory": theory_file.exists(),
+            "has_hints": hints_file.exists(),
+        },
+    )
 
 
