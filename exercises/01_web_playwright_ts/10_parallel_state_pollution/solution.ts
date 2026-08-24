@@ -9,7 +9,7 @@ test.describe.parallel('User Profile Mutations (ISOLATED WORKER SESSIONS)', () =
   test('worker A updates username to Alice with isolated context', async ({ browser }) => {
     const context = await browser.newContext({
       storageState: {
-        cookies: [{ name: 'session_id', value: 'sess_worker_alice', domain: 'localhost', path: '/' }],
+        cookies: [{ name: 'session_id', value: 'sess_worker_alice', domain: 'localhost', path: '/', expires: -1, httpOnly: false, secure: false, sameSite: 'Lax' }],
         origins: [{ origin: 'http://localhost:8080', localStorage: [{ name: 'auth_token', value: 'token_alice_123' }] }],
       },
     });
@@ -26,7 +26,7 @@ test.describe.parallel('User Profile Mutations (ISOLATED WORKER SESSIONS)', () =
   test('worker B updates username to Bob with isolated context', async ({ browser }) => {
     const context = await browser.newContext({
       storageState: {
-        cookies: [{ name: 'session_id', value: 'sess_worker_bob', domain: 'localhost', path: '/' }],
+        cookies: [{ name: 'session_id', value: 'sess_worker_bob', domain: 'localhost', path: '/', expires: -1, httpOnly: false, secure: false, sameSite: 'Lax' }],
         origins: [{ origin: 'http://localhost:8080', localStorage: [{ name: 'auth_token', value: 'token_bob_456' }] }],
       },
     });
