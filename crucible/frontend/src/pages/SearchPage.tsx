@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { apiUrl } from '../lib/api';
 
 const FALLBACK_CATALOG: Record<string, string[]> = {
   p: ['Python', 'PHP', 'Perl', 'PostgreSQL', 'PowerShell'],
@@ -28,7 +29,7 @@ export const SearchPage: React.FC = () => {
     const reqId = Date.now() + Math.floor(Math.random() * 1000);
 
     try {
-      const res = await fetch(`http://localhost:8081/search?q=${encodeURIComponent(trimmed)}`);
+      const res = await fetch(apiUrl(`/search?q=${encodeURIComponent(trimmed)}`));
       if (res.ok) {
         const data = await res.json();
         const duration = Math.round(performance.now() - start);

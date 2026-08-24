@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { apiUrl } from '../lib/api';
 
 export const TransferPage: React.FC = () => {
   const [balance, setBalance] = useState<number>(1000.00);
@@ -25,7 +26,7 @@ export const TransferPage: React.FC = () => {
 
   const fetchBalance = async () => {
     try {
-      const res = await fetch('http://localhost:8081/balance?account_id=ACC-001');
+      const res = await fetch(apiUrl('/balance?account_id=ACC-001'));
       if (res.ok) {
         const data = await res.json();
         if (typeof data.balance === 'number') {
@@ -51,7 +52,7 @@ export const TransferPage: React.FC = () => {
     setPollCount(0);
 
     try {
-      const response = await fetch('http://localhost:8081/transfer', {
+      const response = await fetch(apiUrl('/transfer'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -99,7 +100,7 @@ export const TransferPage: React.FC = () => {
       setPollCount(polls);
 
       try {
-        const res = await fetch('http://localhost:8081/balance?account_id=ACC-001');
+        const res = await fetch(apiUrl('/balance?account_id=ACC-001'));
         if (res.ok) {
           const data = await res.json();
           if (typeof data.balance === 'number') {
@@ -141,7 +142,7 @@ export const TransferPage: React.FC = () => {
 
   const handleResetLedger = async () => {
     try {
-      await fetch('http://localhost:8081/reset', { method: 'POST' });
+      await fetch(apiUrl('/reset'), { method: 'POST' });
     } catch {
       // Ignore
     }
@@ -179,14 +180,14 @@ export const TransferPage: React.FC = () => {
                 data-testid="account-balance"
                 className="balance-amount"
               >
-                ${balance.toFixed(2)}
+                {balance.toFixed(2)}
               </span>
             </div>
           </div>
 
           <form onSubmit={handleTransferSubmit} className="transfer-form">
             <div className="form-group">
-              <label htmlFor="recipient-input">Destination Account</label>
+              <label htmlFor="recipient-input">Recipient Account ID:</label>
               <input
                 id="recipient-input"
                 data-testid="recipient-input"
@@ -200,7 +201,7 @@ export const TransferPage: React.FC = () => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="amount-input">Transfer Amount ($ USD)</label>
+              <label htmlFor="amount-input">Transfer Amount ($ USD):</label>
               <input
                 id="amount-input"
                 data-testid="amount-input"
@@ -224,7 +225,7 @@ export const TransferPage: React.FC = () => {
                 disabled={isSubmitting || isPolling}
                 className="primary-btn transfer-btn"
               >
-                {isSubmitting ? 'Submitting...' : isPolling ? 'Settling in Kafka...' : 'Transfer Funds'}
+                {isSubmitting ? 'Submitting...' : isPolling ? 'Settling in Kafka...' : 'Submit Transfer'}
               </button>
 
               <button
@@ -243,7 +244,7 @@ export const TransferPage: React.FC = () => {
           )}
 
           {transferStatus && (
-            <div className="transfer-status-box">
+            <div className="transfer-status-box" role="status">
               <div className="status-header">
                 <span className={`pulse-dot ${transferStatus === 'Transfer Settled' ? 'settled' : 'pending'}`}></span>
                 <span

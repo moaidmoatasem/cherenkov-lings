@@ -5,6 +5,10 @@ import { CheckoutPage } from './pages/CheckoutPage';
 import { TransferPage } from './pages/TransferPage';
 import { SearchPage } from './pages/SearchPage';
 import { ShadowDomPage } from './pages/ShadowDomPage';
+import { CatalogPage } from './pages/CatalogPage';
+import { DashboardPage } from './pages/DashboardPage';
+import { ProfilePage } from './pages/ProfilePage';
+import { PaymentPage } from './pages/PaymentPage';
 import { MissionControlPage } from './pages/MissionControlPage';
 
 export const App: React.FC = () => {
@@ -39,6 +43,14 @@ export const App: React.FC = () => {
         return <SearchPage />;
       case '/shadow-dom':
         return <ShadowDomPage />;
+      case '/products':
+        return <CatalogPage />;
+      case '/dashboard':
+        return <DashboardPage />;
+      case '/profile':
+        return <ProfilePage />;
+      case '/payment':
+        return <PaymentPage />;
       case '/':
       default:
         return <HomePage onNavigate={handleNavigate} />;

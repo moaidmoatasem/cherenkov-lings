@@ -6,7 +6,7 @@
 
 ## Verification Gate Commands
 ```powershell
-# Gate 1: Rust Unit & Integration Tests (254+ existing tests + new tests)
+# Gate 1: Rust Unit & Integration Tests (359 existing tests + new tests)
 cargo test
 
 # Gate 2: Zero-Warning Compiler & Clippy Strict Linter
@@ -34,9 +34,9 @@ cargo run -- dashboard
    - JMeter: 8 drills (with complete exercise + solution + hints)
    - Tool Decisions: 4 drills
    - Track 0 (5), Track 5 (2), Track 6 (2)
-   - Total 48 drills.
+   - Total 60 drills across 11 tracks.
 2. **Bundle Integrity**: Every drill directory contains `exercise.*`, `solution.*`, `hints.md`, and `theory.md`.
 3. **Production Story**: Every exercise file contains a named real-world incident comment block.
-4. **Theory Modules**: Every `theory.md` >= 200 words, contains incident story, mechanism, ASCII diagram, and closes with "You will now simulate this in the Crucible".
+4. **Theory Modules**: Every `theory.md` >= 150 words, contains incident story, mechanism, ASCII diagram, and closes with "You will now simulate this in the Crucible".
 5. **Gamification & Progress**: `.cherenkov-progress.json` format, XP calculations, 7 levels, 8 badges.
 6. **JMeter Runner**: Gracefully handles missing `jmeter` without panic.

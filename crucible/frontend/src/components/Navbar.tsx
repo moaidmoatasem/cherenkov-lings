@@ -13,6 +13,10 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate }) => {
     { path: '/transfer', label: 'Transfer (Kafka Lag)', icon: '💸' },
     { path: '/search', label: 'Search (Race Condition)', icon: '🔍' },
     { path: '/shadow-dom', label: 'Shadow DOM & Iframe', icon: '🛡️' },
+    { path: '/products', label: 'Catalog (Stubbing)', icon: '📦' },
+    { path: '/dashboard', label: 'Dashboard (Visual)', icon: '📊' },
+    { path: '/payment', label: 'Payment (frameLocator)', icon: '💳' },
+    { path: '/profile', label: 'Profile (Isolation)', icon: '👤' },
   ];
 
   return (

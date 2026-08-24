@@ -153,6 +153,105 @@ HTML_PAYMENT_FRAME = """<!DOCTYPE html>
 </html>
 """
 
+HTML_CHECKOUT_FRAME = """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Checkout Gateway Frame</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      margin: 0;
+      padding: 12px;
+      box-sizing: border-box;
+    }
+    h4 {
+      margin: 0 0 10px 0;
+      color: #38bdf8;
+      font-size: 14px;
+    }
+    .field {
+      margin-bottom: 10px;
+    }
+    label {
+      font-size: 12px;
+      color: #94a3b8;
+      display: block;
+      margin-bottom: 4px;
+    }
+    input {
+      width: 100%;
+      max-width: 220px;
+      padding: 6px 8px;
+      background: #1e293b;
+      border: 1px solid #475569;
+      border-radius: 4px;
+      color: #fff;
+      font-size: 13px;
+      box-sizing: border-box;
+    }
+    input:focus {
+      outline: none;
+      border-color: #38bdf8;
+    }
+    button {
+      display: inline-block;
+      padding: 7px 16px;
+      background: #0284c7;
+      color: #ffffff;
+      border: none;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    button:hover {
+      background: #0369a1;
+    }
+    #payment-status {
+      margin-top: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      display: none;
+    }
+    #payment-status.ok { color: #4ade80; }
+    #payment-status.err { color: #f87171; }
+  </style>
+</head>
+<body>
+  <h4>Secure Checkout Gateway (Frame)</h4>
+  <div class="field">
+    <label for="card-number">Card Number:</label>
+    <input id="card-number" type="text" placeholder="4242 4242 4242 4242" />
+  </div>
+  <div class="field">
+    <label for="card-expiry">Expiry Date (MM/YY):</label>
+    <input id="card-expiry" type="text" placeholder="12/28" />
+  </div>
+  <button id="btn-submit-payment">Submit Payment</button>
+  <div id="payment-status"></div>
+  <script>
+    document.getElementById('btn-submit-payment').addEventListener('click', function() {
+      var card = document.getElementById('card-number').value.trim();
+      var expiry = document.getElementById('card-expiry').value.trim();
+      var status = document.getElementById('payment-status');
+      if (card.length >= 12 && /\\d{2}\\/\\d{2}/.test(expiry)) {
+        status.textContent = 'Payment Authorized - Success';
+        status.className = 'ok';
+      } else {
+        status.textContent = 'Error: invalid card details';
+        status.className = 'err';
+      }
+      status.style.display = 'block';
+    });
+  </script>
+</body>
+</html>
+"""
+
 
 def settle_pending_transfers() -> None:
     """Settle all pending Kafka ledger transfers whose lag delay has elapsed."""
@@ -189,7 +288,6 @@ app.add_middleware(
         "http://127.0.0.1:8080",
         "http://localhost:8081",
         "http://127.0.0.1:8081",
-        "*",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -408,6 +506,12 @@ async def auth_me(request: Request) -> UserMeResponse:
 async def get_payment_frame() -> HTMLResponse:
     """Serve cross-origin payment iframe HTML."""
     return HTMLResponse(content=HTML_PAYMENT_FRAME, status_code=200)
+
+
+@app.get("/embed/checkout-frame", response_class=HTMLResponse)
+async def get_checkout_frame() -> HTMLResponse:
+    """Serve full card checkout iframe HTML (card number, expiry, submit)."""
+    return HTMLResponse(content=HTML_CHECKOUT_FRAME, status_code=200)
 
 
 # ---------------------------------------------------------------------------

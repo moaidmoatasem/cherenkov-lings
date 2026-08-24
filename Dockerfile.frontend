@@ -3,10 +3,14 @@ FROM node:18-alpine
 WORKDIR /app
 
 COPY crucible/frontend/package*.json ./
-RUN npm install
+RUN npm ci
+
+ARG VITE_API_BASE=http://localhost:8081
+ENV VITE_API_BASE=$VITE_API_BASE
 
 COPY crucible/frontend/ ./
+RUN npm run build
 
 EXPOSE 8080
 
-CMD ["npx", "vite", "--port", "8080", "--host", "0.0.0.0"]
+CMD ["npx", "vite", "preview", "--port", "8080", "--host", "0.0.0.0"]

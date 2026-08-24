@@ -19,8 +19,8 @@ Every requirement from ORIGINAL_REQUEST.md is inventoried below with its assigne
 | 9 | R1.4 k6 JS Drills 04–05 | Streaming SSE test against `/events/stream`, InfluxDB/Grafana metrics & thresholds | M2 | DONE | ORIGINAL_REQUEST §R1 |
 | 10 | R1.5 JMeter Drills 01–08 | Complete exercise.jmx + solution.jmx/solution.sh + hints for all 8 JMeter drills | M2 | DONE | ORIGINAL_REQUEST §R1 |
 | 11 | R1.6 Tool Decisions Drills 03–04 | Appium vs Maestro and Pact contract vs E2E test matrices | M2 | DONE | ORIGINAL_REQUEST §R1 |
-| 12 | R1.7 Production Stories | Comment block with named real-world incident at top of all 48 exercise files | M2 | DONE | ORIGINAL_REQUEST §R1 |
-| 13 | R3.1 Theoretical Context Modules | `theory.md` for all 48 drills (>=200 words, real incident, mechanism, ASCII diagram, crucible anchor) | M3 | DONE | ORIGINAL_REQUEST §R3 |
+| 12 | R1.7 Production Stories | Comment block with named real-world incident at top of all 60 exercise files | M2 | DONE | ORIGINAL_REQUEST §R1 |
+| 13 | R3.1 Theoretical Context Modules | `theory.md` for all 60 drills (>=150 words, real incident, mechanism, ASCII diagram, crucible anchor) | M3 | DONE | ORIGINAL_REQUEST §R3 |
 | 14 | R6.1 JMeterRunner Implementation | Runner trait implementation in `src/runner.rs`, executes `jmeter -n -t ... -l results.jtl` | M4 | DONE | ORIGINAL_REQUEST §R6 |
 | 15 | R6.2 JTL CSV Parser | Parses `elapsed`, `success`, `label` from JTL CSV for p99, avg latency, error rate | M4 | DONE | ORIGINAL_REQUEST §R6 |
 | 16 | R6.3 JMeter PATH Graceful Handling | Detects missing `jmeter` binary without panicking, provides helpful install message | M4 | DONE | ORIGINAL_REQUEST §R6 |
@@ -40,7 +40,7 @@ Every requirement from ORIGINAL_REQUEST.md is inventoried below with its assigne
 |---|------|-------|-------------|--------|
 | M1 | Crucible Backend Expansion | Implement `/upload`, `/products`, `/events/stream`, `/graphql` in `crucible/backend/app.py`, update `chaos.py` and `models.py`, write 10 pytest tests, verify ruff | None | DONE |
 | M2 | Drill Curriculum Expansion | Author new drills for Playwright (06-10), REST Assured (04-07), Maestro (04-05), k6 (04-05), JMeter (01-08), Tool Decisions (03-04), update `lings.toml` | M1 | DONE |
-| M3 | Theoretical Context Modules | Author `theory.md` for all 48 drill directories with named incidents, mechanisms, ASCII diagrams, and crucible anchors | None | DONE |
+| M3 | Theoretical Context Modules | Author `theory.md` for all 60 drill directories with named incidents, mechanisms, ASCII diagrams, and crucible anchors | None | DONE |
 | M4 | JMeter Runner & Clippy Cleanup | Implement `JMeterRunner` in `src/runner.rs`, CSV JTL parser, `AnyRunner::Jmeter`, graceful PATH fallback, fix clippy warnings | None | DONE |
 | M5 | Gamification Engine | Implement `src/gamification.rs`, `.cherenkov-progress.json` persistence, XP formula, 7 levels, 8 badges, streak logic, terminal badge reveal | None | DONE |
 | M6 | Interactive Dashboard Subcommand | Implement `cherenkov-lings dashboard` in `src/main.rs`, ANSI scorecard rendering, track progress table, recommendation | M5 | DONE |
@@ -55,6 +55,6 @@ Every requirement from ORIGINAL_REQUEST.md is inventoried below with its assigne
 - `crucible/backend/app.py`: FastAPI backend routes & GraphQL resolver
 - `crucible/backend/chaos.py`: Chaos headers & middleware
 - `crucible/backend/models.py`: Pydantic models
-- `tests/test_micro_crucible_chaos.py`: Pytest chaos integration suite (27 tests)
-- `exercises/`: 48 curriculum directories across 9 tracks
+- `tests/test_micro_crucible_chaos.py`: Pytest chaos integration suite (33 tests)
+- `exercises/`: 60 curriculum directories across 11 tracks
 - `lings.toml`: Curriculum and runner configuration

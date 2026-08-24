@@ -8,6 +8,12 @@ import { test, expect } from '@playwright/test';
 test('display catalog items with network interception stub (RESILIENT)', async ({ page }) => {
   // Stub the products API endpoint before navigation
   await page.route('**/products*', async (route) => {
+    // GOTCHA: route globs also match the SPA document navigation itself.
+    // Without this guard the HTML document is replaced by raw stubbed JSON.
+    if (route.request().resourceType() === 'document') {
+      await route.continue();
+      return;
+    }
     await route.fulfill({
       status: 200,
       contentType: 'application/json',

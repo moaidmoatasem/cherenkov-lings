@@ -58,7 +58,7 @@ jobs:
       run: ruff check crucible/ tests/
 
     - name: Run Chaos & Pathology Pytest Suite
-      run: pytest tests/test_micro_crucible_chaos.py -v
+      run: python -m pytest tests/test_micro_crucible_chaos.py -v
 
   frontend_build_verification:
     name: React Frontend Build & Type Safety

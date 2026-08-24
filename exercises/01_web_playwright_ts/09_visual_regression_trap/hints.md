@@ -6,6 +6,8 @@ Pixel-by-pixel visual snapshot comparison is fragile when rendered against non-d
 ## Hint 2 (API Pattern)
 Use Playwright's `mask` array option in `toHaveScreenshot()` to overlay neutral pink bounding boxes over volatile elements, and specify `maxDiffPixelRatio`.
 
+> **Note:** The very first execution intentionally fails with "A snapshot doesn't exist ... writing actual." — that run generates your local baseline. Run the solution a second time to perform the real masked comparison.
+
 ## Hint 3 (Code Diff)
 ```diff
 - await expect(page).toHaveScreenshot('dashboard-baseline.png');

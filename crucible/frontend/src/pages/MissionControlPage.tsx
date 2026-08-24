@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiUrl } from '../lib/api';
 
 interface DrillInfo {
   id: string;
@@ -42,14 +43,14 @@ interface DrillTheoryModalData {
 }
 
 const BADGES = [
-  { id: 'first_blood', icon: '??', name: 'First Blood', desc: 'Complete your first drill' },
-  { id: 'flakiness_slayer', icon: '???', name: 'Flakiness Slayer', desc: '3x 100/100 Flakiness under chaos' },
-  { id: 'chaos_survivor', icon: '?', name: 'Chaos Survivor', desc: 'Pass 5/5 k6 load test iterations under chaos' },
-  { id: 'tool_polyglot', icon: '??', name: 'Tool Polyglot', desc: 'Complete drills across 4 different tech stacks' },
-  { id: 'the_architect', icon: '???', name: 'The Architect', desc: 'Master all Cross-Tool Decision drills' },
-  { id: 'perfect_locator', icon: '??', name: 'Perfect Locator', desc: '5x 100/100 semantic locator scores' },
-  { id: 'speed_demon', icon: '??', name: 'Speed Demon', desc: 'Beat execution speed baseline by 40%+' },
-  { id: 'sdet_master', icon: '??', name: 'SDET Master', desc: 'Complete all 60 drills across all tracks' },
+  { id: 'first_blood', icon: '🩸', name: 'First Blood', desc: 'Complete your first drill' },
+  { id: 'flakiness_slayer', icon: '🗡️', name: 'Flakiness Slayer', desc: '3x 100/100 Flakiness under chaos' },
+  { id: 'chaos_survivor', icon: '🌀', name: 'Chaos Survivor', desc: 'Pass 5/5 k6 load test iterations under chaos' },
+  { id: 'tool_polyglot', icon: '🧰', name: 'Tool Polyglot', desc: 'Complete drills across 4 different tech stacks' },
+  { id: 'the_architect', icon: '🏗️', name: 'The Architect', desc: 'Master all Cross-Tool Decision drills' },
+  { id: 'perfect_locator', icon: '🎯', name: 'Perfect Locator', desc: '5x 100/100 semantic locator scores' },
+  { id: 'speed_demon', icon: '⚡', name: 'Speed Demon', desc: 'Beat execution speed baseline by 40%+' },
+  { id: 'sdet_master', icon: '👑', name: 'SDET Master', desc: 'Complete all 60 drills across all tracks' },
 ];
 
 export const MissionControlPage: React.FC = () => {
@@ -75,7 +76,7 @@ export const MissionControlPage: React.FC = () => {
 
   useEffect(() => {
     // Fetch progress from backend
-    fetch('http://localhost:8081/api/progress')
+    fetch(apiUrl('/api/progress'))
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data) setProgress(data);
@@ -83,7 +84,7 @@ export const MissionControlPage: React.FC = () => {
       .catch(() => {});
 
     // Fetch curriculum metadata
-    fetch('http://localhost:8081/api/curriculum')
+    fetch(apiUrl('/api/curriculum'))
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data && data.tracks) setCurriculum(data.tracks);
@@ -96,7 +97,7 @@ export const MissionControlPage: React.FC = () => {
     setLoadingTheory(true);
     setTheoryData(null);
 
-    fetch(`http://localhost:8081/api/drill/theory?path=${encodeURIComponent(drill.path)}`)
+    fetch(apiUrl(`/api/drill/theory?path=${encodeURIComponent(drill.path)}`))
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data) setTheoryData(data);
@@ -124,7 +125,7 @@ export const MissionControlPage: React.FC = () => {
     setChaosStatusCode(null);
 
     const startTime = performance.now();
-    const url = `http://localhost:8081${chaosEndpoint}`;
+    const url = apiUrl(chaosEndpoint);
 
     try {
       const headers: Record<string, string> = {};
@@ -195,7 +196,7 @@ export const MissionControlPage: React.FC = () => {
           <div>
             <span className="badge info" style={{ marginBottom: '8px' }}>QA Expert Flight Deck</span>
             <h1 style={{ fontSize: '28px', fontWeight: 800, color: 'var(--text-main)', marginTop: '4px' }}>
-              ?? Mission Control & Interactive Curriculum
+              🎯 Mission Control & Interactive Curriculum
             </h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px', maxWidth: '680px', marginTop: '6px' }}>
               Your real-time SDET learning telemetry hub. Level up through 60 production failure drills across 11 tracks, simulate live micro-crucible chaos, and review architectural incident postmortems.
@@ -203,11 +204,11 @@ export const MissionControlPage: React.FC = () => {
           </div>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
             <div style={{ textAlign: 'center', background: 'rgba(15, 23, 42, 0.6)', padding: '12px 18px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>?? Active Streak</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>🔥 Active Streak</div>
               <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--accent-amber)' }}>{progress ? progress.streak_days : 0} Days</div>
             </div>
             <div style={{ textAlign: 'center', background: 'rgba(15, 23, 42, 0.6)', padding: '12px 18px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>?? Total Drills</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>🧪 Total Drills</div>
               <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--accent-cyan)' }}>{totalDrillsCount || 60}</div>
             </div>
           </div>
@@ -239,7 +240,7 @@ export const MissionControlPage: React.FC = () => {
       {/* Achievements Showcase */}
       <div className="card">
         <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span>???</span> SDET Mastery Achievements
+            <span>🏅</span> SDET Mastery Achievements
         </h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '14px' }}>
           {BADGES.map((b) => {
@@ -352,7 +353,7 @@ export const MissionControlPage: React.FC = () => {
               className="primary-btn"
               style={{ height: '38px', padding: '0 20px', whiteSpace: 'nowrap' }}
             >
-              {chaosLoading ? '? Injecting...' : '?? Fire Request'}
+              {chaosLoading ? '⏳ Injecting...' : '🔥 Fire Request'}
             </button>
           </div>
         </div>
@@ -392,7 +393,7 @@ export const MissionControlPage: React.FC = () => {
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
           <div>
-            <h2 className="card-title" style={{ margin: 0 }}>?? 60-Drill Polyglot Curriculum Catalog</h2>
+            <h2 className="card-title" style={{ margin: 0 }}>📚 60-Drill Polyglot Curriculum Catalog</h2>
             <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '4px' }}>
               Click any drill to read its Real-World Production Story, failure mechanism, and progressive hints.
             </p>
@@ -438,7 +439,7 @@ export const MissionControlPage: React.FC = () => {
                   className="secondary-btn"
                   style={{ fontSize: '11px', padding: '4px 10px' }}
                 >
-                  {copiedPath === track.id ? '? Command Copied!' : `?? Copy 'watch --track=${track.id}'`}
+                  {copiedPath === track.id ? '✅ Command Copied!' : `📋 Copy 'watch --track=${track.id}'`}
                 </button>
               </div>
 
@@ -472,7 +473,7 @@ export const MissionControlPage: React.FC = () => {
                       <div style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-main)' }}>{drill.name}</div>
                       <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{drill.id}</div>
                     </div>
-                    <span style={{ fontSize: '13px', color: 'var(--accent-cyan)' }}>?? Theory &rarr;</span>
+                    <span style={{ fontSize: '13px', color: 'var(--accent-cyan)' }}>📖 Theory &rarr;</span>
                   </div>
                 ))}
               </div>
@@ -541,14 +542,14 @@ export const MissionControlPage: React.FC = () => {
               ) : theoryData ? (
                 <>
                   <div style={{ background: '#090e17', borderRadius: '8px', padding: '16px', border: '1px solid #1e293b' }}>
-                    <h4 style={{ color: 'var(--accent-cyan)', fontSize: '14px', marginBottom: '10px' }}>?? Theoretical Context & Case Study</h4>
+                    <h4 style={{ color: 'var(--accent-cyan)', fontSize: '14px', marginBottom: '10px' }}>📚 Theoretical Context & Case Study</h4>
                     <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: '13px', lineHeight: 1.6, color: 'var(--text-main)' }}>
                       {theoryData.theory_markdown}
                     </div>
                   </div>
 
                   <div style={{ background: '#090e17', borderRadius: '8px', padding: '16px', border: '1px solid #1e293b' }}>
-                    <h4 style={{ color: 'var(--accent-green)', fontSize: '14px', marginBottom: '10px' }}>?? Progressive Hints & Solutions</h4>
+                    <h4 style={{ color: 'var(--accent-green)', fontSize: '14px', marginBottom: '10px' }}>💡 Progressive Hints & Solutions</h4>
                     <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'var(--font-mono)', fontSize: '12px', lineHeight: 1.5, color: 'var(--text-muted)' }}>
                       {theoryData.hints_markdown}
                     </div>

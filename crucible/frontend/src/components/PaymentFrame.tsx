@@ -1,11 +1,12 @@
 import React from 'react';
+import { apiUrl } from '../lib/api';
 
 interface PaymentFrameProps {
   src?: string;
 }
 
 export const PaymentFrame: React.FC<PaymentFrameProps> = ({
-  src = 'http://localhost:8081/embed/payment-frame',
+  src = apiUrl('/embed/payment-frame'),
 }) => {
   return (
     <div className="payment-frame-wrapper">

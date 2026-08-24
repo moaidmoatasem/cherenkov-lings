@@ -1,5 +1,6 @@
 import React from 'react';
 import { PaymentFrame } from '../components/PaymentFrame';
+import { apiUrl } from '../lib/api';
 import '../components/ChaosVault'; // Ensure custom element is registered
 
 export const ShadowDomPage: React.FC = () => {
@@ -33,7 +34,7 @@ export const ShadowDomPage: React.FC = () => {
             An embedded payment authorization iframe hosted on port 8081 (origin: <code>http://localhost:8081</code>).
           </p>
 
-          <PaymentFrame src="http://localhost:8081/embed/payment-frame" />
+          <PaymentFrame src={apiUrl('/embed/payment-frame')} />
         </div>
 
         <div className="card diagnostic-card">

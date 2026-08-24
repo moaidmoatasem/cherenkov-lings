@@ -3,11 +3,7 @@
 > **An interactive, local-first experiential learning platform for QA Engineers and SDETs.**
 > Master modern test automation across UI, API, Mobile, Performance, Security, and GenAI — with zero cloud, zero GPU, zero vendor lock-in.
 
-[![CI](https://github.com/your-org/cherenkov-lings/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/cherenkov-lings/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Rust](https://img.shields.io/badge/rust-stable-orange)](https://www.rust-lang.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com)
-[![Playwright](https://img.shields.io/badge/Playwright-1.50+-45ba4b.svg)](https://playwright.dev)
 
 ---
 
@@ -16,7 +12,7 @@
 Cherenkov-lings is inspired by [Rustlings](https://github.com/rust-lang/rustlings) and modern engineering pedagogy: **You master test automation by breaking real systems, not by reading slides.**
 
 Every drill runs against a purposely pathological embedded application — the **Micro-Crucible** — which reproduces the exact production failures QA Engineers face in real-world environments:
-* React 19 hydration timing click drops
+* React hydration timing click drops
 * Distributed Kafka eventual consistency lag
 * JWT mid-session token invalidation
 * Out-of-order debounced search clobbering
@@ -71,7 +67,7 @@ Track your journey from Manual QA to SDET Master:
 
 **Windows (PowerShell):**
 ```powershell
-git clone https://github.com/your-org/cherenkov-lings
+git clone <repository-url>
 cd cherenkov-lings
 .\install.ps1
 ```
@@ -100,6 +96,8 @@ chmod +x crucible/start.sh && ./crucible/start.sh
 ```bash
 docker compose up
 ```
+
+To point the sandbox UI at a non-default backend URL, set `VITE_API_BASE` at frontend image build time (e.g. `docker compose build --build-arg VITE_API_BASE=http://192.168.1.50:8081 frontend`).
 
 Services will be live at:
 * 🌐 **Web Sandbox & Pathology Demos**: `http://localhost:8080`
@@ -133,7 +131,7 @@ Open any `exercise.*` file in your favorite editor, write your fix, and hit **Sa
 | Track | Stack | Drills | Core Concepts & Incident Case Studies |
 |---|---|:---:|---|
 | **0. Foundations** | Python / Pytest | 5 | AAA pattern, assertions as documentation, avoiding mock traps, single-responsibility |
-| **1. Web UI** | Playwright TS | 10 | React 19 hydration click drops, closed Shadow DOM piercing, debounced race conditions, Page Object Model, cross-origin payment iframes, network request intercepts, visual regression thresholds, worker storageState isolation |
+| **1. Web UI** | Playwright TS | 10 | React hydration click drops, closed Shadow DOM piercing, debounced race conditions, Page Object Model, cross-origin payment iframes, network request intercepts, visual regression thresholds, worker storageState isolation |
 | **2. API Resilience** | REST Assured Java | 7 | HTTP 409 idempotency collisions, transparent JWT 401 interceptors, Kafka lag polling, multi-page pagination loops, JSON schema contracts, aliased GraphQL queries, `RequestSpecBuilder` reuse |
 | **3. Mobile UI** | Maestro YAML | 5 | Biometric auth fallback flows, deep link cold starts, activity recreation & screen rotation UI state, dynamic list `scrollUntilVisible`, OS permission dialog handlers |
 | **4. Performance (k6)** | k6 JS | 5 | Database pool starvation, 10x spike p99 latency profiling, chaos proxy SLA thresholds, Server-Sent Events continuous streams, InfluxDB / Grafana outputs |

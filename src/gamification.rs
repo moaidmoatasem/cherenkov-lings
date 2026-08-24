@@ -413,7 +413,13 @@ pub fn save_progress<P: AsRef<Path>>(
 
     let json = serde_json::to_string_pretty(state)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-    fs::write(target_path, json)?;
+
+    let tmp_path = target_path.with_extension("tmp");
+    fs::write(&tmp_path, &json)?;
+    if let Err(e) = fs::rename(&tmp_path, target_path) {
+        let _ = fs::remove_file(&tmp_path);
+        return Err(e);
+    }
     Ok(())
 }
 

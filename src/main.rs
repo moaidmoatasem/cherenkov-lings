@@ -440,8 +440,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     );
 
                                     if scorecard.passed {
-                                        let mut state = gamification::load_progress(None::<&Path>)
-                                            .unwrap_or_default();
+                                        let mut state = match gamification::load_progress(
+                                            None::<&Path>,
+                                        ) {
+                                            Ok(s) => s,
+                                            Err(e) => {
+                                                eprintln!(
+                                                    "{} Progress file unreadable ({}); starting fresh from zero XP.",
+                                                    "⚠️".yellow(),
+                                                    e
+                                                );
+                                                Default::default()
+                                            }
+                                        };
                                         let run_ctx = gamification::DrillRunContext {
                                             track_id: task_track_id.clone(),
                                             drill_id: drill_id.clone(),
@@ -647,7 +658,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 tracks: gamification::default_curriculum_tracks(),
             });
 
-            let state = gamification::load_progress(None::<&Path>).unwrap_or_default();
+            let state = match gamification::load_progress(None::<&Path>) {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!(
+                        "{} Progress file unreadable ({}); showing default state.",
+                        "⚠️".yellow(),
+                        e
+                    );
+                    Default::default()
+                }
+            };
             let dashboard_output = gamification::render_dashboard(&state, &cfg);
             print!("{}", dashboard_output);
         }

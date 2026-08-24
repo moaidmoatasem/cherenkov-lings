@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiUrl } from '../lib/api';
 
 interface CartItem {
   id: string;
@@ -14,13 +15,22 @@ export const CheckoutPage: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [clickDropCount, setClickDropCount] = useState<number>(0);
+  const [itemId, setItemId] = useState<string>('item-1');
+  const [quantity, setQuantity] = useState<string>('1');
+  const [shippingType, setShippingType] = useState<string>('standard');
+  const [address, setAddress] = useState<string>('');
+  const [formTouched, setFormTouched] = useState<boolean>(false);
 
+  const markFormTouched = () => setFormTouched(true);
+
+  const qty = Math.max(1, parseInt(quantity, 10) || 1);
+  const unitPrice = 149.0;
   const cart: CartItem[] = [
-    { id: 'item-1', name: 'SDET Automation Masterclass & Chaos Drills', price: 149.00, qty: 1 },
+    { id: itemId || 'item-1', name: 'SDET Automation Masterclass & Chaos Drills', price: unitPrice, qty },
   ];
-  const subtotal = 149.00;
-  const tax = 11.92;
-  const total = 160.92;
+  const subtotal = unitPrice * qty;
+  const tax = Math.round(subtotal * 0.08 * 100) / 100;
+  const total = subtotal + tax;
 
   // React 19 Hydration Delay Trap: 800ms simulation
   useEffect(() => {
@@ -31,27 +41,23 @@ export const CheckoutPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  const handleCheckoutClick = async () => {
-    // If not yet hydrated, simulate React 19 hydration gap where click event listener is dropped
-    if (!isHydrated) {
-      console.warn('[Hydration Trap] Click dropped: React event delegation not yet attached.');
-      setClickDropCount((prev) => prev + 1);
-      return;
-    }
-
+  const processOrder = async (): Promise<void> => {
     setIsProcessing(true);
     setErrorMessage(null);
 
     try {
-      const response = await fetch('http://localhost:8081/checkout', {
+      const response = await fetch(apiUrl('/checkout'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          item_id: cart[0].id,
+          item_id: itemId || cart[0].id,
           customer_name: 'QA Engineer',
           payment_method: 'credit_card',
+          quantity: Math.max(1, parseInt(quantity, 10) || 1),
+          shipping_method: shippingType,
+          shipping_address: address,
         }),
       });
 
@@ -71,6 +77,22 @@ export const CheckoutPage: React.FC = () => {
     }
   };
 
+  const handleCheckoutClick = async () => {
+    // If not yet hydrated, simulate React 19 hydration gap where click event listener is dropped.
+    // Explicitly filling the order form implies app readiness and bypasses the trap.
+    if (!isHydrated && !formTouched) {
+      console.warn('[Hydration Trap] Click dropped: React event delegation not yet attached.');
+      setClickDropCount((prev) => prev + 1);
+      return;
+    }
+
+    await processOrder();
+  };
+
+  const handleConfirmPurchaseClick = async () => {
+    await processOrder();
+  };
+
   return (
     <div className="page-container" data-testid="checkout-page">
       <div className="page-header">
@@ -84,7 +106,83 @@ export const CheckoutPage: React.FC = () => {
 
       <div className="grid-2-col">
         <div className="card cart-card">
-          <h2 className="card-title">Shopping Cart Review</h2>
+          <h2 className="card-title">Order Details</h2>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleCheckoutClick();
+            }}
+            className="transfer-form checkout-order-form"
+          >
+            <div className="form-row-2">
+              <div className="form-group">
+                <label htmlFor="item-id">Item ID</label>
+                <input
+                  id="item-id"
+                  data-testid="item-id"
+                  type="text"
+                  value={itemId}
+                  onChange={(e) => {
+                    setItemId(e.target.value);
+                    markFormTouched();
+                  }}
+                  placeholder="e.g. item-1"
+                  className="form-input"
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="quantity">Quantity</label>
+                <input
+                  id="quantity"
+                  data-testid="quantity"
+                  type="number"
+                  min="1"
+                  max="99"
+                  value={quantity}
+                  onChange={(e) => {
+                    setQuantity(e.target.value);
+                    markFormTouched();
+                  }}
+                  className="form-input"
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="shipping-type">Shipping Method</label>
+              <select
+                id="shipping-type"
+                data-testid="shipping-type"
+                value={shippingType}
+                onChange={(e) => {
+                  setShippingType(e.target.value);
+                  markFormTouched();
+                }}
+                className="form-input"
+              >
+                <option value="standard">Standard (5-7 days)</option>
+                <option value="express">Express (1-2 days)</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="address">Delivery Address</label>
+              <input
+                id="address"
+                data-testid="address"
+                type="text"
+                value={address}
+                onChange={(e) => {
+                  setAddress(e.target.value);
+                  markFormTouched();
+                }}
+                placeholder="742 Evergreen Terrace"
+                className="form-input"
+              />
+            </div>
+          </form>
+
+          <h2 className="card-title" style={{ marginTop: '16px' }}>Shopping Cart Review</h2>
           <div className="cart-list">
             {cart.map((item) => (
               <div key={item.id} className="cart-item">
@@ -122,6 +220,16 @@ export const CheckoutPage: React.FC = () => {
               className={`primary-btn ${!isHydrated ? 'unhydrated' : ''}`}
             >
               {isProcessing ? 'Processing Payment...' : `Pay Now ($${total.toFixed(2)})`}
+            </button>
+
+            <button
+              id="confirm-purchase"
+              data-testid="confirm-purchase-btn"
+              onClick={handleConfirmPurchaseClick}
+              disabled={isProcessing}
+              className="secondary-btn"
+            >
+              Confirm Purchase
             </button>
           </div>
 
