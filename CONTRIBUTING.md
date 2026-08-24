@@ -1,99 +1,61 @@
 # Contributing to cherenkov-lings
 
-> Thanks for helping us expand the curriculum. Every new drill teaches a real QA engineer a real skill.
+First off, thank you for considering contributing to cherenkov-lings! 
 
-## How to Add a New Drill
+This project aims to be the most comprehensive, scientifically rigorous experiential learning platform for Quality Engineering.
 
-### 1. Pick a track and drill number
+## ?? Core Philosophy
+1. **Realism**: Drills must represent actual production failures, not synthetic toy problems.
+2. **Resilience**: The platform deliberately injects network and timing chaos. Solutions must survive chaos, not just "happy path" local runs.
+3. **Empathy**: Feedback should act like a Senior SDET mentoring a junior. Never use punitive language ("Failed 0/100"); use coaching language ("Needs Flakiness Hardening").
 
-Each track lives in `exercises/<NN>_<track_name>/`. Drills are numbered sequentially:
+## ??? Local Development Setup
 
-`
-exercises/01_web_playwright_ts/
-  01_hydration_timing/    <- existing
-  02_shadow_dom_v2/       <- existing
-  04_my_new_drill/        <- your new drill
-`
+1. **Rust Toolchain**: Must use `stable-x86_64-pc-windows-msvc` (or target OS equivalent).
+2. **Node.js**: v18+ required for Playwright / React.
+3. **Python**: v3.11+ required for FastAPI / Pytest.
 
-### 2. Create the three required files
+### Running the Test Gates
+Before submitting a PR, you **must** pass all verification gates:
+```bash
+# 1. Rust Core Engine Tests & Lints
+cargo clippy --all-targets -- -D warnings
+cargo fmt --all -- --check
+cargo test --all
 
-Every drill must have exactly these three files:
+# 2. Python Backend & Security Suites
+python -m pytest tests/test_micro_crucible_chaos.py
 
-| File | Purpose | Contract |
-|---|---|---|
-| `exercise.ts` / `.java` / `.js` / `.yaml` / `.py` | The broken/incomplete starting code | Must **FAIL** against the running Crucible |
-| `solution.ts` / `.java` / etc. | The correct, flakiness-resistant version | Must **PASS** all 5 chaos iterations |
-| `hints.md` | Exactly 3 progressive hints | Nudge, Pattern, Diff |
+# 3. TypeScript Compilation
+npx tsc --noEmit (in crucible/frontend)
+```
 
-### 3. The Pedagogical Contract
+## ??? Adding a New Drill (The Strict Contract)
 
-The `exercise` file must:
-- Contain a `// TODO:` comment (or `# TODO:` for Python/YAML) identifying the exact anti-pattern to fix
-- Fail for a **clear pedagogical reason** (not a typo, not a missing import)
-- The failure message should be a clue, not noise
+We do not accept "half-drills". Every drill in the platform must conform to a strict structural contract.
 
-The `hints.md` must follow this structure:
-`markdown
-# Hints: Drill NN — Title
+Use the built-in CLI to scaffold your drill:
+```bash
+cherenkov-lings new-drill --track=playwright-ts --name=04_new_concept
+```
 
-## Hint 1 (Architectural Nudge)
-Why does this class of anti-pattern cause flakiness in production?
+This ensures your directory has the mandatory 4 files:
+1. `exercise.ts / .py`: The broken code containing the anti-pattern, marked with `// TODO`.
+2. `solution.ts / .py`: The flakiness-resistant, chaos-proof solution.
+3. `hints.md`: Exactly 3 progressive hints:
+   - Hint 1: Architectural Nudge
+   - Hint 2: API Pattern
+   - Hint 3: Code Diff
+4. `theory.md`: The real-world production incident story (must be = 150 words) and an ASCII failure diagram.
 
-## Hint 2 (API Pattern)
-Show the correct API or pattern, without giving away the full solution.
+Verify your drill with:
+```bash
+cherenkov-lings audit
+```
 
-## Hint 3 (Code Diff)
-A minimal diff showing exactly what to change.
-`
+If it does not pass the audit, the CI pipeline will reject the PR.
 
-### 4. Test your drill end-to-end
+## ?? Expanding the Micro-Crucible
+If your drill requires a new failure mode (e.g., a specific GraphQL vulnerability), add it to `crucible/backend/app.py` or the React frontend. Ensure you respect the `X-Chaos` header patterns established in `ChaosMiddleware`.
 
-`powershell
-# Start the Crucible
-.\crucible\start.bat
-
-# Verify exercise FAILS
-npx playwright test exercises/01_web_playwright_ts/04_my_new_drill/exercise.ts
-
-# Verify solution PASSES
-npx playwright test exercises/01_web_playwright_ts/04_my_new_drill/solution.ts
-
-# Run through the watcher loop
-cherenkov-lings watch --track=playwright-ts
-# then save exercise.ts and confirm the scorecard appears
-`
-
-### 5. Verify Rust tests still pass
-
-`powershell
-cargo test
-# Must show 0 failed across all suites
-`
-
-### 6. Open a Pull Request
-
-The CI pipeline (`ci.yml`) will automatically:
-- Lint with `cargo clippy` (no warnings allowed)
-- Check formatting with `cargo fmt`
-- Run all 254+ Rust tests
-- Lint the Python backend with `ruff`
-
----
-
-## How to Add a New Track
-
-1. Add a new `[[tracks]]` entry in `lings.toml`
-2. Create the exercises directory `exercises/NN_track_name/`
-3. If it needs a new runner type, implement it in `src/runner.rs` following the `Runner` trait
-4. Add anti-pattern detection patterns in `src/feedback.rs`
-5. Wire the runner into `src/main.rs`'s `watch` command
-
----
-
-## Philosophy Reminder
-
-> "Not to evaluate learners, but to help them learn from A to Z."
-
-- Language: **feedback**, not grades. **insights**, not scores. **puzzles**, not tests.
-- Every drill must teach something a QA Engineer will encounter in production.
-- No synthetic toy examples. Every pathology in the Micro-Crucible is based on a real incident class.
+Thank you for helping us elevate the standard of QA Engineering globally!

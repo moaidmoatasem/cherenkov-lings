@@ -1,4 +1,4 @@
-﻿# ⚡ cherenkov-lings
+# ⚡ cherenkov-lings
 
 > **An interactive, local-first experiential learning platform for QA Engineers and SDETs.**
 > Master modern test automation across UI, API, Mobile, Performance, Security, and GenAI — with zero cloud, zero GPU, zero vendor lock-in.
@@ -128,7 +128,7 @@ Open any `exercise.*` file in your favorite editor, write your fix, and hit **Sa
 
 ---
 
-## 📚 48-Drill Curriculum Matrix (9 Tracks)
+## 📚 60-Drill Curriculum Matrix (11 Tracks)
 
 | Track | Stack | Drills | Core Concepts & Incident Case Studies |
 |---|---|:---:|---|
@@ -138,9 +138,11 @@ Open any `exercise.*` file in your favorite editor, write your fix, and hit **Sa
 | **3. Mobile UI** | Maestro YAML | 5 | Biometric auth fallback flows, deep link cold starts, activity recreation & screen rotation UI state, dynamic list `scrollUntilVisible`, OS permission dialog handlers |
 | **4. Performance (k6)** | k6 JS | 5 | Database pool starvation, 10x spike p99 latency profiling, chaos proxy SLA thresholds, Server-Sent Events continuous streams, InfluxDB / Grafana outputs |
 | **5. Performance (JMeter)** | JMeter JMX | 8 | Non-GUI CI execution, response assertions, Gaussian random timers, listener memory leaks, CSRF extraction & correlation, throughput vs concurrency math, master-agent distributed load, automated JTL HTML dashboards |
-| **6. GenAI QA** | Playwright TS | 2 | RAG answer semantic faithfulness verification, non-deterministic LLM output schema matching |
-| **7. Cloud & DevSecOps** | Python Pytest | 2 | Docker socket volume privilege escalation, JWT `alg: none` signature bypasses |
+| **6. GenAI QA & LLMs** | Playwright TS | 5 | RAG semantic faithfulness, structured intent assertions, hallucination citation grounding, prompt injection red-teaming defenses, TTFT streaming latency thresholds |
+| **7. Cloud DevSecOps** | Python Pytest | 5 | Docker socket privilege escalation, JWT signature bypass, blind timing SQLi, cloud metadata SSRF blocking, CORS origin isolation |
 | **8. Tool Decisions** | Python | 4 | UI vs API layer decision matrix, k6 vs JMeter enterprise tradeoffs, Appium vs Maestro mobile strategy, Pact contract vs E2E microservice testing |
+| **9. Contract Testing** | Python / Pact | 3 | Consumer schema definition, automated provider verification gates, breaking additive vs destructive API changes |
+| **10. Accessibility** | Playwright TS | 3 | WCAG semantic trees & color contrast, keyboard sequential focus traps, ARIA screen-reader live regions |
 
 ---
 
