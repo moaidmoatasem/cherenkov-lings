@@ -10,7 +10,10 @@ mod feedback;
 mod watcher;
 
 use feedback::*;
-use runner::{parse_surefire_xml, AnyRunner, DrillResponse, JvmRunner, RunResult, SurefireFailure, SurefireReport, SurefireTestCase};
+use runner::{
+    AnyRunner, DrillResponse, JvmRunner, RunResult, SurefireFailure, SurefireReport,
+    SurefireTestCase, parse_surefire_xml,
+};
 use std::path::Path;
 use std::sync::Arc;
 
@@ -22,41 +25,87 @@ use std::sync::Arc;
 fn test_extract_class_name_standard_and_windows_paths() {
     let cases = vec![
         // Standard Maven directory structures
-        ("exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill01_idempotency/Exercise.java", Some("com.cherenkov.drill01_idempotency.Exercise")),
-        ("exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill01_idempotency/Solution.java", Some("com.cherenkov.drill01_idempotency.Solution")),
-        ("exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill02_jwt_auth/Exercise.java", Some("com.cherenkov.drill02_jwt_auth.Exercise")),
-        ("exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill02_jwt_auth/Solution.java", Some("com.cherenkov.drill02_jwt_auth.Solution")),
-        ("exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill03_kafka_lag/Exercise.java", Some("com.cherenkov.drill03_kafka_lag.Exercise")),
-        ("exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill03_kafka_lag/Solution.java", Some("com.cherenkov.drill03_kafka_lag.Solution")),
-
+        (
+            "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill01_idempotency/Exercise.java",
+            Some("com.cherenkov.drill01_idempotency.Exercise"),
+        ),
+        (
+            "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill01_idempotency/Solution.java",
+            Some("com.cherenkov.drill01_idempotency.Solution"),
+        ),
+        (
+            "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill02_jwt_auth/Exercise.java",
+            Some("com.cherenkov.drill02_jwt_auth.Exercise"),
+        ),
+        (
+            "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill02_jwt_auth/Solution.java",
+            Some("com.cherenkov.drill02_jwt_auth.Solution"),
+        ),
+        (
+            "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill03_kafka_lag/Exercise.java",
+            Some("com.cherenkov.drill03_kafka_lag.Exercise"),
+        ),
+        (
+            "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill03_kafka_lag/Solution.java",
+            Some("com.cherenkov.drill03_kafka_lag.Solution"),
+        ),
         // Windows backslashes
-        (r"exercises\02_api_restassured_java\src\test\java\com\cherenkov\drill01_idempotency\Exercise.java", Some("com.cherenkov.drill01_idempotency.Exercise")),
-        (r"C:\projects\cherenkov\exercises\02_api_restassured_java\src\test\java\org\example\MyTest.java", Some("org.example.MyTest")),
-
+        (
+            r"exercises\02_api_restassured_java\src\test\java\com\cherenkov\drill01_idempotency\Exercise.java",
+            Some("com.cherenkov.drill01_idempotency.Exercise"),
+        ),
+        (
+            r"C:\projects\cherenkov\exercises\02_api_restassured_java\src\test\java\org\example\MyTest.java",
+            Some("org.example.MyTest"),
+        ),
         // Paths with spaces and version numbers
-        (r"C:\My Documents\Workspace v1.2.3\exercises\02_api_restassured_java\src\test\java\com\cherenkov\CustomTest.java", Some("com.cherenkov.CustomTest")),
-
+        (
+            r"C:\My Documents\Workspace v1.2.3\exercises\02_api_restassured_java\src\test\java\com\cherenkov\CustomTest.java",
+            Some("com.cherenkov.CustomTest"),
+        ),
         // Subpaths rooted at src/test/java or test/java or main/java
-        ("src/test/java/com/corp/service/UserApiTest.java", Some("com.corp.service.UserApiTest")),
-        ("src/main/java/com/corp/service/UserApi.java", Some("com.corp.service.UserApi")),
-        ("test/java/com/corp/service/HelperTest.java", Some("com.corp.service.HelperTest")),
-        ("main/java/com/corp/service/Helper.java", Some("com.corp.service.Helper")),
-
+        (
+            "src/test/java/com/corp/service/UserApiTest.java",
+            Some("com.corp.service.UserApiTest"),
+        ),
+        (
+            "src/main/java/com/corp/service/UserApi.java",
+            Some("com.corp.service.UserApi"),
+        ),
+        (
+            "test/java/com/corp/service/HelperTest.java",
+            Some("com.corp.service.HelperTest"),
+        ),
+        (
+            "main/java/com/corp/service/Helper.java",
+            Some("com.corp.service.Helper"),
+        ),
         // Fully-qualified class names directly passed
-        ("com.cherenkov.drill01_idempotency.Exercise", Some("com.cherenkov.drill01_idempotency.Exercise")),
-        ("org.junit.jupiter.api.Test", Some("org.junit.jupiter.api.Test")),
-
+        (
+            "com.cherenkov.drill01_idempotency.Exercise",
+            Some("com.cherenkov.drill01_idempotency.Exercise"),
+        ),
+        (
+            "org.junit.jupiter.api.Test",
+            Some("org.junit.jupiter.api.Test"),
+        ),
         // Relative slash class names
-        ("com/cherenkov/drill01_idempotency/Exercise.java", Some("com.cherenkov.drill01_idempotency.Exercise")),
-        ("com/cherenkov/drill01_idempotency/Exercise", Some("com.cherenkov.drill01_idempotency.Exercise")),
-
+        (
+            "com/cherenkov/drill01_idempotency/Exercise.java",
+            Some("com.cherenkov.drill01_idempotency.Exercise"),
+        ),
+        (
+            "com/cherenkov/drill01_idempotency/Exercise",
+            Some("com.cherenkov.drill01_idempotency.Exercise"),
+        ),
         // Deeply nested package hierarchy
-        ("src/test/java/a/b/c/d/e/f/g/DeepTest.java", Some("a.b.c.d.e.f.g.DeepTest")),
-
+        (
+            "src/test/java/a/b/c/d/e/f/g/DeepTest.java",
+            Some("a.b.c.d.e.f.g.DeepTest"),
+        ),
         // Simple class name without path
         ("SimpleTest", Some("SimpleTest")),
         ("SimpleTest.java", Some("SimpleTest")),
-
         // Empty string
         ("", None),
     ];
@@ -132,7 +181,11 @@ Expected status code <200> but was <409>.
 
     let failure = tc.failure.as_ref().expect("Failure object present");
     // Escaped entities &#10; and &lt; &gt; must be properly decoded
-    assert!(failure.message.contains("Expected status code <200> but was <409>"));
+    assert!(
+        failure
+            .message
+            .contains("Expected status code <200> but was <409>")
+    );
     assert_eq!(failure.failure_type, "java.lang.AssertionError");
     assert!(failure.stack_trace.contains("Exercise.java:51"));
     assert!(failure.stack_trace.contains("java.lang.AssertionError:"));
@@ -193,7 +246,10 @@ fn test_surefire_parser_corrupt_and_unusual_formatting() {
     </testsuite>"#;
     let r2 = parse_surefire_xml(self_closing_failure).expect("Parse self-closing failure");
     assert_eq!(r2.failures, 1);
-    assert_eq!(r2.test_cases[0].failure.as_ref().unwrap().message, "abrupt failure");
+    assert_eq!(
+        r2.test_cases[0].failure.as_ref().unwrap().message,
+        "abrupt failure"
+    );
 }
 
 // =========================================================================
@@ -214,7 +270,11 @@ fn test_flakiness_matrix_permutations() {
             failed_iterations: failed_count,
             total_duration_ms: 2500, // 500ms avg <= 1000ms baseline (speed = 100)
             runs: vec![],
-            error: if failed_count > 0 { Some("Test assertion failed".into()) } else { None },
+            error: if failed_count > 0 {
+                Some("Test assertion failed".into())
+            } else {
+                None
+            },
         };
 
         // Clean AST (no Thread.sleep)
@@ -225,12 +285,23 @@ fn test_flakiness_matrix_permutations() {
             ..Default::default()
         };
 
-        let card_clean = evaluate_feedback(&response, &ast_clean, "restassured-java", "1.0.0", 85.0, 1000);
+        let card_clean = evaluate_feedback(
+            &response,
+            &ast_clean,
+            "restassured-java",
+            "1.0.0",
+            85.0,
+            1000,
+        );
         let expected_raw_flake = (passed_count as f64 / 5.0) * 100.0;
         assert_eq!(card_clean.flakiness.score, expected_raw_flake);
 
         // Expected total score = (0.35 * correctness) + (0.35 * flakiness) + (0.15 * locator: 100) + (0.15 * speed: 100)
-        let expected_c = if passed_count == 5 { 100.0 } else { expected_raw_flake };
+        let expected_c = if passed_count == 5 {
+            100.0
+        } else {
+            expected_raw_flake
+        };
         let expected_total = (0.35 * expected_c) + (0.35 * expected_raw_flake) + 15.0 + 15.0;
         assert!((card_clean.total_score - expected_total).abs() < 0.001);
 
@@ -249,10 +320,20 @@ fn test_flakiness_matrix_permutations() {
             ..Default::default()
         };
 
-        let card_with_sleep = evaluate_feedback(&response, &ast_with_sleep, "restassured-java", "1.0.0", 85.0, 1000);
+        let card_with_sleep = evaluate_feedback(
+            &response,
+            &ast_with_sleep,
+            "restassured-java",
+            "1.0.0",
+            85.0,
+            1000,
+        );
         let expected_capped_flake = expected_raw_flake.min(40.0);
         assert_eq!(card_with_sleep.flakiness.score, expected_capped_flake);
-        assert!(!card_with_sleep.passed, "Code with Thread.sleep must never pass scorecard");
+        assert!(
+            !card_with_sleep.passed,
+            "Code with Thread.sleep must never pass scorecard"
+        );
     }
 }
 
@@ -267,30 +348,28 @@ fn test_ast_thread_sleep_syntax_styles() {
         ("Thread.sleep(100);", true, Some(100)),
         ("Thread.sleep(0);", true, Some(0)),
         ("Thread.sleep(5000);", true, Some(5000)),
-
         // Fully qualified java.lang.Thread.sleep
         ("java.lang.Thread.sleep(250);", true, Some(250)),
         ("java.lang.Thread.sleep(1000);", true, Some(1000)),
-
         // TimeUnit sleep styles
         ("TimeUnit.SECONDS.sleep(5);", true, Some(5)),
         ("TimeUnit.MILLISECONDS.sleep(500);", true, Some(500)),
         ("TimeUnit.MINUTES.sleep(1);", true, Some(1)),
         ("TimeUnit.NANOSECONDS.sleep(100000);", true, Some(100000)),
         ("TimeUnit.HOURS.sleep(2);", true, Some(2)),
-
         // Fully qualified package before TimeUnit
-        ("java.util.concurrent.TimeUnit.SECONDS.sleep(3);", true, Some(3)),
-
+        (
+            "java.util.concurrent.TimeUnit.SECONDS.sleep(3);",
+            true,
+            Some(3),
+        ),
         // Unusual spacing around dots and parentheses
         ("Thread . sleep ( 300 );", true, Some(300)),
         ("java.lang.Thread . sleep ( 450 );", true, Some(450)),
         ("TimeUnit . SECONDS . sleep ( 10 );", true, Some(10)),
-
         // Variable or expression sleep argument (duration_ms is None)
         ("Thread.sleep(TIMEOUT_MS);", true, None),
         ("TimeUnit.SECONDS.sleep(delay);", true, None),
-
         // Commented out sleeps (MUST NOT trigger)
         ("// Thread.sleep(100);", false, None),
         ("// java.lang.Thread.sleep(200);", false, None),
@@ -302,25 +381,26 @@ fn test_ast_thread_sleep_syntax_styles() {
     for (code, should_flag, expected_duration) in variants {
         let report = analyze_source(code, "Test.java");
         assert_eq!(
-            report.has_wait_for_timeout,
-            should_flag,
+            report.has_wait_for_timeout, should_flag,
             "Failed AST detection for '{}': expected has_wait_for_timeout={}, got {}",
-            code,
-            should_flag,
-            report.has_wait_for_timeout
+            code, should_flag, report.has_wait_for_timeout
         );
 
         if should_flag {
-            let ap = report.anti_patterns.iter().find(|a| matches!(a.kind, AntiPatternKind::ThreadSleep { .. }));
-            assert!(ap.is_some(), "Expected ThreadSleep anti-pattern for '{}'", code);
+            let ap = report
+                .anti_patterns
+                .iter()
+                .find(|a| matches!(a.kind, AntiPatternKind::ThreadSleep { .. }));
+            assert!(
+                ap.is_some(),
+                "Expected ThreadSleep anti-pattern for '{}'",
+                code
+            );
             if let Some(AntiPatternKind::ThreadSleep { duration_ms }) = ap.map(|a| &a.kind) {
                 assert_eq!(
-                    *duration_ms,
-                    expected_duration,
+                    *duration_ms, expected_duration,
                     "Mismatched duration for '{}': expected {:?}, got {:?}",
-                    code,
-                    expected_duration,
-                    duration_ms
+                    code, expected_duration, duration_ms
                 );
             }
         } else {
@@ -370,8 +450,7 @@ fn test_all_3_drills_ast_and_scorecard_evaluations() {
         let sol_ast = feedback::analyze_file(sol_path).expect("Analyze solution");
 
         assert_eq!(
-            ex_ast.has_wait_for_timeout,
-            ex_has_sleep,
+            ex_ast.has_wait_for_timeout, ex_has_sleep,
             "{}: Exercise has_wait_for_timeout expectation failed",
             name
         );
@@ -408,8 +487,13 @@ fn test_all_3_drills_ast_and_scorecard_evaluations() {
             runs: vec![],
             error: None,
         };
-        let sol_card = evaluate_feedback(&sol_resp, &sol_ast, "restassured-java", "1.0.0", 85.0, 1000);
+        let sol_card =
+            evaluate_feedback(&sol_resp, &sol_ast, "restassured-java", "1.0.0", 85.0, 1000);
         assert!(sol_card.passed, "{}: Solution must pass evaluation", name);
-        assert_eq!(sol_card.total_score, 100.0, "{}: Solution total score must be 100.0", name);
+        assert_eq!(
+            sol_card.total_score, 100.0,
+            "{}: Solution total score must be 100.0",
+            name
+        );
     }
 }

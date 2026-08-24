@@ -1,6 +1,6 @@
 use cherenkov_lings::feedback::{self, AstReport};
 use cherenkov_lings::runner::{
-    parse_k6_summary_json, AnyRunner, DrillResponse, K6Runner, RunResult,
+    AnyRunner, DrillResponse, K6Runner, RunResult, parse_k6_summary_json,
 };
 use std::path::Path;
 use std::sync::Arc;
@@ -216,10 +216,12 @@ fn test_k6_feedback_matrix_evaluation() {
 
     assert!(!scorecard.passed);
     assert_eq!(scorecard.correctness.score, 0.0);
-    assert!(scorecard
-        .diagnostics
-        .iter()
-        .any(|d| d.contains("threshold 'rate<0.01' failed")));
+    assert!(
+        scorecard
+            .diagnostics
+            .iter()
+            .any(|d| d.contains("threshold 'rate<0.01' failed"))
+    );
 
     let mock_passed_response = DrillResponse {
         id: "k6-req-2".to_string(),

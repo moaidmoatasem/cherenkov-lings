@@ -1,6 +1,6 @@
 use cherenkov_lings::feedback::{self, AstReport};
 use cherenkov_lings::runner::{
-    parse_jmeter_jtl_csv, AnyRunner, DrillResponse, JMeterRunner, RunResult,
+    AnyRunner, DrillResponse, JMeterRunner, RunResult, parse_jmeter_jtl_csv,
 };
 use std::sync::Arc;
 
@@ -80,7 +80,9 @@ fn test_parse_jmeter_jtl_csv_error_rate_and_reasons() {
 
 #[test]
 fn test_parse_jmeter_jtl_csv_percentile_precision() {
-    let mut csv_data = String::from("timeStamp,elapsed,label,responseCode,responseMessage,threadName,dataType,success,failureMessage\n");
+    let mut csv_data = String::from(
+        "timeStamp,elapsed,label,responseCode,responseMessage,threadName,dataType,success,failureMessage\n",
+    );
     for i in 1..=100 {
         csv_data.push_str(&format!(
             "1700000000000,{},Sample {},200,OK,Thread 1,text,true,\n",
@@ -111,9 +113,16 @@ fn test_parse_jmeter_jtl_csv_quoted_and_escaped_fields() {
     assert_eq!(metrics.passed_samples, 1);
     assert_eq!(metrics.failed_samples, 1);
     assert_eq!(metrics.samples[0].label, "GET /api/v1/items?filter=a,b,c");
-    assert_eq!(metrics.samples[0].response_message, "OK, processed successfully");
+    assert_eq!(
+        metrics.samples[0].response_message,
+        "OK, processed successfully"
+    );
     assert_eq!(metrics.samples[1].label, "POST /api/v1/items,batch");
-    assert!(metrics.samples[1].failure_message.contains("Validation error, \"field\" is required"));
+    assert!(
+        metrics.samples[1]
+            .failure_message
+            .contains("Validation error, \"field\" is required")
+    );
 }
 
 #[test]
@@ -152,10 +161,12 @@ fn test_jmeter_feedback_matrix_evaluation() {
 
     assert!(!scorecard.passed);
     assert_eq!(scorecard.correctness.score, 0.0);
-    assert!(scorecard
-        .diagnostics
-        .iter()
-        .any(|d| d.contains("Connection refused")));
+    assert!(
+        scorecard
+            .diagnostics
+            .iter()
+            .any(|d| d.contains("Connection refused"))
+    );
 
     let mock_passed_response = DrillResponse {
         id: "jmeter-req-2".to_string(),

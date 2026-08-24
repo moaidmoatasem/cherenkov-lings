@@ -7,7 +7,9 @@ use tokio::net::{TcpListener, TcpStream};
 /// Helper: starts a mock HTTP server on an OS-assigned ephemeral port (`127.0.0.1:0`).
 /// Returns the bound `SocketAddr` and a receiver for inspected incoming request strings.
 async fn spawn_mock_upstream() -> (SocketAddr, tokio::sync::mpsc::Receiver<String>) {
-    let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind mock upstream");
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind mock upstream");
     let local_addr = listener.local_addr().expect("local addr");
     let (tx, rx) = tokio::sync::mpsc::channel(100);
 
@@ -35,7 +37,9 @@ async fn spawn_mock_upstream() -> (SocketAddr, tokio::sync::mpsc::Receiver<Strin
 
 /// Helper: starts a mock HTTP server specifically returning 201 Created for POSTs.
 async fn spawn_mock_checkout_upstream() -> (SocketAddr, tokio::sync::mpsc::Receiver<String>) {
-    let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind mock checkout upstream");
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind mock checkout upstream");
     let local_addr = listener.local_addr().expect("local addr");
     let (tx, rx) = tokio::sync::mpsc::channel(100);
 
@@ -76,10 +80,14 @@ async fn test_proxy_transparent_routing_and_passthrough() {
     drop(proxy_listener);
 
     let config = ProxyConfig::new(proxy_addr, upstream_addr);
-    let (handle, shutdown_tx) = ProxyServer::spawn_background(config).await.expect("spawn proxy");
+    let (handle, shutdown_tx) = ProxyServer::spawn_background(config)
+        .await
+        .expect("spawn proxy");
 
     // Connect to proxy
-    let mut client = TcpStream::connect(proxy_addr).await.expect("connect to proxy");
+    let mut client = TcpStream::connect(proxy_addr)
+        .await
+        .expect("connect to proxy");
 
     let post_body = r#"{"item":"fusion_cell","qty":5}"#;
     let req = format!(
@@ -89,7 +97,10 @@ async fn test_proxy_transparent_routing_and_passthrough() {
         post_body
     );
 
-    client.write_all(req.as_bytes()).await.expect("send request");
+    client
+        .write_all(req.as_bytes())
+        .await
+        .expect("send request");
     client.flush().await.expect("flush request");
 
     // Read response from proxy
@@ -98,11 +109,18 @@ async fn test_proxy_transparent_routing_and_passthrough() {
     assert!(n > 0, "Expected response from proxy");
 
     let resp_str = String::from_utf8_lossy(&resp_buf[..n]);
-    assert!(resp_str.contains("201 Created"), "Response should be 201 Created, got: {}", resp_str);
+    assert!(
+        resp_str.contains("201 Created"),
+        "Response should be 201 Created, got: {}",
+        resp_str
+    );
     assert!(resp_str.contains(r#"{"order_id":"ord_1001","status":"confirmed"}"#));
 
     // Verify upstream received the exact headers and body
-    let received_req = req_rx.recv().await.expect("upstream should receive request");
+    let received_req = req_rx
+        .recv()
+        .await
+        .expect("upstream should receive request");
     assert!(received_req.starts_with("POST /checkout HTTP/1.1"));
     assert!(received_req.contains("X-Client-Trace: cl-999"));
     assert!(received_req.contains(post_body));
@@ -120,11 +138,15 @@ async fn test_proxy_l4_tcp_drop_on_x_chaos_header() {
     drop(proxy_listener);
 
     let config = ProxyConfig::new(proxy_addr, upstream_addr);
-    let (handle, shutdown_tx) = ProxyServer::spawn_background(config).await.expect("spawn proxy");
+    let (handle, shutdown_tx) = ProxyServer::spawn_background(config)
+        .await
+        .expect("spawn proxy");
 
     // Case 1: X-Chaos: drop=true
     {
-        let mut client = TcpStream::connect(proxy_addr).await.expect("connect to proxy");
+        let mut client = TcpStream::connect(proxy_addr)
+            .await
+            .expect("connect to proxy");
         let req = format!(
             "GET /api/status HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nX-Chaos: drop=true\r\n\r\n",
             proxy_addr.port()
@@ -134,12 +156,17 @@ async fn test_proxy_l4_tcp_drop_on_x_chaos_header() {
 
         let mut resp_buf = vec![0u8; 1024];
         let n = client.read(&mut resp_buf).await.unwrap_or(0);
-        assert_eq!(n, 0, "L4 Drop should close TCP stream with 0 bytes returned");
+        assert_eq!(
+            n, 0,
+            "L4 Drop should close TCP stream with 0 bytes returned"
+        );
     }
 
     // Case 2: X-Chaos-Drop: true
     {
-        let mut client = TcpStream::connect(proxy_addr).await.expect("connect to proxy");
+        let mut client = TcpStream::connect(proxy_addr)
+            .await
+            .expect("connect to proxy");
         let req = format!(
             "GET /api/status HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nX-Chaos-Drop: true\r\n\r\n",
             proxy_addr.port()
@@ -149,12 +176,17 @@ async fn test_proxy_l4_tcp_drop_on_x_chaos_header() {
 
         let mut resp_buf = vec![0u8; 1024];
         let n = client.read(&mut resp_buf).await.unwrap_or(0);
-        assert_eq!(n, 0, "L4 Drop should close TCP stream with 0 bytes returned");
+        assert_eq!(
+            n, 0,
+            "L4 Drop should close TCP stream with 0 bytes returned"
+        );
     }
 
     // Case 3: X-Chaos-Fault: drop
     {
-        let mut client = TcpStream::connect(proxy_addr).await.expect("connect to proxy");
+        let mut client = TcpStream::connect(proxy_addr)
+            .await
+            .expect("connect to proxy");
         let req = format!(
             "GET /api/status HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nX-Chaos-Fault: drop\r\n\r\n",
             proxy_addr.port()
@@ -164,7 +196,10 @@ async fn test_proxy_l4_tcp_drop_on_x_chaos_header() {
 
         let mut resp_buf = vec![0u8; 1024];
         let n = client.read(&mut resp_buf).await.unwrap_or(0);
-        assert_eq!(n, 0, "L4 Drop should close TCP stream with 0 bytes returned");
+        assert_eq!(
+            n, 0,
+            "L4 Drop should close TCP stream with 0 bytes returned"
+        );
     }
 
     let _ = shutdown_tx.send(());
@@ -181,9 +216,13 @@ async fn test_proxy_l4_tcp_drop_on_configured_drop_rate() {
 
     // 100% drop rate
     let config = ProxyConfig::new(proxy_addr, upstream_addr).with_drop_rate(1.0);
-    let (handle, shutdown_tx) = ProxyServer::spawn_background(config).await.expect("spawn proxy");
+    let (handle, shutdown_tx) = ProxyServer::spawn_background(config)
+        .await
+        .expect("spawn proxy");
 
-    let mut client = TcpStream::connect(proxy_addr).await.expect("connect to proxy");
+    let mut client = TcpStream::connect(proxy_addr)
+        .await
+        .expect("connect to proxy");
     let req = format!(
         "GET /api/balance HTTP/1.1\r\nHost: 127.0.0.1:{}\r\n\r\n",
         proxy_addr.port()
@@ -193,7 +232,10 @@ async fn test_proxy_l4_tcp_drop_on_configured_drop_rate() {
 
     let mut resp_buf = vec![0u8; 1024];
     let n = client.read(&mut resp_buf).await.unwrap_or(0);
-    assert_eq!(n, 0, "Configured 100% drop rate should immediately close client connection");
+    assert_eq!(
+        n, 0,
+        "Configured 100% drop rate should immediately close client connection"
+    );
 
     let _ = shutdown_tx.send(());
     let _ = handle.await;
@@ -208,10 +250,14 @@ async fn test_proxy_l7_synthetic_502_bad_gateway() {
     drop(proxy_listener);
 
     let config = ProxyConfig::new(proxy_addr, upstream_addr);
-    let (handle, shutdown_tx) = ProxyServer::spawn_background(config).await.expect("spawn proxy");
+    let (handle, shutdown_tx) = ProxyServer::spawn_background(config)
+        .await
+        .expect("spawn proxy");
 
     // Send request with X-Chaos: fault=502
-    let mut client = TcpStream::connect(proxy_addr).await.expect("connect to proxy");
+    let mut client = TcpStream::connect(proxy_addr)
+        .await
+        .expect("connect to proxy");
     let req = format!(
         "GET /api/test HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nX-Chaos: fault=502\r\n\r\n",
         proxy_addr.port()
@@ -224,7 +270,11 @@ async fn test_proxy_l7_synthetic_502_bad_gateway() {
     assert!(n > 0);
 
     let resp_str = String::from_utf8_lossy(&resp_buf[..n]);
-    assert!(resp_str.contains("502 Bad Gateway"), "Expected 502 Bad Gateway, got: {}", resp_str);
+    assert!(
+        resp_str.contains("502 Bad Gateway"),
+        "Expected 502 Bad Gateway, got: {}",
+        resp_str
+    );
     assert!(resp_str.contains("Content-Type: application/json"));
     assert!(resp_str.contains(r#""status":502"#) || resp_str.contains(r#""status": 502"#));
     assert!(resp_str.contains("Bad Gateway (Chaos Injected)"));
@@ -242,10 +292,14 @@ async fn test_proxy_l7_synthetic_504_gateway_timeout() {
     drop(proxy_listener);
 
     let config = ProxyConfig::new(proxy_addr, upstream_addr);
-    let (handle, shutdown_tx) = ProxyServer::spawn_background(config).await.expect("spawn proxy");
+    let (handle, shutdown_tx) = ProxyServer::spawn_background(config)
+        .await
+        .expect("spawn proxy");
 
     // Send request with X-Chaos-Fault: 504
-    let mut client = TcpStream::connect(proxy_addr).await.expect("connect to proxy");
+    let mut client = TcpStream::connect(proxy_addr)
+        .await
+        .expect("connect to proxy");
     let req = format!(
         "GET /api/long-poll HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nX-Chaos-Fault: 504\r\n\r\n",
         proxy_addr.port()
@@ -258,7 +312,11 @@ async fn test_proxy_l7_synthetic_504_gateway_timeout() {
     assert!(n > 0);
 
     let resp_str = String::from_utf8_lossy(&resp_buf[..n]);
-    assert!(resp_str.contains("504 Gateway Timeout"), "Expected 504 Gateway Timeout, got: {}", resp_str);
+    assert!(
+        resp_str.contains("504 Gateway Timeout"),
+        "Expected 504 Gateway Timeout, got: {}",
+        resp_str
+    );
     assert!(resp_str.contains("Content-Type: application/json"));
     assert!(resp_str.contains(r#""status":504"#) || resp_str.contains(r#""status": 504"#));
     assert!(resp_str.contains("Gateway Timeout (Chaos Injected)"));
@@ -279,9 +337,13 @@ async fn test_proxy_upstream_unreachable_returns_synthetic_502() {
     drop(proxy_listener);
 
     let config = ProxyConfig::new(proxy_addr, dead_upstream_addr);
-    let (handle, shutdown_tx) = ProxyServer::spawn_background(config).await.expect("spawn proxy");
+    let (handle, shutdown_tx) = ProxyServer::spawn_background(config)
+        .await
+        .expect("spawn proxy");
 
-    let mut client = TcpStream::connect(proxy_addr).await.expect("connect to proxy");
+    let mut client = TcpStream::connect(proxy_addr)
+        .await
+        .expect("connect to proxy");
     let req = format!(
         "GET /api/data HTTP/1.1\r\nHost: 127.0.0.1:{}\r\n\r\n",
         proxy_addr.port()
@@ -294,7 +356,11 @@ async fn test_proxy_upstream_unreachable_returns_synthetic_502() {
     assert!(n > 0);
 
     let resp_str = String::from_utf8_lossy(&resp_buf[..n]);
-    assert!(resp_str.contains("502 Bad Gateway"), "Expected 502 Bad Gateway for unreachable upstream, got: {}", resp_str);
+    assert!(
+        resp_str.contains("502 Bad Gateway"),
+        "Expected 502 Bad Gateway for unreachable upstream, got: {}",
+        resp_str
+    );
     assert!(resp_str.contains("Upstream Unreachable"));
 
     let _ = shutdown_tx.send(());
@@ -310,9 +376,13 @@ async fn test_proxy_l7_latency_delay_and_jitter() {
     drop(proxy_listener);
 
     let config = ProxyConfig::new(proxy_addr, upstream_addr);
-    let (handle, shutdown_tx) = ProxyServer::spawn_background(config).await.expect("spawn proxy");
+    let (handle, shutdown_tx) = ProxyServer::spawn_background(config)
+        .await
+        .expect("spawn proxy");
 
-    let mut client = TcpStream::connect(proxy_addr).await.expect("connect to proxy");
+    let mut client = TcpStream::connect(proxy_addr)
+        .await
+        .expect("connect to proxy");
     let req = format!(
         "GET /api/slow HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nX-Chaos: delay=120ms;jitter=10ms\r\n\r\n",
         proxy_addr.port()
@@ -346,9 +416,13 @@ async fn test_proxy_application_chaos_header_passthrough() {
     drop(proxy_listener);
 
     let config = ProxyConfig::new(proxy_addr, upstream_addr);
-    let (handle, shutdown_tx) = ProxyServer::spawn_background(config).await.expect("spawn proxy");
+    let (handle, shutdown_tx) = ProxyServer::spawn_background(config)
+        .await
+        .expect("spawn proxy");
 
-    let mut client = TcpStream::connect(proxy_addr).await.expect("connect to proxy");
+    let mut client = TcpStream::connect(proxy_addr)
+        .await
+        .expect("connect to proxy");
     let req = format!(
         "POST /auth/refresh HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nX-Chaos: token_expire=immediate;kafka_lag=1500ms;idempotency_conflict=true\r\n\r\n",
         proxy_addr.port()
@@ -361,7 +435,10 @@ async fn test_proxy_application_chaos_header_passthrough() {
     let _ = client.read(&mut resp_buf).await.unwrap();
 
     let upstream_req = req_rx.recv().await.expect("upstream received request");
-    assert!(upstream_req.contains("token_expire=immediate"), "X-Chaos header should pass through application directives");
+    assert!(
+        upstream_req.contains("token_expire=immediate"),
+        "X-Chaos header should pass through application directives"
+    );
     assert!(upstream_req.contains("kafka_lag=1500ms"));
     assert!(upstream_req.contains("idempotency_conflict=true"));
 
@@ -378,11 +455,18 @@ async fn test_proxy_lifecycle_shutdown_cleans_port() {
     drop(proxy_listener);
 
     let config = ProxyConfig::new(proxy_addr, upstream_addr);
-    let (handle, shutdown_tx) = ProxyServer::spawn_background(config).await.expect("spawn proxy");
+    let (handle, shutdown_tx) = ProxyServer::spawn_background(config)
+        .await
+        .expect("spawn proxy");
 
     // Check that proxy is accepting connections
-    let mut client = TcpStream::connect(proxy_addr).await.expect("connect while running");
-    let req = format!("GET /ping HTTP/1.1\r\nHost: 127.0.0.1:{}\r\n\r\n", proxy_addr.port());
+    let mut client = TcpStream::connect(proxy_addr)
+        .await
+        .expect("connect while running");
+    let req = format!(
+        "GET /ping HTTP/1.1\r\nHost: 127.0.0.1:{}\r\n\r\n",
+        proxy_addr.port()
+    );
     client.write_all(req.as_bytes()).await.unwrap();
     client.flush().await.unwrap();
 
@@ -396,5 +480,8 @@ async fn test_proxy_lifecycle_shutdown_cleans_port() {
 
     // Verify port is freed / connection rejected
     let connect_res = TcpStream::connect(proxy_addr).await;
-    assert!(connect_res.is_err(), "Proxy port should be closed after shutdown");
+    assert!(
+        connect_res.is_err(),
+        "Proxy port should be closed after shutdown"
+    );
 }

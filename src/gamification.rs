@@ -10,7 +10,11 @@ pub const DEFAULT_BASELINE_DURATION_MS: u64 = 1000;
 
 /// All 8 defined achievements in Cherenkov-Lings
 pub const ALL_ACHIEVEMENTS: [(&str, &str, &str); 8] = [
-    ("first_blood", "First Blood", "Complete your first drill ever"),
+    (
+        "first_blood",
+        "First Blood",
+        "Complete your first drill ever",
+    ),
     (
         "flakiness_slayer",
         "Flakiness Slayer",
@@ -183,7 +187,6 @@ pub const LEVELS: [(usize, &str, u64, Option<u64>); 7] = [
     (6, "QA Architect", 10000, Some(20000)),
     (7, "SDET Master", 20000, None),
 ];
-
 
 // =========================================================================
 // XP & Level Calculations
@@ -456,10 +459,10 @@ impl GamificationState {
     pub fn is_drill_completed(&self, track_id: &str, drill_id: &str) -> bool {
         let key = format!("{}/{}", track_id, drill_id);
         self.completed_drills.contains_key(&key)
-            || self
-                .completed_drills
-                .values()
-                .any(|d| (d.track_id == track_id || d.track_id.is_empty()) && (d.drill_id == drill_id || d.drill_id.ends_with(drill_id)))
+            || self.completed_drills.values().any(|d| {
+                (d.track_id == track_id || d.track_id.is_empty())
+                    && (d.drill_id == drill_id || d.drill_id.ends_with(drill_id))
+            })
     }
 
     /// Get the drill record for a specific track and drill, if completed
@@ -468,9 +471,10 @@ impl GamificationState {
         if let Some(record) = self.completed_drills.get(&key) {
             return Some(record);
         }
-        self.completed_drills
-            .values()
-            .find(|d| (d.track_id == track_id || d.track_id.is_empty()) && (d.drill_id == drill_id || d.drill_id.ends_with(drill_id)))
+        self.completed_drills.values().find(|d| {
+            (d.track_id == track_id || d.track_id.is_empty())
+                && (d.drill_id == drill_id || d.drill_id.ends_with(drill_id))
+        })
     }
 
     /// Return all completed drill IDs for a track
@@ -722,7 +726,8 @@ pub fn check_achievements_with_timestamp(
         DEFAULT_BASELINE_DURATION_MS
     };
     let target_threshold = (baseline * 60) / 100; // 40% faster = <= 60% of baseline duration
-    if run_ctx.passed && run_ctx.avg_duration_ms > 0 && run_ctx.avg_duration_ms <= target_threshold {
+    if run_ctx.passed && run_ctx.avg_duration_ms > 0 && run_ctx.avg_duration_ms <= target_threshold
+    {
         newly_unlocked.extend(state.try_unlock(
             "speed_demon",
             "Speed Demon",
@@ -848,7 +853,9 @@ pub fn render_gamification_scorecard_with_tier(
     newly_unlocked: &[UnlockedAchievement],
 ) -> String {
     let mut out = String::new();
-    let border = "----------------------------------------------------------------------------------------".dimmed();
+    let border =
+        "----------------------------------------------------------------------------------------"
+            .dimmed();
 
     out.push_str(&format!("{}\n", border));
     out.push_str(&format!(
@@ -1007,7 +1014,8 @@ pub fn default_curriculum_tracks() -> Vec<crate::config::TrackConfig> {
             runner: "python".to_string(),
             exercise_dir: "exercises/00_foundations".to_string(),
             extension: ".py".to_string(),
-            command: "python -m pytest {file} --json-report --json-report-file=report.json".to_string(),
+            command: "python -m pytest {file} --json-report --json-report-file=report.json"
+                .to_string(),
         },
         crate::config::TrackConfig {
             id: "playwright-ts".to_string(),
@@ -1055,7 +1063,8 @@ pub fn default_curriculum_tracks() -> Vec<crate::config::TrackConfig> {
             runner: "python".to_string(),
             exercise_dir: "exercises/06_cloud_devsecops".to_string(),
             extension: ".py".to_string(),
-            command: "python -m pytest {file} --json-report --json-report-file=report.json".to_string(),
+            command: "python -m pytest {file} --json-report --json-report-file=report.json"
+                .to_string(),
         },
         crate::config::TrackConfig {
             id: "jmeter".to_string(),
@@ -1071,7 +1080,8 @@ pub fn default_curriculum_tracks() -> Vec<crate::config::TrackConfig> {
             runner: "python".to_string(),
             exercise_dir: "exercises/06_tool_decisions".to_string(),
             extension: ".py".to_string(),
-            command: "python -m pytest {file} --json-report --json-report-file=report.json".to_string(),
+            command: "python -m pytest {file} --json-report --json-report-file=report.json"
+                .to_string(),
         },
         crate::config::TrackConfig {
             id: "contract-pact".to_string(),
@@ -1079,7 +1089,8 @@ pub fn default_curriculum_tracks() -> Vec<crate::config::TrackConfig> {
             runner: "python".to_string(),
             exercise_dir: "exercises/07_contract_pact".to_string(),
             extension: ".py".to_string(),
-            command: "python -m pytest {file} --json-report --json-report-file=report.json".to_string(),
+            command: "python -m pytest {file} --json-report --json-report-file=report.json"
+                .to_string(),
         },
         crate::config::TrackConfig {
             id: "a11y-axe".to_string(),
@@ -1113,7 +1124,11 @@ pub fn discover_track_drills(track_id: &str, exercise_dir: &str) -> Vec<String> 
             let path = entry.path();
             if path.is_dir() {
                 let name = entry.file_name().to_string_lossy().to_string();
-                if name.starts_with('.') || name == "target" || name == "__pycache__" || name == "src" {
+                if name.starts_with('.')
+                    || name == "target"
+                    || name == "__pycache__"
+                    || name == "src"
+                {
                     continue;
                 }
                 let has_drill_file = fs::read_dir(&path)
@@ -1308,9 +1323,13 @@ pub fn get_next_recommended_drill(
     for record in state.completed_drills.values() {
         if record.best_score < 100.0 {
             match lowest_score_record {
-                None => lowest_score_record = Some((&record.track_id, &record.drill_id, record.best_score)),
+                None => {
+                    lowest_score_record =
+                        Some((&record.track_id, &record.drill_id, record.best_score))
+                }
                 Some((_, _, score)) if record.best_score < score => {
-                    lowest_score_record = Some((&record.track_id, &record.drill_id, record.best_score));
+                    lowest_score_record =
+                        Some((&record.track_id, &record.drill_id, record.best_score));
                 }
                 _ => {}
             }
@@ -1336,7 +1355,11 @@ pub fn get_next_recommended_drill(
 
     // 3. If no incomplete and all 100% (or no tracks)
     if let Some(first_track) = config.tracks.first() {
-        if !summaries.is_empty() && summaries.iter().all(|s| s.drills_completed >= s.drills_total && s.drills_total > 0) {
+        if !summaries.is_empty()
+            && summaries
+                .iter()
+                .all(|s| s.drills_completed >= s.drills_total && s.drills_total > 0)
+        {
             NextDrillRecommendation {
                 track_id: "sdet_master".to_string(),
                 track_name: "SDET Master Curriculum".to_string(),
@@ -1440,7 +1463,10 @@ pub fn render_dashboard(state: &GamificationState, config: &crate::config::Confi
         ALL_ACHIEVEMENTS.len()
     ));
     if let Some(ref date) = state.last_active_date {
-        out.push_str(&format!("    📅 Last Active Date:  {}\n", date.bright_white()));
+        out.push_str(&format!(
+            "    📅 Last Active Date:  {}\n",
+            date.bright_white()
+        ));
     }
     out.push('\n');
 
@@ -1608,8 +1634,14 @@ mod tests {
     fn test_tier_for_track_or_drill_mapping() {
         assert_eq!(tier_for_track_or_drill("foundations", "01_assert"), 1);
         assert_eq!(tier_for_track_or_drill("playwright-ts", "01_hydration"), 1);
-        assert_eq!(tier_for_track_or_drill("playwright-ts", "06_page_object"), 2);
-        assert_eq!(tier_for_track_or_drill("playwright-ts", "09_visual_regression"), 3);
+        assert_eq!(
+            tier_for_track_or_drill("playwright-ts", "06_page_object"),
+            2
+        );
+        assert_eq!(
+            tier_for_track_or_drill("playwright-ts", "09_visual_regression"),
+            3
+        );
         assert_eq!(tier_for_track_or_drill("k6-js", "01_pool"), 2);
         assert_eq!(tier_for_track_or_drill("k6-js", "05_grafana_output"), 3);
         assert_eq!(tier_for_track_or_drill("devsecops-python", "01_zap"), 3);
@@ -1937,29 +1969,34 @@ mod tests {
             "01_what_is_a_test"
         );
         assert_eq!(
-            extract_drill_id_from_path("exercises/01_web_playwright_ts/04_first_playwright_test/exercise.ts"),
+            extract_drill_id_from_path(
+                "exercises/01_web_playwright_ts/04_first_playwright_test/exercise.ts"
+            ),
             "04_first_playwright_test"
         );
         assert_eq!(
-            extract_drill_id_from_path("exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill01_idempotency/Exercise.java"),
+            extract_drill_id_from_path(
+                "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill01_idempotency/Exercise.java"
+            ),
             "drill01_idempotency"
         );
         assert_eq!(
-            extract_drill_id_from_path("exercises/03_mobile_maestro/01_biometric_fallback/exercise.yaml"),
+            extract_drill_id_from_path(
+                "exercises/03_mobile_maestro/01_biometric_fallback/exercise.yaml"
+            ),
             "01_biometric_fallback"
         );
         assert_eq!(
-            extract_drill_id_from_path("exercises/04_perf_k6_js/01_database_pool_starvation/solution.js"),
+            extract_drill_id_from_path(
+                "exercises/04_perf_k6_js/01_database_pool_starvation/solution.js"
+            ),
             "01_database_pool_starvation"
         );
         assert_eq!(
             extract_drill_id_from_path("exercises/05_perf_jmeter/01_gui_mode_antipattern/hints.md"),
             "01_gui_mode_antipattern"
         );
-        assert_eq!(
-            extract_drill_id_from_path("01_assert.py"),
-            "01_assert"
-        );
+        assert_eq!(extract_drill_id_from_path("01_assert.py"), "01_assert");
     }
 
     #[test]
@@ -1968,11 +2005,13 @@ mod tests {
         assert_eq!(foundations_drills.len(), 5);
         assert!(foundations_drills.contains(&"01_what_is_a_test".to_string()));
 
-        let playwright_drills = discover_track_drills("playwright-ts", "exercises/01_web_playwright_ts");
+        let playwright_drills =
+            discover_track_drills("playwright-ts", "exercises/01_web_playwright_ts");
         assert_eq!(playwright_drills.len(), 10);
         assert!(playwright_drills.contains(&"01_hydration_timing".to_string()));
 
-        let java_drills = discover_track_drills("restassured-java", "exercises/02_api_restassured_java");
+        let java_drills =
+            discover_track_drills("restassured-java", "exercises/02_api_restassured_java");
         assert!(!java_drills.is_empty());
         assert!(java_drills.contains(&"drill01_idempotency".to_string()));
     }
@@ -2058,8 +2097,11 @@ mod tests {
 
         let dashboard = render_dashboard(&state, &config);
         assert!(dashboard.contains("First Blood"));
-        assert!(dashboard.contains("1 / 45") || dashboard.contains("1 / 43") || dashboard.contains("1 / "));
+        assert!(
+            dashboard.contains("1 / 45")
+                || dashboard.contains("1 / 43")
+                || dashboard.contains("1 / ")
+        );
         assert!(dashboard.contains("🟡") || dashboard.contains("✅"));
     }
 }
-

@@ -154,7 +154,11 @@ pub fn strip_comments(source: &str) -> String {
 
     while i < len {
         let c = chars[i];
-        let next = if i + 1 < len { Some(chars[i + 1]) } else { None };
+        let next = if i + 1 < len {
+            Some(chars[i + 1])
+        } else {
+            None
+        };
 
         // Handle escape character inside strings
         if (in_single_quote || in_double_quote || in_template) && c == '\\' {
@@ -278,8 +282,12 @@ pub fn analyze_yaml_source(source: &str, file_path: &str) -> AstReport {
     let mut has_wait_for_timeout = false;
 
     // Pattern matching for YAML locators
-    let re_text = Regex::new(r#"(?:^|\s+)text:\s*(?:'((?:\\.|[^'\\])*)'|"((?:\\.|[^"\\])*)"|([^\r\n#]+))"#).expect("Valid regex");
-    let re_id = Regex::new(r#"(?:^|\s+)id:\s*(?:'((?:\\.|[^'\\])*)'|"((?:\\.|[^"\\])*)"|([^\r\n#]+))"#).expect("Valid regex");
+    let re_text =
+        Regex::new(r#"(?:^|\s+)text:\s*(?:'((?:\\.|[^'\\])*)'|"((?:\\.|[^"\\])*)"|([^\r\n#]+))"#)
+            .expect("Valid regex");
+    let re_id =
+        Regex::new(r#"(?:^|\s+)id:\s*(?:'((?:\\.|[^'\\])*)'|"((?:\\.|[^"\\])*)"|([^\r\n#]+))"#)
+            .expect("Valid regex");
 
     for (idx, stripped_line) in stripped_lines.iter().enumerate() {
         let line_num = idx + 1;
@@ -326,10 +334,17 @@ pub fn analyze_yaml_source(source: &str, file_path: &str) -> AstReport {
     let has_when_condition = stripped.contains("when:") && stripped.contains("runFlow:");
     if has_biometric && !has_when_condition {
         has_wait_for_timeout = true;
-        let bio_line = stripped_lines.iter().enumerate().find(|(_, l)| l.contains("Biometric") || l.contains("biometric"))
+        let bio_line = stripped_lines
+            .iter()
+            .enumerate()
+            .find(|(_, l)| l.contains("Biometric") || l.contains("biometric"))
             .map(|(i, _)| i + 1)
             .unwrap_or(1);
-        let bio_snippet = original_lines.get(bio_line.saturating_sub(1)).unwrap_or(&"").trim().to_string();
+        let bio_snippet = original_lines
+            .get(bio_line.saturating_sub(1))
+            .unwrap_or(&"")
+            .trim()
+            .to_string();
 
         anti_patterns.push(AntiPattern {
             kind: AntiPatternKind::MissingWhenCondition { flow_type: "biometric_fallback".to_string() },
@@ -343,13 +358,21 @@ pub fn analyze_yaml_source(source: &str, file_path: &str) -> AstReport {
     // 2. Cold Start Deep Link Anti-Pattern:
     // Uses `openLink` which fails or opens browser on unlaunched/cold-start app
     let has_open_link = stripped.contains("openLink:");
-    let has_launch_app_deeplink = stripped.contains("launchApp:") && (stripped.contains("deeplink:") || stripped.contains("arguments:"));
+    let has_launch_app_deeplink = stripped.contains("launchApp:")
+        && (stripped.contains("deeplink:") || stripped.contains("arguments:"));
     if has_open_link && !has_launch_app_deeplink {
         has_wait_for_timeout = true;
-        let open_line = stripped_lines.iter().enumerate().find(|(_, l)| l.contains("openLink:"))
+        let open_line = stripped_lines
+            .iter()
+            .enumerate()
+            .find(|(_, l)| l.contains("openLink:"))
             .map(|(i, _)| i + 1)
             .unwrap_or(1);
-        let open_snippet = original_lines.get(open_line.saturating_sub(1)).unwrap_or(&"").trim().to_string();
+        let open_snippet = original_lines
+            .get(open_line.saturating_sub(1))
+            .unwrap_or(&"")
+            .trim()
+            .to_string();
 
         anti_patterns.push(AntiPattern {
             kind: AntiPatternKind::MissingColdStartDeepLink { command: "openLink".to_string() },
@@ -362,14 +385,23 @@ pub fn analyze_yaml_source(source: &str, file_path: &str) -> AstReport {
 
     // 3. Activity Recreation Anti-Pattern:
     // Asserts state without testing Activity destruction and recreation across screen orientation changes
-    let is_activity_drill = file_path.contains("03_activity_recreation") || (stripped.contains("Balance") && stripped.contains("assertVisible"));
-    let has_orientation_change = stripped.contains("setOrientation:") || (stripped.contains("orientation:") && stripped.contains("landscape"));
+    let is_activity_drill = file_path.contains("03_activity_recreation")
+        || (stripped.contains("Balance") && stripped.contains("assertVisible"));
+    let has_orientation_change = stripped.contains("setOrientation:")
+        || (stripped.contains("orientation:") && stripped.contains("landscape"));
     if is_activity_drill && !has_orientation_change {
         has_wait_for_timeout = true;
-        let assert_line = stripped_lines.iter().enumerate().find(|(_, l)| l.contains("assertVisible:"))
+        let assert_line = stripped_lines
+            .iter()
+            .enumerate()
+            .find(|(_, l)| l.contains("assertVisible:"))
             .map(|(i, _)| i + 1)
             .unwrap_or(1);
-        let assert_snippet = original_lines.get(assert_line.saturating_sub(1)).unwrap_or(&"").trim().to_string();
+        let assert_snippet = original_lines
+            .get(assert_line.saturating_sub(1))
+            .unwrap_or(&"")
+            .trim()
+            .to_string();
 
         anti_patterns.push(AntiPattern {
             kind: AntiPatternKind::MissingActivityRecreation { state: "screen_rotation".to_string() },
@@ -399,7 +431,9 @@ pub fn analyze_yaml_source(source: &str, file_path: &str) -> AstReport {
 
 /// Analyze source code (TypeScript, Java, or Maestro YAML) for locators, anti-patterns, and quality
 pub fn analyze_source(source: &str, file_path: &str) -> AstReport {
-    let is_yaml = file_path.ends_with(".yaml") || file_path.ends_with(".yml") || source.trim_start().starts_with("---");
+    let is_yaml = file_path.ends_with(".yaml")
+        || file_path.ends_with(".yml")
+        || source.trim_start().starts_with("---");
     if is_yaml {
         return analyze_yaml_source(source, file_path);
     }
@@ -418,7 +452,10 @@ pub fn analyze_source(source: &str, file_path: &str) -> AstReport {
         // 1. Detect waitForTimeout anti-pattern
         if let Some(caps) = RE_WAIT_FOR_TIMEOUT.captures(stripped_line) {
             has_wait_for_timeout = true;
-            let duration_ms = caps.get(1).or_else(|| caps.get(2)).and_then(|m| m.as_str().parse::<u64>().ok());
+            let duration_ms = caps
+                .get(1)
+                .or_else(|| caps.get(2))
+                .and_then(|m| m.as_str().parse::<u64>().ok());
             anti_patterns.push(AntiPattern {
                 kind: AntiPatternKind::WaitForTimeout { duration_ms },
                 line: line_num,
@@ -522,7 +559,13 @@ pub fn analyze_source(source: &str, file_path: &str) -> AstReport {
                         snippet: original_snippet.clone(),
                         score: LocatorKind::GetByTestId.score(),
                     });
-                } else if sel.contains('.') || sel.contains('#') || sel.contains('>') || sel.contains(' ') || sel.contains(':') || sel.contains("[class") {
+                } else if sel.contains('.')
+                    || sel.contains('#')
+                    || sel.contains('>')
+                    || sel.contains(' ')
+                    || sel.contains(':')
+                    || sel.contains("[class")
+                {
                     // CSS class / ID selector (40 pts)
                     locators.push(LocatorOccurrence {
                         kind: LocatorKind::CssSelector,
@@ -625,7 +668,11 @@ impl ProgressiveHints {
         let mut current_hint = String::new();
 
         for line in content.lines() {
-            if line.starts_with("# ") || line.starts_with("## ") || line.starts_with("### ") || line.starts_with("**Hint") {
+            if line.starts_with("# ")
+                || line.starts_with("## ")
+                || line.starts_with("### ")
+                || line.starts_with("**Hint")
+            {
                 if !current_hint.trim().is_empty() {
                     hints.push(current_hint.trim().to_string());
                     current_hint.clear();
@@ -642,7 +689,9 @@ impl ProgressiveHints {
         }
 
         if hints.is_empty() {
-            Some(Self { hints: vec![content.trim().to_string()] })
+            Some(Self {
+                hints: vec![content.trim().to_string()],
+            })
         } else {
             Some(Self { hints })
         }
@@ -660,7 +709,11 @@ impl ProgressiveHints {
         } else if total_score < 75.0 {
             if total >= 2 { 1 } else { 0 }
         } else if total_score < 85.0 {
-            if total >= 3 { 2 } else { total.saturating_sub(1) }
+            if total >= 3 {
+                2
+            } else {
+                total.saturating_sub(1)
+            }
         } else {
             0
         };
@@ -670,7 +723,11 @@ impl ProgressiveHints {
 }
 
 /// Calculate wall-clock execution speed score vs baseline duration (1000ms)
-pub fn calculate_speed_score(total_duration_ms: u64, iterations: u32, baseline_ms: u64) -> (f64, u64) {
+pub fn calculate_speed_score(
+    total_duration_ms: u64,
+    iterations: u32,
+    baseline_ms: u64,
+) -> (f64, u64) {
     let num_iter = iterations.max(1) as u64;
     let avg_duration_ms = total_duration_ms / num_iter;
 
@@ -703,9 +760,15 @@ pub fn evaluate_feedback(
         (response.passed_iterations as f64 / iterations as f64) * 100.0
     };
     let correctness_detail = if response.passed {
-        format!("All {}/{} iterations passed", response.passed_iterations, iterations)
+        format!(
+            "All {}/{} iterations passed",
+            response.passed_iterations, iterations
+        )
     } else {
-        format!("{}/{} passed, {} failed", response.passed_iterations, iterations, response.failed_iterations)
+        format!(
+            "{}/{} passed, {} failed",
+            response.passed_iterations, iterations, response.failed_iterations
+        )
     };
 
     // 2. Flakiness Resistance Dimension (0.35)
@@ -722,7 +785,10 @@ pub fn evaluate_feedback(
     } else {
         (
             raw_flakiness,
-            format!("{}/{} passed under chaos (200ms delay + 75ms jitter)", response.passed_iterations, iterations),
+            format!(
+                "{}/{} passed under chaos (200ms delay + 75ms jitter)",
+                response.passed_iterations, iterations
+            ),
         )
     };
 
@@ -731,16 +797,43 @@ pub fn evaluate_feedback(
     let locator_detail = if ast.locators.is_empty() {
         "No locators detected in AST (Default: 100)".to_string()
     } else {
-        let roles = ast.locators.iter().filter(|l| l.kind == LocatorKind::GetByRole).count();
-        let test_ids = ast.locators.iter().filter(|l| l.kind == LocatorKind::GetByTestId).count();
-        let css = ast.locators.iter().filter(|l| l.kind == LocatorKind::CssSelector).count();
-        let xpath = ast.locators.iter().filter(|l| l.kind == LocatorKind::AbsoluteXPath).count();
-        format!("{} locators ({} getByRole, {} testId, {} CSS, {} XPath)", ast.locators.len(), roles, test_ids, css, xpath)
+        let roles = ast
+            .locators
+            .iter()
+            .filter(|l| l.kind == LocatorKind::GetByRole)
+            .count();
+        let test_ids = ast
+            .locators
+            .iter()
+            .filter(|l| l.kind == LocatorKind::GetByTestId)
+            .count();
+        let css = ast
+            .locators
+            .iter()
+            .filter(|l| l.kind == LocatorKind::CssSelector)
+            .count();
+        let xpath = ast
+            .locators
+            .iter()
+            .filter(|l| l.kind == LocatorKind::AbsoluteXPath)
+            .count();
+        format!(
+            "{} locators ({} getByRole, {} testId, {} CSS, {} XPath)",
+            ast.locators.len(),
+            roles,
+            test_ids,
+            css,
+            xpath
+        )
     };
 
     // 4. Execution Speed Dimension (0.15)
-    let (speed_score, avg_duration_ms) = calculate_speed_score(response.total_duration_ms, iterations, baseline_duration_ms);
-    let speed_detail = format!("{}ms total (avg: {}ms/iter, baseline: {}ms)", response.total_duration_ms, avg_duration_ms, baseline_duration_ms);
+    let (speed_score, avg_duration_ms) =
+        calculate_speed_score(response.total_duration_ms, iterations, baseline_duration_ms);
+    let speed_detail = format!(
+        "{}ms total (avg: {}ms/iter, baseline: {}ms)",
+        response.total_duration_ms, avg_duration_ms, baseline_duration_ms
+    );
 
     // Total Composite Score
     let weighted_c = correctness_score * WEIGHT_CORRECTNESS;
@@ -756,21 +849,27 @@ pub fn evaluate_feedback(
     for ap in &ast.anti_patterns {
         match &ap.kind {
             AntiPatternKind::WaitForTimeout { duration_ms } => {
-                let ms_str = duration_ms.map(|d| format!("({}ms)", d)).unwrap_or_default();
+                let ms_str = duration_ms
+                    .map(|d| format!("({}ms)", d))
+                    .unwrap_or_default();
                 diagnostics.push(format!(
                     "✗ Anti-pattern: page.waitForTimeout{} on line {}\n  → {}\n  → Recommendation: {}",
                     ms_str, ap.line, ap.explanation, ap.recommendation
                 ));
             }
             AntiPatternKind::HardcodedSleep { duration_ms } => {
-                let ms_str = duration_ms.map(|d| format!("({}ms)", d)).unwrap_or_default();
+                let ms_str = duration_ms
+                    .map(|d| format!("({}ms)", d))
+                    .unwrap_or_default();
                 diagnostics.push(format!(
                     "✗ Anti-pattern: setTimeout{} on line {}\n  → {}\n  → Recommendation: {}",
                     ms_str, ap.line, ap.explanation, ap.recommendation
                 ));
             }
             AntiPatternKind::ThreadSleep { duration_ms } => {
-                let ms_str = duration_ms.map(|d| format!("({}ms)", d)).unwrap_or_default();
+                let ms_str = duration_ms
+                    .map(|d| format!("({}ms)", d))
+                    .unwrap_or_default();
                 diagnostics.push(format!(
                     "✗ Anti-pattern: Thread.sleep{} on line {}\n  → {}\n  → Recommendation: {}",
                     ms_str, ap.line, ap.explanation, ap.recommendation
@@ -898,7 +997,9 @@ pub fn render_progress_bar(score: f64, width: usize) -> String {
 /// Render the complete ANSI Cherenkov Blue terminal scorecard
 pub fn render_scorecard(card: &Scorecard) -> String {
     let mut out = String::new();
-    let border = "========================================================================================".cyan();
+    let border =
+        "========================================================================================"
+            .cyan();
 
     out.push_str(&format!("{}\n", border));
     out.push_str(&format!(
@@ -946,7 +1047,11 @@ pub fn render_scorecard(card: &Scorecard) -> String {
     ];
 
     for (dim, weight_str) in dimensions {
-        let mark = if dim.passed { "✓".green() } else { "✗".red() };
+        let mark = if dim.passed {
+            "✓".green()
+        } else {
+            "✗".red()
+        };
         let bar = render_progress_bar(dim.score, 10);
         let score_fmt = format!("{:5.1} / 100", dim.score);
 
@@ -963,7 +1068,10 @@ pub fn render_scorecard(card: &Scorecard) -> String {
 
     // Diagnostics & Root Causes
     if !card.diagnostics.is_empty() {
-        out.push_str(&format!("\n {}\n", "DIAGNOSTICS & ROOT CAUSE:".bold().bright_yellow()));
+        out.push_str(&format!(
+            "\n {}\n",
+            "DIAGNOSTICS & ROOT CAUSE:".bold().bright_yellow()
+        ));
         for diag in &card.diagnostics {
             out.push_str(&format!(" {}\n", diag));
         }
@@ -981,7 +1089,9 @@ pub fn render_scorecard(card: &Scorecard) -> String {
 /// Render standalone diagnostic view (for `cherenkov-lings diagnose`)
 pub fn render_diagnostic(ast: &AstReport, track_name: &str, platform_version: &str) -> String {
     let mut out = String::new();
-    let border = "========================================================================================".cyan();
+    let border =
+        "========================================================================================"
+            .cyan();
 
     out.push_str(&format!("{}\n", border));
     out.push_str(&format!(
@@ -994,7 +1104,10 @@ pub fn render_diagnostic(ast: &AstReport, track_name: &str, platform_version: &s
     out.push_str(&format!("{}\n", border));
 
     // Locator Quality Breakdown
-    out.push_str(&format!(" {}\n", "STATIC AST ANALYSIS:".bold().bright_cyan()));
+    out.push_str(&format!(
+        " {}\n",
+        "STATIC AST ANALYSIS:".bold().bright_cyan()
+    ));
     let bar = render_progress_bar(ast.locator_quality_score, 10);
     out.push_str(&format!(
         "   Locator Quality Score: {} {:5.1} / 100  ({} locators analyzed)\n\n",
@@ -1015,7 +1128,10 @@ pub fn render_diagnostic(ast: &AstReport, track_name: &str, platform_version: &s
             };
             out.push_str(&format!(
                 "   - Line {:2}: {:<22} selector: '{}'\n     Snippet: {}\n",
-                loc.line, badge, loc.selector, loc.snippet.dimmed()
+                loc.line,
+                badge,
+                loc.selector,
+                loc.snippet.dimmed()
             ));
         }
         out.push('\n');
@@ -1023,13 +1139,24 @@ pub fn render_diagnostic(ast: &AstReport, track_name: &str, platform_version: &s
 
     // Detected Anti-patterns
     if ast.anti_patterns.is_empty() {
-        out.push_str(&format!(" {}\n", "✓ No anti-patterns detected in AST.".green().bold()));
+        out.push_str(&format!(
+            " {}\n",
+            "✓ No anti-patterns detected in AST.".green().bold()
+        ));
     } else {
-        out.push_str(&format!(" {}\n", "DETECTED ANTI-PATTERNS & ROOT CAUSES:".bold().bright_yellow()));
+        out.push_str(&format!(
+            " {}\n",
+            "DETECTED ANTI-PATTERNS & ROOT CAUSES:"
+                .bold()
+                .bright_yellow()
+        ));
         for ap in &ast.anti_patterns {
             out.push_str(&format!(
                 "   ✗ Line {:2}: {}\n     Root Cause: {}\n     Recommendation: {}\n\n",
-                ap.line, ap.snippet.bright_red(), ap.explanation, ap.recommendation.bright_green()
+                ap.line,
+                ap.snippet.bright_red(),
+                ap.explanation,
+                ap.recommendation.bright_green()
             ));
         }
     }
@@ -1038,7 +1165,13 @@ pub fn render_diagnostic(ast: &AstReport, track_name: &str, platform_version: &s
     if let Some(ph) = ProgressiveHints::load_from_exercise_path(&ast.file_path)
         && let Some((idx, total, text)) = ph.get_hint_for_score(ast.locator_quality_score)
     {
-        out.push_str(&format!(" {}\n{}\n", format!("💡 PROGRESSIVE HINTS ({}/{}):", idx, total).bright_cyan().bold(), text));
+        out.push_str(&format!(
+            " {}\n{}\n",
+            format!("💡 PROGRESSIVE HINTS ({}/{}):", idx, total)
+                .bright_cyan()
+                .bold(),
+            text
+        ));
     }
 
     out.push_str(&format!("{}\n", border));
@@ -1089,7 +1222,11 @@ test('checkout hydration timing', async ({ page }) => {
         assert!(report.has_wait_for_timeout);
         assert_eq!(report.anti_patterns.len(), 2); // waitForTimeout and CSS selector
 
-        let timeout_ap = report.anti_patterns.iter().find(|ap| matches!(ap.kind, AntiPatternKind::WaitForTimeout { .. })).expect("Found waitForTimeout");
+        let timeout_ap = report
+            .anti_patterns
+            .iter()
+            .find(|ap| matches!(ap.kind, AntiPatternKind::WaitForTimeout { .. }))
+            .expect("Found waitForTimeout");
         assert_eq!(timeout_ap.line, 7);
         assert!(timeout_ap.snippet.contains("waitForTimeout(2000)"));
         assert!(timeout_ap.explanation.contains("timing-dependent"));
@@ -1181,11 +1318,36 @@ test('checkout hydration timing', async ({ page }) => {
             failed_iterations: 0,
             total_duration_ms: 2500,
             runs: vec![
-                RunResult { iteration: 1, passed: true, duration_ms: 500, error: None },
-                RunResult { iteration: 2, passed: true, duration_ms: 500, error: None },
-                RunResult { iteration: 3, passed: true, duration_ms: 500, error: None },
-                RunResult { iteration: 4, passed: true, duration_ms: 500, error: None },
-                RunResult { iteration: 5, passed: true, duration_ms: 500, error: None },
+                RunResult {
+                    iteration: 1,
+                    passed: true,
+                    duration_ms: 500,
+                    error: None,
+                },
+                RunResult {
+                    iteration: 2,
+                    passed: true,
+                    duration_ms: 500,
+                    error: None,
+                },
+                RunResult {
+                    iteration: 3,
+                    passed: true,
+                    duration_ms: 500,
+                    error: None,
+                },
+                RunResult {
+                    iteration: 4,
+                    passed: true,
+                    duration_ms: 500,
+                    error: None,
+                },
+                RunResult {
+                    iteration: 5,
+                    passed: true,
+                    duration_ms: 500,
+                    error: None,
+                },
             ],
             error: None,
         };
@@ -1198,7 +1360,14 @@ test('checkout hydration timing', async ({ page }) => {
             ..Default::default()
         };
 
-        let card_flaky = evaluate_feedback(&drill_response, &ast_with_sleep, "playwright-ts", "1.0.0", 85.0, 1000);
+        let card_flaky = evaluate_feedback(
+            &drill_response,
+            &ast_with_sleep,
+            "playwright-ts",
+            "1.0.0",
+            85.0,
+            1000,
+        );
         assert_eq!(card_flaky.flakiness.score, 40.0);
         assert!(!card_flaky.passed);
 
@@ -1210,7 +1379,14 @@ test('checkout hydration timing', async ({ page }) => {
             ..Default::default()
         };
 
-        let card_clean = evaluate_feedback(&drill_response, &ast_clean, "playwright-ts", "1.0.0", 85.0, 1000);
+        let card_clean = evaluate_feedback(
+            &drill_response,
+            &ast_clean,
+            "playwright-ts",
+            "1.0.0",
+            85.0,
+            1000,
+        );
         assert_eq!(card_clean.flakiness.score, 100.0);
         assert_eq!(card_clean.total_score, 100.0);
         assert!(card_clean.passed);
@@ -1227,11 +1403,36 @@ test('checkout hydration timing', async ({ page }) => {
             failed_iterations: 4,
             total_duration_ms: 12250,
             runs: vec![
-                RunResult { iteration: 1, passed: false, duration_ms: 2450, error: Some("Click dropped".into()) },
-                RunResult { iteration: 2, passed: true, duration_ms: 2450, error: None },
-                RunResult { iteration: 3, passed: false, duration_ms: 2450, error: Some("Click dropped".into()) },
-                RunResult { iteration: 4, passed: false, duration_ms: 2450, error: Some("Click dropped".into()) },
-                RunResult { iteration: 5, passed: false, duration_ms: 2450, error: Some("Click dropped".into()) },
+                RunResult {
+                    iteration: 1,
+                    passed: false,
+                    duration_ms: 2450,
+                    error: Some("Click dropped".into()),
+                },
+                RunResult {
+                    iteration: 2,
+                    passed: true,
+                    duration_ms: 2450,
+                    error: None,
+                },
+                RunResult {
+                    iteration: 3,
+                    passed: false,
+                    duration_ms: 2450,
+                    error: Some("Click dropped".into()),
+                },
+                RunResult {
+                    iteration: 4,
+                    passed: false,
+                    duration_ms: 2450,
+                    error: Some("Click dropped".into()),
+                },
+                RunResult {
+                    iteration: 5,
+                    passed: false,
+                    duration_ms: 2450,
+                    error: Some("Click dropped".into()),
+                },
             ],
             error: None,
         };
@@ -1240,7 +1441,9 @@ test('checkout hydration timing', async ({ page }) => {
             file_path: "exercises/01_hydration/exercise.ts".to_string(),
             total_lines: 15,
             anti_patterns: vec![AntiPattern {
-                kind: AntiPatternKind::WaitForTimeout { duration_ms: Some(2000) },
+                kind: AntiPatternKind::WaitForTimeout {
+                    duration_ms: Some(2000),
+                },
                 line: 10,
                 snippet: "await page.waitForTimeout(2000);".to_string(),
                 explanation: "Fixed sleep causes click drops".to_string(),
@@ -1257,7 +1460,14 @@ test('checkout hydration timing', async ({ page }) => {
             has_wait_for_timeout: true,
         };
 
-        let card = evaluate_feedback(&drill_response, &ast, "Modern Web Automation", "1.0.0", 85.0, 1000);
+        let card = evaluate_feedback(
+            &drill_response,
+            &ast,
+            "Modern Web Automation",
+            "1.0.0",
+            85.0,
+            1000,
+        );
 
         // Correctness: 1/5 = 20.0 (35% -> 7.0)
         assert_eq!(card.correctness.score, 20.0);
@@ -1354,7 +1564,9 @@ test('checkout hydration timing', async ({ page }) => {
             file_path: "exercises/01_web_playwright_ts/01_hydration/exercise.ts".to_string(),
             total_lines: 20,
             anti_patterns: vec![AntiPattern {
-                kind: AntiPatternKind::WaitForTimeout { duration_ms: Some(2000) },
+                kind: AntiPatternKind::WaitForTimeout {
+                    duration_ms: Some(2000),
+                },
                 line: 12,
                 snippet: "await page.waitForTimeout(2000);".to_string(),
                 explanation: "Fixed sleep makes the test timing-dependent.".to_string(),
@@ -1371,7 +1583,11 @@ test('checkout hydration timing', async ({ page }) => {
             has_wait_for_timeout: true,
         };
 
-        let diag = render_diagnostic(&ast, "Modern Web Automation (Playwright TypeScript)", "1.0.0");
+        let diag = render_diagnostic(
+            &ast,
+            "Modern Web Automation (Playwright TypeScript)",
+            "1.0.0",
+        );
         assert!(diag.contains("CHERENKOV-LINGS DIAGNOSTIC"));
         assert!(diag.contains("Target File:"));
         assert!(diag.contains("STATIC AST ANALYSIS"));
@@ -1397,15 +1613,27 @@ public class Exercise {
     }
 }
 "#;
-        let report = analyze_source(java_code, "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill03_kafka_lag/Exercise.java");
+        let report = analyze_source(
+            java_code,
+            "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill03_kafka_lag/Exercise.java",
+        );
         assert!(report.has_wait_for_timeout);
         assert_eq!(report.anti_patterns.len(), 1);
 
         let sleep_ap = &report.anti_patterns[0];
-        assert_eq!(sleep_ap.kind, AntiPatternKind::ThreadSleep { duration_ms: Some(100) });
+        assert_eq!(
+            sleep_ap.kind,
+            AntiPatternKind::ThreadSleep {
+                duration_ms: Some(100)
+            }
+        );
         assert_eq!(sleep_ap.line, 12);
         assert!(sleep_ap.snippet.contains("Thread.sleep(100)"));
-        assert!(sleep_ap.explanation.contains("brittle under asynchronous processing lag"));
+        assert!(
+            sleep_ap
+                .explanation
+                .contains("brittle under asynchronous processing lag")
+        );
         assert!(sleep_ap.recommendation.contains("Awaitility"));
     }
 
@@ -1431,11 +1659,36 @@ public class Exercise {
             failed_iterations: 0,
             total_duration_ms: 2500,
             runs: vec![
-                RunResult { iteration: 1, passed: true, duration_ms: 500, error: None },
-                RunResult { iteration: 2, passed: true, duration_ms: 500, error: None },
-                RunResult { iteration: 3, passed: true, duration_ms: 500, error: None },
-                RunResult { iteration: 4, passed: true, duration_ms: 500, error: None },
-                RunResult { iteration: 5, passed: true, duration_ms: 500, error: None },
+                RunResult {
+                    iteration: 1,
+                    passed: true,
+                    duration_ms: 500,
+                    error: None,
+                },
+                RunResult {
+                    iteration: 2,
+                    passed: true,
+                    duration_ms: 500,
+                    error: None,
+                },
+                RunResult {
+                    iteration: 3,
+                    passed: true,
+                    duration_ms: 500,
+                    error: None,
+                },
+                RunResult {
+                    iteration: 4,
+                    passed: true,
+                    duration_ms: 500,
+                    error: None,
+                },
+                RunResult {
+                    iteration: 5,
+                    passed: true,
+                    duration_ms: 500,
+                    error: None,
+                },
             ],
             error: None,
         };
@@ -1445,7 +1698,9 @@ public class Exercise {
             file_path: "Exercise.java".to_string(),
             has_wait_for_timeout: true,
             anti_patterns: vec![AntiPattern {
-                kind: AntiPatternKind::ThreadSleep { duration_ms: Some(100) },
+                kind: AntiPatternKind::ThreadSleep {
+                    duration_ms: Some(100),
+                },
                 line: 10,
                 snippet: "Thread.sleep(100);".to_string(),
                 explanation: "Fixed sleep".to_string(),
@@ -1465,7 +1720,12 @@ public class Exercise {
         );
         assert_eq!(card_flaky.flakiness.score, 40.0);
         assert!(!card_flaky.passed);
-        assert!(card_flaky.diagnostics.iter().any(|d| d.contains("Thread.sleep(100ms)")));
+        assert!(
+            card_flaky
+                .diagnostics
+                .iter()
+                .any(|d| d.contains("Thread.sleep(100ms)"))
+        );
 
         // When clean (e.g. Solution.java with Awaitility), score is 100.0
         let ast_clean = AstReport {
@@ -1521,7 +1781,10 @@ public class Exercise {
         let report_ex = analyze_source(ex_yaml, ex_path);
         assert!(report_ex.has_wait_for_timeout);
         assert_eq!(report_ex.anti_patterns.len(), 1);
-        assert!(matches!(report_ex.anti_patterns[0].kind, AntiPatternKind::MissingWhenCondition { .. }));
+        assert!(matches!(
+            report_ex.anti_patterns[0].kind,
+            AntiPatternKind::MissingWhenCondition { .. }
+        ));
 
         let sol_yaml = r#"
 ---
@@ -1557,7 +1820,10 @@ public class Exercise {
         let report_ex = analyze_source(ex_yaml, ex_path);
         assert!(report_ex.has_wait_for_timeout);
         assert_eq!(report_ex.anti_patterns.len(), 1);
-        assert!(matches!(report_ex.anti_patterns[0].kind, AntiPatternKind::MissingColdStartDeepLink { .. }));
+        assert!(matches!(
+            report_ex.anti_patterns[0].kind,
+            AntiPatternKind::MissingColdStartDeepLink { .. }
+        ));
 
         let sol_yaml = r#"
 ---
@@ -1591,7 +1857,10 @@ public class Exercise {
         let report_ex = analyze_source(ex_yaml, ex_path);
         assert!(report_ex.has_wait_for_timeout);
         assert_eq!(report_ex.anti_patterns.len(), 1);
-        assert!(matches!(report_ex.anti_patterns[0].kind, AntiPatternKind::MissingActivityRecreation { .. }));
+        assert!(matches!(
+            report_ex.anti_patterns[0].kind,
+            AntiPatternKind::MissingActivityRecreation { .. }
+        ));
 
         let sol_yaml = r#"
 ---
@@ -1632,19 +1901,29 @@ public class Exercise {
     id: 'balance-card'
 "#;
         let report_quoted = analyze_source(yaml_quoted, "flow.yaml");
-        let selectors: Vec<(&str, &str)> = report_quoted.locators.iter()
-            .map(|l| (match l.kind {
-                LocatorKind::GetByTextOrLabel => "text",
-                LocatorKind::GetByTestId => "id",
-                _ => "other",
-            }, l.selector.as_str()))
+        let selectors: Vec<(&str, &str)> = report_quoted
+            .locators
+            .iter()
+            .map(|l| {
+                (
+                    match l.kind {
+                        LocatorKind::GetByTextOrLabel => "text",
+                        LocatorKind::GetByTestId => "id",
+                        _ => "other",
+                    },
+                    l.selector.as_str(),
+                )
+            })
             .collect();
-        assert_eq!(selectors, vec![
-            ("text", "Login Button"),
-            ("id", "submit-btn"),
-            ("text", "Account Balance: USD 1000"),
-            ("id", "balance-card"),
-        ]);
+        assert_eq!(
+            selectors,
+            vec![
+                ("text", "Login Button"),
+                ("id", "submit-btn"),
+                ("text", "Account Balance: USD 1000"),
+                ("id", "balance-card"),
+            ]
+        );
 
         let yaml_unquoted = r#"
 ---
@@ -1656,19 +1935,25 @@ public class Exercise {
     id: submit-btn
 "#;
         let report_unquoted = analyze_source(yaml_unquoted, "flow.yaml");
-        let selectors_unquoted: Vec<(&str, &str)> = report_unquoted.locators.iter()
-            .map(|l| (match l.kind {
-                LocatorKind::GetByTextOrLabel => "text",
-                LocatorKind::GetByTestId => "id",
-                _ => "other",
-            }, l.selector.as_str()))
+        let selectors_unquoted: Vec<(&str, &str)> = report_unquoted
+            .locators
+            .iter()
+            .map(|l| {
+                (
+                    match l.kind {
+                        LocatorKind::GetByTextOrLabel => "text",
+                        LocatorKind::GetByTestId => "id",
+                        _ => "other",
+                    },
+                    l.selector.as_str(),
+                )
+            })
             .collect();
-        assert_eq!(selectors_unquoted, vec![
-            ("text", "Login Button"),
-            ("id", "submit-btn"),
-        ]);
+        assert_eq!(
+            selectors_unquoted,
+            vec![("text", "Login Button"), ("id", "submit-btn"),]
+        );
     }
-
 
     #[test]
     fn test_maestro_all_actual_drill_files_on_disk() {
@@ -1690,14 +1975,21 @@ public class Exercise {
         for (ex, sol) in drills {
             if Path::new(ex).exists() && Path::new(sol).exists() {
                 let report_ex = analyze_file(ex).expect("Analyze exercise YAML");
-                assert!(report_ex.has_wait_for_timeout, "Exercise must fail anti-pattern: {}", ex);
+                assert!(
+                    report_ex.has_wait_for_timeout,
+                    "Exercise must fail anti-pattern: {}",
+                    ex
+                );
                 assert!(!report_ex.anti_patterns.is_empty());
 
                 let report_sol = analyze_file(sol).expect("Analyze solution YAML");
-                assert!(!report_sol.has_wait_for_timeout, "Solution must pass cleanly: {}", sol);
+                assert!(
+                    !report_sol.has_wait_for_timeout,
+                    "Solution must pass cleanly: {}",
+                    sol
+                );
                 assert!(report_sol.anti_patterns.is_empty());
             }
         }
     }
 }
-

@@ -1,8 +1,8 @@
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 use std::fs;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::channel;
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 
@@ -76,7 +76,10 @@ async fn test_watcher_debouncing_coalesces_rapid_events() {
         received_events.push(path);
     }
 
-    println!("Received events count after 5 rapid writes: {}", received_events.len());
+    println!(
+        "Received events count after 5 rapid writes: {}",
+        received_events.len()
+    );
     for (idx, ev) in received_events.iter().enumerate() {
         println!("Event {}: {}", idx, ev);
     }

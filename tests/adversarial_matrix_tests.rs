@@ -132,14 +132,33 @@ const l3 = page.getByLabel(`Label Template`);
 
     assert_eq!(report.locators.len(), 15);
 
-    let get_by_role_count = report.locators.iter().filter(|l| l.kind == LocatorKind::GetByRole).count();
-    let get_by_testid_count = report.locators.iter().filter(|l| l.kind == LocatorKind::GetByTestId).count();
-    let get_by_text_label_count = report.locators.iter().filter(|l| l.kind == LocatorKind::GetByTextOrLabel).count();
-    let css_count = report.locators.iter().filter(|l| l.kind == LocatorKind::CssSelector).count();
+    let get_by_role_count = report
+        .locators
+        .iter()
+        .filter(|l| l.kind == LocatorKind::GetByRole)
+        .count();
+    let get_by_testid_count = report
+        .locators
+        .iter()
+        .filter(|l| l.kind == LocatorKind::GetByTestId)
+        .count();
+    let get_by_text_label_count = report
+        .locators
+        .iter()
+        .filter(|l| l.kind == LocatorKind::GetByTextOrLabel)
+        .count();
+    let css_count = report
+        .locators
+        .iter()
+        .filter(|l| l.kind == LocatorKind::CssSelector)
+        .count();
 
     assert_eq!(get_by_role_count, 3, "3 getByRole with ', \", ` quotes");
     assert_eq!(get_by_testid_count, 3, "3 getByTestId with ', \", ` quotes");
-    assert_eq!(get_by_text_label_count, 6, "6 getByText/Label with ', \", ` quotes");
+    assert_eq!(
+        get_by_text_label_count, 6,
+        "6 getByText/Label with ', \", ` quotes"
+    );
     assert_eq!(css_count, 3, "3 page.locator with ', \", ` quotes");
 
     let expected_sum = (3.0 * 100.0) + (3.0 * 85.0) + (6.0 * 90.0) + (3.0 * 40.0);
@@ -176,13 +195,37 @@ const c9 = page.$$('div.items');
 "#;
     let report = analyze_source(source, "test_xpath_css.ts");
 
-    let xpath_locators: Vec<_> = report.locators.iter().filter(|l| l.kind == LocatorKind::AbsoluteXPath).collect();
-    let testid_locators: Vec<_> = report.locators.iter().filter(|l| l.kind == LocatorKind::GetByTestId).collect();
-    let css_locators: Vec<_> = report.locators.iter().filter(|l| l.kind == LocatorKind::CssSelector).collect();
+    let xpath_locators: Vec<_> = report
+        .locators
+        .iter()
+        .filter(|l| l.kind == LocatorKind::AbsoluteXPath)
+        .collect();
+    let testid_locators: Vec<_> = report
+        .locators
+        .iter()
+        .filter(|l| l.kind == LocatorKind::GetByTestId)
+        .collect();
+    let css_locators: Vec<_> = report
+        .locators
+        .iter()
+        .filter(|l| l.kind == LocatorKind::CssSelector)
+        .collect();
 
-    assert_eq!(xpath_locators.len(), 5, "5 absolute XPath selectors detected");
-    assert_eq!(testid_locators.len(), 4, "4 data-testid/data-test attribute selectors detected");
-    assert_eq!(css_locators.len(), 9, "9 CSS selectors detected (including $, $$)");
+    assert_eq!(
+        xpath_locators.len(),
+        5,
+        "5 absolute XPath selectors detected"
+    );
+    assert_eq!(
+        testid_locators.len(),
+        4,
+        "4 data-testid/data-test attribute selectors detected"
+    );
+    assert_eq!(
+        css_locators.len(),
+        9,
+        "9 CSS selectors detected (including $, $$)"
+    );
 
     assert_eq!(report.anti_patterns.len(), 13);
 }
@@ -195,7 +238,10 @@ const logMsg = "The server reported waitForTimeout was prevented";
 await page.getByRole('button', { name: 'Submit' }).click();
 "#;
     let report = analyze_source(source, "test_no_parens.ts");
-    assert!(!report.has_wait_for_timeout, "waitForTimeout without parentheses in string should not trigger anti-pattern");
+    assert!(
+        !report.has_wait_for_timeout,
+        "waitForTimeout without parentheses in string should not trigger anti-pattern"
+    );
     assert_eq!(report.anti_patterns.len(), 0);
     assert_eq!(report.locators.len(), 1);
 }
@@ -204,7 +250,10 @@ await page.getByRole('button', { name: 'Submit' }).click();
 fn test_stress_ast_analysis_on_10000_lines() {
     let mut big_source = String::with_capacity(1_000_000);
     for i in 0..5000 {
-        big_source.push_str(&format!("// Line {} comment with waitForTimeout(1000)\n", i));
+        big_source.push_str(&format!(
+            "// Line {} comment with waitForTimeout(1000)\n",
+            i
+        ));
         big_source.push_str("await page.getByRole('button', { name: 'Submit' }).click();\n");
     }
 
@@ -216,15 +265,23 @@ fn test_stress_ast_analysis_on_10000_lines() {
     assert_eq!(report.anti_patterns.len(), 0);
     assert_eq!(report.locator_quality_score, 100.0);
     assert!(!report.has_wait_for_timeout);
-    assert!(elapsed.as_millis() < 500, "10,000 lines AST analysis must execute under 500ms (took {}ms)", elapsed.as_millis());
+    assert!(
+        elapsed.as_millis() < 500,
+        "10,000 lines AST analysis must execute under 500ms (took {}ms)",
+        elapsed.as_millis()
+    );
 }
 
 #[test]
 fn test_unclosed_comments_and_strings_graceful_handling() {
     // 1. Unclosed block comment at EOF
-    let unclosed_comment = "const a = 1; /* unclosed block comment with await page.waitForTimeout(500);";
+    let unclosed_comment =
+        "const a = 1; /* unclosed block comment with await page.waitForTimeout(500);";
     let r1 = analyze_source(unclosed_comment, "unclosed_comment.ts");
-    assert!(!r1.has_wait_for_timeout, "Unclosed block comment should not crash or trigger anti-pattern");
+    assert!(
+        !r1.has_wait_for_timeout,
+        "Unclosed block comment should not crash or trigger anti-pattern"
+    );
 
     // 2. Unclosed single quote string at EOF
     let unclosed_quote = "const s = 'unclosed string; await page.getByRole('button');";
@@ -245,8 +302,12 @@ fn test_unclosed_comments_and_strings_graceful_handling() {
 
 #[test]
 fn test_weights_sum_to_one() {
-    let total_weight = WEIGHT_CORRECTNESS + WEIGHT_FLAKINESS + WEIGHT_LOCATOR_QUALITY + WEIGHT_SPEED;
-    assert!((total_weight - 1.0).abs() < f64::EPSILON, "Weights must sum to exactly 1.0");
+    let total_weight =
+        WEIGHT_CORRECTNESS + WEIGHT_FLAKINESS + WEIGHT_LOCATOR_QUALITY + WEIGHT_SPEED;
+    assert!(
+        (total_weight - 1.0).abs() < f64::EPSILON,
+        "Weights must sum to exactly 1.0"
+    );
     assert_eq!(WEIGHT_CORRECTNESS, 0.35);
     assert_eq!(WEIGHT_FLAKINESS, 0.35);
     assert_eq!(WEIGHT_LOCATOR_QUALITY, 0.15);
@@ -264,11 +325,36 @@ fn test_flakiness_penalty_cap_at_40_on_wait_for_timeout() {
         failed_iterations: 0,
         total_duration_ms: 2500, // 500ms avg <= 1000ms baseline
         runs: vec![
-            RunResult { iteration: 1, passed: true, duration_ms: 500, error: None },
-            RunResult { iteration: 2, passed: true, duration_ms: 500, error: None },
-            RunResult { iteration: 3, passed: true, duration_ms: 500, error: None },
-            RunResult { iteration: 4, passed: true, duration_ms: 500, error: None },
-            RunResult { iteration: 5, passed: true, duration_ms: 500, error: None },
+            RunResult {
+                iteration: 1,
+                passed: true,
+                duration_ms: 500,
+                error: None,
+            },
+            RunResult {
+                iteration: 2,
+                passed: true,
+                duration_ms: 500,
+                error: None,
+            },
+            RunResult {
+                iteration: 3,
+                passed: true,
+                duration_ms: 500,
+                error: None,
+            },
+            RunResult {
+                iteration: 4,
+                passed: true,
+                duration_ms: 500,
+                error: None,
+            },
+            RunResult {
+                iteration: 5,
+                passed: true,
+                duration_ms: 500,
+                error: None,
+            },
         ],
         error: None,
     };
@@ -280,7 +366,14 @@ fn test_flakiness_penalty_cap_at_40_on_wait_for_timeout() {
         ..Default::default()
     };
 
-    let scorecard = evaluate_feedback(&drill_response, &ast_with_wait, "playwright-ts", "1.0.0", 85.0, 1000);
+    let scorecard = evaluate_feedback(
+        &drill_response,
+        &ast_with_wait,
+        "playwright-ts",
+        "1.0.0",
+        85.0,
+        1000,
+    );
 
     // Dimension breakdown:
     // Correctness: 100.0 * 0.35 = 35.0
@@ -325,7 +418,14 @@ fn test_flakiness_penalty_when_raw_flakiness_is_below_cap() {
         ..Default::default()
     };
 
-    let scorecard = evaluate_feedback(&drill_response, &ast_with_wait, "playwright-ts", "1.0.0", 85.0, 1000);
+    let scorecard = evaluate_feedback(
+        &drill_response,
+        &ast_with_wait,
+        "playwright-ts",
+        "1.0.0",
+        85.0,
+        1000,
+    );
 
     // Flakiness score: min(20.0, 40.0) = 20.0
     assert_eq!(scorecard.flakiness.score, 20.0);
@@ -387,7 +487,14 @@ fn test_zero_and_overflow_safeguards_in_evaluator() {
         error: None,
     };
     let empty_ast = AstReport::default();
-    let card = evaluate_feedback(&zero_iter_resp, &empty_ast, "playwright-ts", "1.0.0", 85.0, 1000);
+    let card = evaluate_feedback(
+        &zero_iter_resp,
+        &empty_ast,
+        "playwright-ts",
+        "1.0.0",
+        85.0,
+        1000,
+    );
     assert_eq!(card.correctness.score, 0.0);
     assert_eq!(card.flakiness.score, 0.0);
     assert_eq!(card.speed.score, 100.0);
@@ -412,13 +519,27 @@ fn test_drill_01_hydration_timing_exercise_vs_solution() {
     let solution_ast = feedback::analyze_file(solution_path).expect("Read solution.ts");
 
     // Exercise AST analysis verification
-    assert!(exercise_ast.has_wait_for_timeout, "Exercise 01 must have waitForTimeout");
-    assert_eq!(exercise_ast.anti_patterns.len(), 2, "Exercise 01 has waitForTimeout and CSS selector");
+    assert!(
+        exercise_ast.has_wait_for_timeout,
+        "Exercise 01 must have waitForTimeout"
+    );
+    assert_eq!(
+        exercise_ast.anti_patterns.len(),
+        2,
+        "Exercise 01 has waitForTimeout and CSS selector"
+    );
     assert_eq!(exercise_ast.locator_quality_score, 62.5); // CSS (40) + TestID (85) / 2 = 62.5
 
     // Solution AST analysis verification
-    assert!(!solution_ast.has_wait_for_timeout, "Solution 01 must NOT have waitForTimeout");
-    assert_eq!(solution_ast.anti_patterns.len(), 0, "Solution 01 must have 0 anti-patterns");
+    assert!(
+        !solution_ast.has_wait_for_timeout,
+        "Solution 01 must NOT have waitForTimeout"
+    );
+    assert_eq!(
+        solution_ast.anti_patterns.len(),
+        0,
+        "Solution 01 must have 0 anti-patterns"
+    );
     assert_eq!(solution_ast.locator_quality_score, 92.5); // Role (100) + TestID (85) / 2 = 92.5
 
     // Simulated Exercise Execution under Chaos (fails 4/5 iterations due to dropped clicks, avg 2450ms)
@@ -434,7 +555,14 @@ fn test_drill_01_hydration_timing_exercise_vs_solution() {
         error: None,
     };
 
-    let exercise_card = evaluate_feedback(&exercise_response, &exercise_ast, "playwright-ts", "1.0.0", 85.0, 1000);
+    let exercise_card = evaluate_feedback(
+        &exercise_response,
+        &exercise_ast,
+        "playwright-ts",
+        "1.0.0",
+        85.0,
+        1000,
+    );
     assert!(
         exercise_card.total_score < 85.0,
         "Exercise 01 total score ({}) must be < 85.0",
@@ -455,7 +583,14 @@ fn test_drill_01_hydration_timing_exercise_vs_solution() {
         error: None,
     };
 
-    let solution_card = evaluate_feedback(&solution_response, &solution_ast, "playwright-ts", "1.0.0", 85.0, 1000);
+    let solution_card = evaluate_feedback(
+        &solution_response,
+        &solution_ast,
+        "playwright-ts",
+        "1.0.0",
+        85.0,
+        1000,
+    );
     // Correctness: 100.0 * 0.35 = 35.0
     // Flakiness: 100.0 * 0.35 = 35.0
     // Locator: 92.5 * 0.15 = 13.875
@@ -499,7 +634,14 @@ fn test_drill_02_shadow_dom_v2_exercise_vs_solution() {
         runs: vec![],
         error: Some("Element not found across shadow boundary".to_string()),
     };
-    let exercise_card = evaluate_feedback(&exercise_response, &exercise_ast, "playwright-ts", "1.0.0", 85.0, 1000);
+    let exercise_card = evaluate_feedback(
+        &exercise_response,
+        &exercise_ast,
+        "playwright-ts",
+        "1.0.0",
+        85.0,
+        1000,
+    );
     assert!(exercise_card.total_score < 85.0);
     assert!(!exercise_card.passed);
 
@@ -515,7 +657,14 @@ fn test_drill_02_shadow_dom_v2_exercise_vs_solution() {
         runs: vec![],
         error: None,
     };
-    let solution_card = evaluate_feedback(&solution_response, &solution_ast, "playwright-ts", "1.0.0", 85.0, 1000);
+    let solution_card = evaluate_feedback(
+        &solution_response,
+        &solution_ast,
+        "playwright-ts",
+        "1.0.0",
+        85.0,
+        1000,
+    );
     // Correctness: 100 * 0.35 = 35
     // Flakiness: 100 * 0.35 = 35
     // Locator: 77.5 * 0.15 = 11.625
@@ -554,7 +703,14 @@ fn test_drill_03_debounce_race_exercise_vs_solution() {
         runs: vec![],
         error: None,
     };
-    let exercise_card = evaluate_feedback(&exercise_response, &exercise_ast, "playwright-ts", "1.0.0", 85.0, 1000);
+    let exercise_card = evaluate_feedback(
+        &exercise_response,
+        &exercise_ast,
+        "playwright-ts",
+        "1.0.0",
+        85.0,
+        1000,
+    );
     assert!(exercise_card.total_score < 85.0);
     assert!(!exercise_card.passed);
 
@@ -570,7 +726,14 @@ fn test_drill_03_debounce_race_exercise_vs_solution() {
         runs: vec![],
         error: None,
     };
-    let solution_card = evaluate_feedback(&solution_response, &solution_ast, "playwright-ts", "1.0.0", 85.0, 1000);
+    let solution_card = evaluate_feedback(
+        &solution_response,
+        &solution_ast,
+        "playwright-ts",
+        "1.0.0",
+        85.0,
+        1000,
+    );
     // Correctness: 100 * 0.35 = 35
     // Flakiness: 100 * 0.35 = 35
     // Locator: 88.75 * 0.15 = 13.3125
@@ -623,7 +786,14 @@ fn test_scorecard_and_diagnostic_formatting_safety() {
         locator_quality_score: 92.5,
         ..Default::default()
     };
-    let card = evaluate_feedback(&dummy_resp, &dummy_ast, "playwright-ts", "1.0.0", 85.0, 1000);
+    let card = evaluate_feedback(
+        &dummy_resp,
+        &dummy_ast,
+        "playwright-ts",
+        "1.0.0",
+        85.0,
+        1000,
+    );
     let rendered_scorecard = render_scorecard(&card);
     assert!(!rendered_scorecard.is_empty());
     assert!(rendered_scorecard.contains("CHERENKOV-LINGS"));

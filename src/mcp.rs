@@ -1,9 +1,9 @@
-use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
-use std::io::{self, BufRead, Write};
 use crate::feedback;
-use std::path::Path;
+use serde::{Deserialize, Serialize};
+use serde_json::{Value, json};
 use std::fs;
+use std::io::{self, BufRead, Write};
+use std::path::Path;
 
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]
@@ -35,8 +35,10 @@ pub fn run_mcp_server() {
             Ok(0) => break, // EOF
             Ok(_) => {
                 let line = line.trim();
-                if line.is_empty() { continue; }
-                
+                if line.is_empty() {
+                    continue;
+                }
+
                 if let Ok(req) = serde_json::from_str::<RpcRequest>(line) {
                     let mut res = RpcResponse {
                         jsonrpc: "2.0".to_string(),
@@ -56,7 +58,7 @@ pub fn run_mcp_server() {
                                     "tools": {}
                                 }
                             }));
-                        },
+                        }
                         "tools/list" => {
                             res.result = Some(json!({
                                 "tools": [
@@ -84,16 +86,17 @@ pub fn run_mcp_server() {
                                     }
                                 ]
                             }));
-                        },
+                        }
                         "tools/call" => {
                             if let Some(params) = req.params {
                                 let name = params["name"].as_str().unwrap_or("");
                                 let args = &params["arguments"];
-                                
+
                                 match name {
                                     "get_diagnostic_report" => {
                                         let path = args["file_path"].as_str().unwrap_or("");
-                                        if let Ok(report) = feedback::analyze_file(Path::new(path)) {
+                                        if let Ok(report) = feedback::analyze_file(Path::new(path))
+                                        {
                                             // Ensure we implement or debug print
                                             let json_report = json!({
                                                 "anti_patterns": report.anti_patterns.iter().map(|ap| {
@@ -116,7 +119,7 @@ pub fn run_mcp_server() {
                                                 "content": [{ "type": "text", "text": "Error analyzing file" }]
                                             }));
                                         }
-                                    },
+                                    }
                                     "get_hints" => {
                                         let dir = args["exercise_dir"].as_str().unwrap_or("");
                                         let hints_path = Path::new(dir).join("hints.md");
@@ -125,19 +128,22 @@ pub fn run_mcp_server() {
                                         res.result = Some(json!({
                                             "content": [{ "type": "text", "text": content }]
                                         }));
-                                    },
+                                    }
                                     _ => {
-                                        res.error = Some(json!({ "code": -32601, "message": "Method not found" }));
+                                        res.error = Some(
+                                            json!({ "code": -32601, "message": "Method not found" }),
+                                        );
                                     }
                                 }
                             }
-                        },
+                        }
                         "notifications/initialized" => continue,
                         _ => {
-                            res.error = Some(json!({ "code": -32601, "message": "Method not found" }));
+                            res.error =
+                                Some(json!({ "code": -32601, "message": "Method not found" }));
                         }
                     }
-                    
+
                     if let Ok(res_str) = serde_json::to_string(&res) {
                         println!("{}", res_str);
                         stdout.flush().unwrap();

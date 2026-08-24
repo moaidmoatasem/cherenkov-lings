@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter, Lines};
 use tokio::process::{Child, ChildStdin, ChildStdout, Command};
@@ -195,7 +195,10 @@ impl NodeRunner {
         iterations: u32,
         timeout_ms: u64,
     ) -> Result<DrillResponse, RunnerError> {
-        let req_id = format!("req-{}", self.request_counter.fetch_add(1, Ordering::SeqCst));
+        let req_id = format!(
+            "req-{}",
+            self.request_counter.fetch_add(1, Ordering::SeqCst)
+        );
         let request = DrillRequest {
             id: req_id.clone(),
             action: "run_drill".to_string(),
@@ -241,7 +244,10 @@ impl NodeRunner {
 
     /// Send a ping request to verify worker responsiveness
     pub async fn ping(&self) -> Result<bool, RunnerError> {
-        let req_id = format!("ping-{}", self.request_counter.fetch_add(1, Ordering::SeqCst));
+        let req_id = format!(
+            "ping-{}",
+            self.request_counter.fetch_add(1, Ordering::SeqCst)
+        );
         let ping_msg = serde_json::json!({
             "id": req_id,
             "action": "ping"
@@ -343,27 +349,42 @@ fn extract_xml_attr(tag: &str, attr: &str) -> Option<String> {
     let pattern = format!(r#"{}\s*=\s*(?:"([^"]*)"|'([^']*)')"#, regex::escape(attr));
     let re = regex::Regex::new(&pattern).ok()?;
     let caps = re.captures(tag)?;
-    caps.get(1).or_else(|| caps.get(2)).map(|m| unescape_xml(m.as_str()))
+    caps.get(1)
+        .or_else(|| caps.get(2))
+        .map(|m| unescape_xml(m.as_str()))
 }
 
 pub fn parse_surefire_xml(xml: &str) -> Result<SurefireReport, RunnerError> {
     let re_suite = regex::Regex::new(r#"<testsuite\b([^>]*)>"#)
         .map_err(|e| RunnerError::WorkerError(e.to_string()))?;
-    let suite_caps = re_suite.captures(xml)
+    let suite_caps = re_suite
+        .captures(xml)
         .ok_or_else(|| RunnerError::WorkerError("No <testsuite> tag found in XML".into()))?;
     let suite_attrs = suite_caps.get(1).map(|m| m.as_str()).unwrap_or("");
 
     let name = extract_xml_attr(suite_attrs, "name").unwrap_or_default();
-    let time_sec: f64 = extract_xml_attr(suite_attrs, "time").and_then(|s| s.parse().ok()).unwrap_or(0.0);
-    let tests: u32 = extract_xml_attr(suite_attrs, "tests").and_then(|s| s.parse().ok()).unwrap_or(0);
-    let errors: u32 = extract_xml_attr(suite_attrs, "errors").and_then(|s| s.parse().ok()).unwrap_or(0);
-    let skipped: u32 = extract_xml_attr(suite_attrs, "skipped").and_then(|s| s.parse().ok()).unwrap_or(0);
-    let failures: u32 = extract_xml_attr(suite_attrs, "failures").and_then(|s| s.parse().ok()).unwrap_or(0);
+    let time_sec: f64 = extract_xml_attr(suite_attrs, "time")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0.0);
+    let tests: u32 = extract_xml_attr(suite_attrs, "tests")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0);
+    let errors: u32 = extract_xml_attr(suite_attrs, "errors")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0);
+    let skipped: u32 = extract_xml_attr(suite_attrs, "skipped")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0);
+    let failures: u32 = extract_xml_attr(suite_attrs, "failures")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0);
 
-    let re_case = regex::Regex::new(r#"(?s)<testcase\b([^>]*?)>(.*?)</testcase>|<testcase\b([^/>]*?)/>"#)
-        .map_err(|e| RunnerError::WorkerError(e.to_string()))?;
-    let re_failure = regex::Regex::new(r#"(?s)<failure\b([^>]*?)>(.*?)</failure>|<failure\b([^/>]*?)/>"#)
-        .map_err(|e| RunnerError::WorkerError(e.to_string()))?;
+    let re_case =
+        regex::Regex::new(r#"(?s)<testcase\b([^>]*?)>(.*?)</testcase>|<testcase\b([^/>]*?)/>"#)
+            .map_err(|e| RunnerError::WorkerError(e.to_string()))?;
+    let re_failure =
+        regex::Regex::new(r#"(?s)<failure\b([^>]*?)>(.*?)</failure>|<failure\b([^/>]*?)/>"#)
+            .map_err(|e| RunnerError::WorkerError(e.to_string()))?;
     let re_error = regex::Regex::new(r#"(?s)<error\b([^>]*?)>(.*?)</error>|<error\b([^/>]*?)/>"#)
         .map_err(|e| RunnerError::WorkerError(e.to_string()))?;
     let re_cdata = regex::Regex::new(r#"<!\[CDATA\[(.*?)\]\]>"#)
@@ -382,12 +403,17 @@ pub fn parse_surefire_xml(xml: &str) -> Result<SurefireReport, RunnerError> {
 
         let tc_name = extract_xml_attr(case_attrs, "name").unwrap_or_default();
         let tc_classname = extract_xml_attr(case_attrs, "classname").unwrap_or_default();
-        let tc_time: f64 = extract_xml_attr(case_attrs, "time").and_then(|s| s.parse().ok()).unwrap_or(0.0);
+        let tc_time: f64 = extract_xml_attr(case_attrs, "time")
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(0.0);
 
         let mut failure = None;
         if let Some(f_cap) = re_failure.captures(case_body) {
             let (f_attrs, f_body) = if let Some(attrs) = f_cap.get(1) {
-                (attrs.as_str(), f_cap.get(2).map(|m| m.as_str()).unwrap_or(""))
+                (
+                    attrs.as_str(),
+                    f_cap.get(2).map(|m| m.as_str()).unwrap_or(""),
+                )
             } else if let Some(attrs) = f_cap.get(3) {
                 (attrs.as_str(), "")
             } else {
@@ -396,7 +422,11 @@ pub fn parse_surefire_xml(xml: &str) -> Result<SurefireReport, RunnerError> {
             let msg = extract_xml_attr(f_attrs, "message").unwrap_or_default();
             let f_type = extract_xml_attr(f_attrs, "type").unwrap_or_default();
             let stack = if let Some(cdata) = re_cdata.captures(f_body) {
-                cdata.get(1).map(|m| m.as_str().trim()).unwrap_or(f_body.trim()).to_string()
+                cdata
+                    .get(1)
+                    .map(|m| m.as_str().trim())
+                    .unwrap_or(f_body.trim())
+                    .to_string()
             } else {
                 f_body.trim().to_string()
             };
@@ -410,7 +440,10 @@ pub fn parse_surefire_xml(xml: &str) -> Result<SurefireReport, RunnerError> {
         let mut error = None;
         if let Some(e_cap) = re_error.captures(case_body) {
             let (e_attrs, e_body) = if let Some(attrs) = e_cap.get(1) {
-                (attrs.as_str(), e_cap.get(2).map(|m| m.as_str()).unwrap_or(""))
+                (
+                    attrs.as_str(),
+                    e_cap.get(2).map(|m| m.as_str()).unwrap_or(""),
+                )
             } else if let Some(attrs) = e_cap.get(3) {
                 (attrs.as_str(), "")
             } else {
@@ -419,7 +452,11 @@ pub fn parse_surefire_xml(xml: &str) -> Result<SurefireReport, RunnerError> {
             let msg = extract_xml_attr(e_attrs, "message").unwrap_or_default();
             let e_type = extract_xml_attr(e_attrs, "type").unwrap_or_default();
             let stack = if let Some(cdata) = re_cdata.captures(e_body) {
-                cdata.get(1).map(|m| m.as_str().trim()).unwrap_or(e_body.trim()).to_string()
+                cdata
+                    .get(1)
+                    .map(|m| m.as_str().trim())
+                    .unwrap_or(e_body.trim())
+                    .to_string()
             } else {
                 e_body.trim().to_string()
             };
@@ -523,7 +560,8 @@ impl JvmRunner {
         }
 
         // Fallback: Check if file exists on disk and extract package name + file stem
-        if p.exists() && p.is_file()
+        if p.exists()
+            && p.is_file()
             && let Ok(content) = std::fs::read_to_string(p)
         {
             let file_stem = p.file_stem().and_then(|s| s.to_str()).unwrap_or("");
@@ -564,7 +602,9 @@ impl JvmRunner {
     }
 
     /// Parse a Surefire XML report from file
-    pub fn parse_surefire_report<P: AsRef<Path>>(report_path: P) -> Result<SurefireReport, RunnerError> {
+    pub fn parse_surefire_report<P: AsRef<Path>>(
+        report_path: P,
+    ) -> Result<SurefireReport, RunnerError> {
         let content = std::fs::read_to_string(report_path)?;
         parse_surefire_xml(&content)
     }
@@ -578,7 +618,8 @@ impl JvmRunner {
         iteration: u32,
     ) -> Result<RunResult, RunnerError> {
         let start_time = std::time::Instant::now();
-        let surefire_report_path = self.exercise_dir
+        let surefire_report_path = self
+            .exercise_dir
             .join("target")
             .join("surefire-reports")
             .join(format!("TEST-{}.xml", class_name));
@@ -649,7 +690,10 @@ impl JvmRunner {
                     }
                 }
                 if err_msgs.is_empty() {
-                    Some(format!("Test suite failed with {} failure(s) and {} error(s)", report.failures, report.errors))
+                    Some(format!(
+                        "Test suite failed with {} failure(s) and {} error(s)",
+                        report.failures, report.errors
+                    ))
                 } else {
                     Some(err_msgs.join("; "))
                 }
@@ -681,14 +725,20 @@ impl JvmRunner {
             let mut err_lines = Vec::new();
             for line in stdout_str.lines().chain(stderr_str.lines()) {
                 let t = line.trim();
-                if t.starts_with("[ERROR]") && !t.contains("[ERROR] -> [Help 1]") && !t.contains("[ERROR] To see the full stack trace") {
+                if t.starts_with("[ERROR]")
+                    && !t.contains("[ERROR] -> [Help 1]")
+                    && !t.contains("[ERROR] To see the full stack trace")
+                {
                     err_lines.push(t.to_string());
                 }
             }
             let error = if !err_lines.is_empty() {
                 Some(err_lines.join("\n"))
             } else {
-                Some(format!("Maven command failed with exit code: {:?}", output.status.code()))
+                Some(format!(
+                    "Maven command failed with exit code: {:?}",
+                    output.status.code()
+                ))
             };
 
             Ok(RunResult {
@@ -708,9 +758,15 @@ impl JvmRunner {
         iterations: u32,
         timeout_ms: u64,
     ) -> Result<DrillResponse, RunnerError> {
-        let req_id = format!("jvm-req-{}", self.request_counter.fetch_add(1, Ordering::SeqCst));
+        let req_id = format!(
+            "jvm-req-{}",
+            self.request_counter.fetch_add(1, Ordering::SeqCst)
+        );
         let class_name = Self::extract_class_name(file).ok_or_else(|| {
-            RunnerError::WorkerError(format!("Could not resolve Java class name from path: {}", file))
+            RunnerError::WorkerError(format!(
+                "Could not resolve Java class name from path: {}",
+                file
+            ))
         })?;
 
         let iterations = iterations.max(1);
@@ -723,7 +779,9 @@ impl JvmRunner {
         let timeout_per_iter = (timeout_ms / (iterations as u64)).max(5000);
 
         for i in 1..=iterations {
-            let result = self.run_single_iteration(&class_name, chaos, timeout_per_iter, i).await?;
+            let result = self
+                .run_single_iteration(&class_name, chaos, timeout_per_iter, i)
+                .await?;
             if result.passed {
                 passed_iterations += 1;
             } else {
@@ -834,7 +892,10 @@ pub fn parse_k6_summary_json(json_str: &str) -> Result<K6SummaryReport, RunnerEr
             for (thresh_expr, thresh_res) in thresh_map {
                 if !thresh_res.ok {
                     all_thresholds_passed = false;
-                    failed_thresholds.push(format!("{}: threshold '{}' failed", metric_name, thresh_expr));
+                    failed_thresholds.push(format!(
+                        "{}: threshold '{}' failed",
+                        metric_name, thresh_expr
+                    ));
                 }
             }
         }
@@ -842,7 +903,10 @@ pub fn parse_k6_summary_json(json_str: &str) -> Result<K6SummaryReport, RunnerEr
             for (thresh_expr, thresh_res) in thresh_map {
                 if !thresh_res.ok {
                     all_thresholds_passed = false;
-                    failed_thresholds.push(format!("{}: threshold '{}' failed", metric_name, thresh_expr));
+                    failed_thresholds.push(format!(
+                        "{}: threshold '{}' failed",
+                        metric_name, thresh_expr
+                    ));
                 }
             }
         }
@@ -935,7 +999,9 @@ impl K6Runner {
         &self.k6_cmd
     }
 
-    pub fn parse_summary_report<P: AsRef<Path>>(report_path: P) -> Result<K6SummaryReport, RunnerError> {
+    pub fn parse_summary_report<P: AsRef<Path>>(
+        report_path: P,
+    ) -> Result<K6SummaryReport, RunnerError> {
         let content = std::fs::read_to_string(report_path)?;
         parse_k6_summary_json(&content)
     }
@@ -997,8 +1063,7 @@ impl K6Runner {
         let elapsed = start.elapsed().as_millis() as u64;
 
         if summary_file.exists() {
-            let content = std::fs::read_to_string(&summary_file)
-                .map_err(RunnerError::Io)?;
+            let content = std::fs::read_to_string(&summary_file).map_err(RunnerError::Io)?;
             let _ = std::fs::remove_file(&summary_file);
 
             let report = parse_k6_summary_json(&content)?;
@@ -1032,7 +1097,10 @@ impl K6Runner {
             let passed = exec_result.status.success();
             let error = if !passed {
                 let stderr = String::from_utf8_lossy(&exec_result.stderr);
-                Some(format!("k6 failed without summary export: {}", stderr.trim()))
+                Some(format!(
+                    "k6 failed without summary export: {}",
+                    stderr.trim()
+                ))
             } else {
                 None
             };
@@ -1053,7 +1121,10 @@ impl K6Runner {
         iterations: u32,
         timeout_ms: u64,
     ) -> Result<DrillResponse, RunnerError> {
-        let req_id = format!("k6-req-{}", self.request_counter.fetch_add(1, Ordering::SeqCst));
+        let req_id = format!(
+            "k6-req-{}",
+            self.request_counter.fetch_add(1, Ordering::SeqCst)
+        );
         let exercise_path = Path::new(file);
         if !exercise_path.exists() {
             return Ok(DrillResponse {
@@ -1079,7 +1150,9 @@ impl K6Runner {
         let timeout_per_iter = (timeout_ms / (iterations as u64)).max(5000);
 
         for i in 1..=iterations {
-            let result = self.run_single_iteration(file, chaos, timeout_per_iter, i).await?;
+            let result = self
+                .run_single_iteration(file, chaos, timeout_per_iter, i)
+                .await?;
             if result.passed {
                 passed_iterations += 1;
             } else {
@@ -1153,13 +1226,20 @@ impl MaestroRunner {
             let trimmed = raw_line.trim();
 
             // Ignore comments and document markers
-            if trimmed.is_empty() || trimmed.starts_with('#') || trimmed == "---" || trimmed == "..." {
+            if trimmed.is_empty()
+                || trimmed.starts_with('#')
+                || trimmed == "---"
+                || trimmed == "..."
+            {
                 continue;
             }
 
             // Check for tab characters in indentation (invalid in standard YAML)
             if raw_line.contains('\t') {
-                return Err(format!("YAML syntax error on line {}: tabs are not allowed for indentation", line_num));
+                return Err(format!(
+                    "YAML syntax error on line {}: tabs are not allowed for indentation",
+                    line_num
+                ));
             }
 
             // Check list item starter
@@ -1169,17 +1249,25 @@ impl MaestroRunner {
             } else if in_list_item {
                 // Must be a key-value or indented block under list item
                 if !trimmed.contains(':') && !trimmed.starts_with('-') {
-                    return Err(format!("YAML syntax error on line {}: expected key-value mapping or list item", line_num));
+                    return Err(format!(
+                        "YAML syntax error on line {}: expected key-value mapping or list item",
+                        line_num
+                    ));
                 }
             } else if trimmed.contains(':') {
                 has_commands = true;
             } else {
-                return Err(format!("YAML syntax error on line {}: unrecognized YAML structure '{}'", line_num, trimmed));
+                return Err(format!(
+                    "YAML syntax error on line {}: unrecognized YAML structure '{}'",
+                    line_num, trimmed
+                ));
             }
         }
 
         if !has_commands {
-            return Err("No valid Maestro commands or flow steps found in YAML definition".to_string());
+            return Err(
+                "No valid Maestro commands or flow steps found in YAML definition".to_string(),
+            );
         }
 
         Ok(())
@@ -1201,8 +1289,7 @@ impl MaestroRunner {
             )));
         }
 
-        let content = std::fs::read_to_string(exercise_path)
-            .map_err(RunnerError::Io)?;
+        let content = std::fs::read_to_string(exercise_path).map_err(RunnerError::Io)?;
 
         let validation_res = Self::validate_flow_definition(&content);
         let elapsed = start.elapsed().as_millis() as u64;
@@ -1230,7 +1317,10 @@ impl MaestroRunner {
         iterations: u32,
         timeout_ms: u64,
     ) -> Result<DrillResponse, RunnerError> {
-        let req_id = format!("maestro-req-{}", self.request_counter.fetch_add(1, Ordering::SeqCst));
+        let req_id = format!(
+            "maestro-req-{}",
+            self.request_counter.fetch_add(1, Ordering::SeqCst)
+        );
         let exercise_path = Path::new(file);
         if !exercise_path.exists() {
             return Ok(DrillResponse {
@@ -1256,7 +1346,9 @@ impl MaestroRunner {
         let timeout_per_iter = (timeout_ms / (iterations as u64)).max(5000);
 
         for i in 1..=iterations {
-            let result = self.run_single_iteration(file, chaos, timeout_per_iter, i).await?;
+            let result = self
+                .run_single_iteration(file, chaos, timeout_per_iter, i)
+                .await?;
             if result.passed {
                 passed_iterations += 1;
             } else {
@@ -1402,7 +1494,10 @@ pub fn parse_jmeter_jtl_csv(csv_content: &str) -> Result<JtlMetrics, RunnerError
 
         let label = fields.get(label_idx).cloned().unwrap_or_default();
         let response_code = fields.get(response_code_idx).cloned().unwrap_or_default();
-        let response_message = fields.get(response_message_idx).cloned().unwrap_or_default();
+        let response_message = fields
+            .get(response_message_idx)
+            .cloned()
+            .unwrap_or_default();
         let success = fields
             .get(success_idx)
             .map(|s| s.eq_ignore_ascii_case("true") || s == "1" || s.eq_ignore_ascii_case("ok"))
@@ -1411,11 +1506,20 @@ pub fn parse_jmeter_jtl_csv(csv_content: &str) -> Result<JtlMetrics, RunnerError
 
         if !success && first_failure_reason.is_none() {
             let reason = if !failure_message.is_empty() {
-                format!("Sample '{}' failed (HTTP {}): {}", label, response_code, failure_message)
+                format!(
+                    "Sample '{}' failed (HTTP {}): {}",
+                    label, response_code, failure_message
+                )
             } else if !response_message.is_empty() {
-                format!("Sample '{}' failed (HTTP {}): {}", label, response_code, response_message)
+                format!(
+                    "Sample '{}' failed (HTTP {}): {}",
+                    label, response_code, response_message
+                )
             } else {
-                format!("Sample '{}' failed with response code '{}'", label, response_code)
+                format!(
+                    "Sample '{}' failed with response code '{}'",
+                    label, response_code
+                )
             };
             first_failure_reason = Some(reason);
         }
@@ -1447,9 +1551,15 @@ pub fn parse_jmeter_jtl_csv(csv_content: &str) -> Result<JtlMetrics, RunnerError
     let sum_elapsed: u64 = elapsed_list.iter().sum();
     let avg_elapsed_ms = (sum_elapsed as f64 / total_samples as f64).round() as u64;
 
-    let p90_idx = ((total_samples as f64 * 0.90).ceil() as usize).saturating_sub(1).min(total_samples - 1);
-    let p95_idx = ((total_samples as f64 * 0.95).ceil() as usize).saturating_sub(1).min(total_samples - 1);
-    let p99_idx = ((total_samples as f64 * 0.99).ceil() as usize).saturating_sub(1).min(total_samples - 1);
+    let p90_idx = ((total_samples as f64 * 0.90).ceil() as usize)
+        .saturating_sub(1)
+        .min(total_samples - 1);
+    let p95_idx = ((total_samples as f64 * 0.95).ceil() as usize)
+        .saturating_sub(1)
+        .min(total_samples - 1);
+    let p99_idx = ((total_samples as f64 * 0.99).ceil() as usize)
+        .saturating_sub(1)
+        .min(total_samples - 1);
 
     let p90_elapsed_ms = elapsed_list[p90_idx];
     let p95_elapsed_ms = elapsed_list[p95_idx];
@@ -1561,12 +1671,13 @@ impl JMeterRunner {
         let elapsed = start.elapsed().as_millis() as u64;
 
         if jtl_file.exists() {
-            let content = std::fs::read_to_string(&jtl_file)
-                .map_err(RunnerError::Io)?;
+            let content = std::fs::read_to_string(&jtl_file).map_err(RunnerError::Io)?;
             let _ = std::fs::remove_file(&jtl_file);
 
             let metrics = parse_jmeter_jtl_csv(&content)?;
-            let passed = exec_result.status.success() && metrics.total_samples > 0 && metrics.failed_samples == 0;
+            let passed = exec_result.status.success()
+                && metrics.total_samples > 0
+                && metrics.failed_samples == 0;
             let error = if !passed {
                 if let Some(reason) = metrics.first_failure_reason {
                     Some(reason)
@@ -1631,7 +1742,10 @@ impl JMeterRunner {
         iterations: u32,
         timeout_ms: u64,
     ) -> Result<DrillResponse, RunnerError> {
-        let req_id = format!("jmeter-req-{}", self.request_counter.fetch_add(1, Ordering::SeqCst));
+        let req_id = format!(
+            "jmeter-req-{}",
+            self.request_counter.fetch_add(1, Ordering::SeqCst)
+        );
         let exercise_path = Path::new(file);
         if !exercise_path.exists() {
             return Ok(DrillResponse {
@@ -1657,7 +1771,10 @@ impl JMeterRunner {
         let timeout_per_iter = (timeout_ms / (iterations as u64)).max(5000);
 
         for i in 1..=iterations {
-            match self.run_single_iteration(file, chaos, timeout_per_iter, i).await {
+            match self
+                .run_single_iteration(file, chaos, timeout_per_iter, i)
+                .await
+            {
                 Ok(result) => {
                     if result.passed {
                         passed_iterations += 1;
@@ -1721,7 +1838,9 @@ impl Default for PytestRunner {
 }
 
 impl PytestRunner {
-    pub fn new() -> Self { Self }
+    pub fn new() -> Self {
+        Self
+    }
 }
 
 impl Runner for PytestRunner {
@@ -1740,10 +1859,10 @@ impl Runner for PytestRunner {
                 .output()
                 .await
                 .map_err(RunnerError::Io)?;
-            
+
             let stdout = String::from_utf8_lossy(&output.stdout);
             let passed = stdout.contains("\"passed\": true");
-            
+
             Ok(DrillResponse {
                 id: "pytest-run".to_string(),
                 ok: true,
@@ -1977,29 +2096,37 @@ mod tests {
         assert!(!response.ok);
         assert!(!response.passed);
         assert!(response.error.is_some());
-        assert!(response
-            .error
-            .unwrap()
-            .contains("Exercise file does not exist"));
+        assert!(
+            response
+                .error
+                .unwrap()
+                .contains("Exercise file does not exist")
+        );
     }
 
     #[test]
     fn test_extract_class_name_variations() {
         // Standard Maven directory layout
         assert_eq!(
-            JvmRunner::extract_class_name("exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill01_idempotency/Exercise.java"),
+            JvmRunner::extract_class_name(
+                "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill01_idempotency/Exercise.java"
+            ),
             Some("com.cherenkov.drill01_idempotency.Exercise".to_string())
         );
 
         // Windows backslash path
         assert_eq!(
-            JvmRunner::extract_class_name(r"exercises\02_api_restassured_java\src\test\java\com\cherenkov\drill02_jwt_auth\Solution.java"),
+            JvmRunner::extract_class_name(
+                r"exercises\02_api_restassured_java\src\test\java\com\cherenkov\drill02_jwt_auth\Solution.java"
+            ),
             Some("com.cherenkov.drill02_jwt_auth.Solution".to_string())
         );
 
         // Subpath starting at src/test/java
         assert_eq!(
-            JvmRunner::extract_class_name("src/test/java/com/cherenkov/drill03_kafka_lag/Exercise.java"),
+            JvmRunner::extract_class_name(
+                "src/test/java/com/cherenkov/drill03_kafka_lag/Exercise.java"
+            ),
             Some("com.cherenkov.drill03_kafka_lag.Exercise".to_string())
         );
 
@@ -2016,7 +2143,9 @@ mod tests {
         );
 
         // Existing file on disk in exercises/02_api_restassured_java
-        let drill1_ex = Path::new("exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill01_idempotency/Exercise.java");
+        let drill1_ex = Path::new(
+            "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill01_idempotency/Exercise.java",
+        );
         if drill1_ex.exists() {
             assert_eq!(
                 JvmRunner::extract_class_name(drill1_ex),
@@ -2070,7 +2199,11 @@ Expected status code <200> but was <409>.
         let tc = &report.test_cases[0];
         assert_eq!(tc.name, "testCheckoutWithStaticKey");
         let failure = tc.failure.as_ref().expect("Expected failure");
-        assert!(failure.message.contains("Expected status code <200> but was <409>"));
+        assert!(
+            failure
+                .message
+                .contains("Expected status code <200> but was <409>")
+        );
         assert_eq!(failure.failure_type, "java.lang.AssertionError");
         assert!(failure.stack_trace.contains("Exercise.java:51"));
     }
@@ -2101,14 +2234,18 @@ Expected status code <200> but was <409>.
     #[test]
     fn test_jvm_runner_configuration_and_paths() {
         let runner = JvmRunner::new("exercises/02_api_restassured_java");
-        assert_eq!(runner.exercise_dir(), Path::new("exercises/02_api_restassured_java"));
+        assert_eq!(
+            runner.exercise_dir(),
+            Path::new("exercises/02_api_restassured_java")
+        );
         if cfg!(windows) {
             assert_eq!(runner.maven_cmd(), "mvn.cmd");
         } else {
             assert_eq!(runner.maven_cmd(), "mvn");
         }
 
-        let custom_runner = JvmRunner::with_maven_cmd("exercises/02_api_restassured_java", "custom-mvn");
+        let custom_runner =
+            JvmRunner::with_maven_cmd("exercises/02_api_restassured_java", "custom-mvn");
         assert_eq!(custom_runner.maven_cmd(), "custom-mvn");
     }
 
@@ -2185,8 +2322,18 @@ Expected status code <200> but was <409>.
         let report = parse_k6_summary_json(json).expect("Parse k6 summary JSON");
         assert!(!report.all_thresholds_passed);
         assert_eq!(report.failed_thresholds.len(), 2);
-        assert!(report.failed_thresholds.iter().any(|f| f.contains("http_req_duration") && f.contains("p(95)<2000")));
-        assert!(report.failed_thresholds.iter().any(|f| f.contains("http_req_failed") && f.contains("rate<0.01")));
+        assert!(
+            report
+                .failed_thresholds
+                .iter()
+                .any(|f| f.contains("http_req_duration") && f.contains("p(95)<2000"))
+        );
+        assert!(
+            report
+                .failed_thresholds
+                .iter()
+                .any(|f| f.contains("http_req_failed") && f.contains("rate<0.01"))
+        );
     }
 
     #[test]
@@ -2281,7 +2428,10 @@ Expected status code <200> but was <409>.
         let runner = MaestroRunner::new();
         let file = "exercises/03_mobile_maestro/01_biometric_fallback/solution.yaml";
         if Path::new(file).exists() {
-            let response = runner.run_drill(file, "", 2, 5000).await.expect("Run drill");
+            let response = runner
+                .run_drill(file, "", 2, 5000)
+                .await
+                .expect("Run drill");
             assert!(response.ok);
             assert!(response.passed);
             assert_eq!(response.iterations, 2);
@@ -2352,7 +2502,9 @@ Expected status code <200> but was <409>.
 
     #[test]
     fn test_parse_jmeter_jtl_csv_percentiles_100_samples() {
-        let mut csv_data = String::from("timeStamp,elapsed,label,responseCode,responseMessage,threadName,dataType,success,failureMessage\n");
+        let mut csv_data = String::from(
+            "timeStamp,elapsed,label,responseCode,responseMessage,threadName,dataType,success,failureMessage\n",
+        );
         for i in 1..=100 {
             csv_data.push_str(&format!(
                 "1700000000000,{},Sample {},200,OK,Thread 1,text,true,\n",
@@ -2383,9 +2535,15 @@ Expected status code <200> but was <409>.
         assert_eq!(metrics.passed_samples, 1);
         assert_eq!(metrics.failed_samples, 1);
         assert_eq!(metrics.samples[0].label, "GET /api/v1/items?filter=a,b,c");
-        assert_eq!(metrics.samples[0].response_message, "OK, processed successfully");
+        assert_eq!(
+            metrics.samples[0].response_message,
+            "OK, processed successfully"
+        );
         assert_eq!(metrics.samples[1].label, "POST /api/v1/items,batch");
-        assert_eq!(metrics.samples[1].failure_message, "Validation failed, field 'name' is required");
+        assert_eq!(
+            metrics.samples[1].failure_message,
+            "Validation failed, field 'name' is required"
+        );
     }
 
     #[test]
@@ -2460,4 +2618,3 @@ Expected status code <200> but was <409>.
         }
     }
 }
-

@@ -1,4 +1,4 @@
-use cherenkov_lings::feedback::{analyze_file, evaluate_feedback, AstReport};
+use cherenkov_lings::feedback::{AstReport, analyze_file, evaluate_feedback};
 use cherenkov_lings::runner::{DrillResponse, RunResult};
 use std::fs;
 use std::path::Path;
@@ -26,13 +26,37 @@ fn test_genai_qa_drill_files_exist_and_hints_contracts() {
         let sol_content = fs::read_to_string(&solution).expect("read solution.ts");
         let hint_content = fs::read_to_string(&hints).expect("read hints.md");
 
-        assert!(!ex_content.trim().is_empty(), "exercise.ts in {} cannot be empty", dir);
-        assert!(!sol_content.trim().is_empty(), "solution.ts in {} cannot be empty", dir);
-        assert!(!hint_content.trim().is_empty(), "hints.md in {} cannot be empty", dir);
+        assert!(
+            !ex_content.trim().is_empty(),
+            "exercise.ts in {} cannot be empty",
+            dir
+        );
+        assert!(
+            !sol_content.trim().is_empty(),
+            "solution.ts in {} cannot be empty",
+            dir
+        );
+        assert!(
+            !hint_content.trim().is_empty(),
+            "hints.md in {} cannot be empty",
+            dir
+        );
 
-        assert!(hint_content.contains("Hint 1"), "hints.md in {} must contain Hint 1", dir);
-        assert!(hint_content.contains("Hint 2"), "hints.md in {} must contain Hint 2", dir);
-        assert!(hint_content.contains("Hint 3"), "hints.md in {} must contain Hint 3", dir);
+        assert!(
+            hint_content.contains("Hint 1"),
+            "hints.md in {} must contain Hint 1",
+            dir
+        );
+        assert!(
+            hint_content.contains("Hint 2"),
+            "hints.md in {} must contain Hint 2",
+            dir
+        );
+        assert!(
+            hint_content.contains("Hint 3"),
+            "hints.md in {} must contain Hint 3",
+            dir
+        );
     }
 }
 
@@ -97,7 +121,10 @@ fn test_genai_qa_drill02_llm_flakiness_contract() {
 #[test]
 fn test_playwright_config_discovers_genai_drills() {
     let config_path = "playwright.config.ts";
-    assert!(Path::new(config_path).exists(), "playwright.config.ts must exist");
+    assert!(
+        Path::new(config_path).exists(),
+        "playwright.config.ts must exist"
+    );
 
     let content = fs::read_to_string(config_path).expect("read playwright.config.ts");
     assert!(
@@ -148,11 +175,36 @@ fn test_genai_qa_feedback_matrix_scorecard_evaluation() {
         failed_iterations: 0,
         total_duration_ms: 250,
         runs: vec![
-            RunResult { iteration: 1, passed: true, duration_ms: 50, error: None },
-            RunResult { iteration: 2, passed: true, duration_ms: 50, error: None },
-            RunResult { iteration: 3, passed: true, duration_ms: 50, error: None },
-            RunResult { iteration: 4, passed: true, duration_ms: 50, error: None },
-            RunResult { iteration: 5, passed: true, duration_ms: 50, error: None },
+            RunResult {
+                iteration: 1,
+                passed: true,
+                duration_ms: 50,
+                error: None,
+            },
+            RunResult {
+                iteration: 2,
+                passed: true,
+                duration_ms: 50,
+                error: None,
+            },
+            RunResult {
+                iteration: 3,
+                passed: true,
+                duration_ms: 50,
+                error: None,
+            },
+            RunResult {
+                iteration: 4,
+                passed: true,
+                duration_ms: 50,
+                error: None,
+            },
+            RunResult {
+                iteration: 5,
+                passed: true,
+                duration_ms: 50,
+                error: None,
+            },
         ],
         error: None,
     };
@@ -181,11 +233,36 @@ fn test_genai_qa_feedback_matrix_scorecard_evaluation() {
         failed_iterations: 2,
         total_duration_ms: 250,
         runs: vec![
-            RunResult { iteration: 1, passed: true, duration_ms: 50, error: None },
-            RunResult { iteration: 2, passed: false, duration_ms: 50, error: Some("raw_text mismatch".to_string()) },
-            RunResult { iteration: 3, passed: true, duration_ms: 50, error: None },
-            RunResult { iteration: 4, passed: false, duration_ms: 50, error: Some("raw_text mismatch".to_string()) },
-            RunResult { iteration: 5, passed: true, duration_ms: 50, error: None },
+            RunResult {
+                iteration: 1,
+                passed: true,
+                duration_ms: 50,
+                error: None,
+            },
+            RunResult {
+                iteration: 2,
+                passed: false,
+                duration_ms: 50,
+                error: Some("raw_text mismatch".to_string()),
+            },
+            RunResult {
+                iteration: 3,
+                passed: true,
+                duration_ms: 50,
+                error: None,
+            },
+            RunResult {
+                iteration: 4,
+                passed: false,
+                duration_ms: 50,
+                error: Some("raw_text mismatch".to_string()),
+            },
+            RunResult {
+                iteration: 5,
+                passed: true,
+                duration_ms: 50,
+                error: None,
+            },
         ],
         error: Some("raw_text mismatch".to_string()),
     };
@@ -211,7 +288,11 @@ fn test_polyglot_5_tracks_manifest_and_config() {
 
     let expected_tracks = [
         ("playwright-ts", "exercises/01_web_playwright_ts", ".ts"),
-        ("restassured-java", "exercises/02_api_restassured_java", ".java"),
+        (
+            "restassured-java",
+            "exercises/02_api_restassured_java",
+            ".java",
+        ),
         ("k6-js", "exercises/04_perf_k6_js", ".js"),
         ("maestro-mobile", "exercises/03_mobile_maestro", ".yaml"),
         ("genai-qa", "exercises/05_genai_qa", ".ts"),
@@ -239,23 +320,83 @@ fn test_polyglot_5_tracks_manifest_and_config() {
 #[test]
 fn test_polyglot_all_14_drills_exist_with_complete_artifacts() {
     let drill_manifest = [
-        ("exercises/01_web_playwright_ts/01_hydration_timing", "exercise.ts", "solution.ts"),
-        ("exercises/01_web_playwright_ts/02_shadow_dom_v2", "exercise.ts", "solution.ts"),
-        ("exercises/01_web_playwright_ts/03_debounce_race_condition", "exercise.ts", "solution.ts"),
-        ("exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill01_idempotency", "Exercise.java", "Solution.java"),
-        ("exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill02_jwt_auth", "Exercise.java", "Solution.java"),
-        ("exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill03_kafka_lag", "Exercise.java", "Solution.java"),
-        ("exercises/03_mobile_maestro/01_biometric_fallback", "exercise.yaml", "solution.yaml"),
-        ("exercises/03_mobile_maestro/02_deep_link_cold_start", "exercise.yaml", "solution.yaml"),
-        ("exercises/03_mobile_maestro/03_activity_recreation", "exercise.yaml", "solution.yaml"),
-        ("exercises/04_perf_k6_js/01_database_pool_starvation", "exercise.js", "solution.js"),
-        ("exercises/04_perf_k6_js/02_spike_profile_p99", "exercise.js", "solution.js"),
-        ("exercises/04_perf_k6_js/03_chaos_sla_assertion", "exercise.js", "solution.js"),
-        ("exercises/05_genai_qa/01_rag_context_faithfulness", "exercise.ts", "solution.ts"),
-        ("exercises/05_genai_qa/02_llm_assertion_flakiness", "exercise.ts", "solution.ts"),
+        (
+            "exercises/01_web_playwright_ts/01_hydration_timing",
+            "exercise.ts",
+            "solution.ts",
+        ),
+        (
+            "exercises/01_web_playwright_ts/02_shadow_dom_v2",
+            "exercise.ts",
+            "solution.ts",
+        ),
+        (
+            "exercises/01_web_playwright_ts/03_debounce_race_condition",
+            "exercise.ts",
+            "solution.ts",
+        ),
+        (
+            "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill01_idempotency",
+            "Exercise.java",
+            "Solution.java",
+        ),
+        (
+            "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill02_jwt_auth",
+            "Exercise.java",
+            "Solution.java",
+        ),
+        (
+            "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill03_kafka_lag",
+            "Exercise.java",
+            "Solution.java",
+        ),
+        (
+            "exercises/03_mobile_maestro/01_biometric_fallback",
+            "exercise.yaml",
+            "solution.yaml",
+        ),
+        (
+            "exercises/03_mobile_maestro/02_deep_link_cold_start",
+            "exercise.yaml",
+            "solution.yaml",
+        ),
+        (
+            "exercises/03_mobile_maestro/03_activity_recreation",
+            "exercise.yaml",
+            "solution.yaml",
+        ),
+        (
+            "exercises/04_perf_k6_js/01_database_pool_starvation",
+            "exercise.js",
+            "solution.js",
+        ),
+        (
+            "exercises/04_perf_k6_js/02_spike_profile_p99",
+            "exercise.js",
+            "solution.js",
+        ),
+        (
+            "exercises/04_perf_k6_js/03_chaos_sla_assertion",
+            "exercise.js",
+            "solution.js",
+        ),
+        (
+            "exercises/05_genai_qa/01_rag_context_faithfulness",
+            "exercise.ts",
+            "solution.ts",
+        ),
+        (
+            "exercises/05_genai_qa/02_llm_assertion_flakiness",
+            "exercise.ts",
+            "solution.ts",
+        ),
     ];
 
-    assert_eq!(drill_manifest.len(), 14, "Expected exactly 14 drills across all 5 tracks");
+    assert_eq!(
+        drill_manifest.len(),
+        14,
+        "Expected exactly 14 drills across all 5 tracks"
+    );
 
     for (dir, ex_name, sol_name) in drill_manifest {
         let p = Path::new(dir);
@@ -265,13 +406,37 @@ fn test_polyglot_all_14_drills_exist_with_complete_artifacts() {
         let sol_path = p.join(sol_name);
         let hint_path = p.join("hints.md");
 
-        assert!(ex_path.exists(), "Exercise file '{}' must exist", ex_path.display());
-        assert!(sol_path.exists(), "Solution file '{}' must exist", sol_path.display());
-        assert!(hint_path.exists(), "Hints file '{}' must exist", hint_path.display());
+        assert!(
+            ex_path.exists(),
+            "Exercise file '{}' must exist",
+            ex_path.display()
+        );
+        assert!(
+            sol_path.exists(),
+            "Solution file '{}' must exist",
+            sol_path.display()
+        );
+        assert!(
+            hint_path.exists(),
+            "Hints file '{}' must exist",
+            hint_path.display()
+        );
 
         let hints = fs::read_to_string(&hint_path).expect("read hints.md");
-        assert!(hints.contains("Hint 1"), "Missing Hint 1 in {}", hint_path.display());
-        assert!(hints.contains("Hint 2"), "Missing Hint 2 in {}", hint_path.display());
-        assert!(hints.contains("Hint 3"), "Missing Hint 3 in {}", hint_path.display());
+        assert!(
+            hints.contains("Hint 1"),
+            "Missing Hint 1 in {}",
+            hint_path.display()
+        );
+        assert!(
+            hints.contains("Hint 2"),
+            "Missing Hint 2 in {}",
+            hint_path.display()
+        );
+        assert!(
+            hints.contains("Hint 3"),
+            "Missing Hint 3 in {}",
+            hint_path.display()
+        );
     }
 }

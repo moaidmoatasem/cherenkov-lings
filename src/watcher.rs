@@ -25,7 +25,10 @@ pub fn should_ignore_path(path: &Path) -> bool {
     }
 
     // Ignore git metadata
-    if normalized.contains("/.git/") || normalized.starts_with(".git/") || normalized.ends_with("/.git") {
+    if normalized.contains("/.git/")
+        || normalized.starts_with(".git/")
+        || normalized.ends_with("/.git")
+    {
         return true;
     }
 
@@ -114,13 +117,21 @@ mod tests {
     #[test]
     fn test_should_ignore_path_filters() {
         // Target directory
-        assert!(should_ignore_path(Path::new("exercises/02_api_restassured_java/target/classes/App.class")));
-        assert!(should_ignore_path(Path::new("target/surefire-reports/TEST-Exercise.xml")));
-        assert!(should_ignore_path(Path::new(r"exercises\02_api_restassured_java\target\test-classes\Exercise.class")));
+        assert!(should_ignore_path(Path::new(
+            "exercises/02_api_restassured_java/target/classes/App.class"
+        )));
+        assert!(should_ignore_path(Path::new(
+            "target/surefire-reports/TEST-Exercise.xml"
+        )));
+        assert!(should_ignore_path(Path::new(
+            r"exercises\02_api_restassured_java\target\test-classes\Exercise.class"
+        )));
 
         // Bytecode
         assert!(should_ignore_path(Path::new("Exercise.class")));
-        assert!(should_ignore_path(Path::new("com/cherenkov/Solution.class")));
+        assert!(should_ignore_path(Path::new(
+            "com/cherenkov/Solution.class"
+        )));
 
         // Temp and editor swap files
         assert!(should_ignore_path(Path::new("Exercise.java.tmp")));
@@ -130,9 +141,14 @@ mod tests {
         assert!(should_ignore_path(Path::new(".git/HEAD")));
 
         // Valid source files must NOT be ignored
-        assert!(!should_ignore_path(Path::new("exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill01_idempotency/Exercise.java")));
-        assert!(!should_ignore_path(Path::new("exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill01_idempotency/Solution.java")));
-        assert!(!should_ignore_path(Path::new("exercises/01_web_playwright_ts/01_hydration/exercise.ts")));
+        assert!(!should_ignore_path(Path::new(
+            "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill01_idempotency/Exercise.java"
+        )));
+        assert!(!should_ignore_path(Path::new(
+            "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill01_idempotency/Solution.java"
+        )));
+        assert!(!should_ignore_path(Path::new(
+            "exercises/01_web_playwright_ts/01_hydration/exercise.ts"
+        )));
     }
 }
-

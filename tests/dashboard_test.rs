@@ -1,8 +1,7 @@
 use cherenkov_lings::config::{self, Config, EvaluationConfig, PlatformConfig, UiConfig};
 use cherenkov_lings::gamification::{
-    default_curriculum_tracks, discover_track_drills, extract_drill_id_from_path,
-    get_next_recommended_drill, get_track_summaries, render_dashboard, DrillRunContext,
-    GamificationState,
+    DrillRunContext, GamificationState, default_curriculum_tracks, discover_track_drills,
+    extract_drill_id_from_path, get_next_recommended_drill, get_track_summaries, render_dashboard,
 };
 use std::process::Command;
 
@@ -180,7 +179,11 @@ fn test_render_dashboard_partially_completed_state() {
 
     // Next recommended drill is the 4th drill in Playwright or remaining incomplete
     assert!(output.contains("NEXT RECOMMENDED DRILL"));
-    assert!(output.contains("playwright-ts") || output.contains("Modern Web Automation") || output.contains("04_"));
+    assert!(
+        output.contains("playwright-ts")
+            || output.contains("Modern Web Automation")
+            || output.contains("04_")
+    );
 }
 
 #[test]
@@ -222,7 +225,11 @@ fn test_render_dashboard_sdet_master_state() {
     assert!(summaries.iter().all(|s| s.status_emoji == "✅"));
 
     let rec = get_next_recommended_drill(&config, &state);
-    assert!(rec.reason.contains("All drills mastered") || rec.reason.contains("SDET Master") || rec.reason.contains("100.0%"));
+    assert!(
+        rec.reason.contains("All drills mastered")
+            || rec.reason.contains("SDET Master")
+            || rec.reason.contains("100.0%")
+    );
 }
 
 #[test]
@@ -230,7 +237,11 @@ fn test_track_drill_discovery_all_curriculum_tracks() {
     let config = sample_config();
     let summaries = get_track_summaries(&config, &GamificationState::default());
 
-    assert_eq!(summaries.len(), config.tracks.len(), "Should produce summary for all curriculum tracks");
+    assert_eq!(
+        summaries.len(),
+        config.tracks.len(),
+        "Should produce summary for all curriculum tracks"
+    );
 
     for sum in summaries {
         assert!(
@@ -275,11 +286,15 @@ fn test_next_drill_recommendation_prioritization() {
 #[test]
 fn test_extract_drill_id_from_path_robustness() {
     assert_eq!(
-        extract_drill_id_from_path("exercises\\01_web_playwright_ts\\01_hydration_timing\\exercise.ts"),
+        extract_drill_id_from_path(
+            "exercises\\01_web_playwright_ts\\01_hydration_timing\\exercise.ts"
+        ),
         "01_hydration_timing"
     );
     assert_eq!(
-        extract_drill_id_from_path("exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill06_graphql_assertions/Solution.java"),
+        extract_drill_id_from_path(
+            "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill06_graphql_assertions/Solution.java"
+        ),
         "drill06_graphql_assertions"
     );
     assert_eq!(
@@ -287,7 +302,9 @@ fn test_extract_drill_id_from_path_robustness() {
         "08_jtl_dashboard"
     );
     assert_eq!(
-        extract_drill_id_from_path("exercises/03_mobile_maestro/04_scroll_to_element/exercise.yaml"),
+        extract_drill_id_from_path(
+            "exercises/03_mobile_maestro/04_scroll_to_element/exercise.yaml"
+        ),
         "04_scroll_to_element"
     );
     assert_eq!(

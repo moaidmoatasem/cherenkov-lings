@@ -1,13 +1,11 @@
 use cherenkov_lings::gamification::{
-    calculate_xp, calculate_xp_with_multiplier, check_achievements,
-    civil_from_days, current_utc_date_string, current_utc_iso_timestamp,
-    days_from_civil, get_level, get_level_info, get_tier_multiplier,
-    load_progress, parse_date_to_days, render_badge_reveal,
-    render_gamification_scorecard, render_gamification_scorecard_with_tier,
-    render_gamification_summary, render_level_progress_bar, save_progress,
-    tier_for_track_or_drill, DrillRunContext, GamificationState,
-    UnlockedAchievement, ALL_ACHIEVEMENTS, ALL_TRACKS,
-    DEFAULT_BASELINE_DURATION_MS, PROGRESS_FILE, TOOL_DECISIONS_DRILLS,
+    ALL_ACHIEVEMENTS, ALL_TRACKS, DEFAULT_BASELINE_DURATION_MS, DrillRunContext, GamificationState,
+    PROGRESS_FILE, TOOL_DECISIONS_DRILLS, UnlockedAchievement, calculate_xp,
+    calculate_xp_with_multiplier, check_achievements, civil_from_days, current_utc_date_string,
+    current_utc_iso_timestamp, days_from_civil, get_level, get_level_info, get_tier_multiplier,
+    load_progress, parse_date_to_days, render_badge_reveal, render_gamification_scorecard,
+    render_gamification_scorecard_with_tier, render_gamification_summary,
+    render_level_progress_bar, save_progress, tier_for_track_or_drill,
 };
 use std::fs;
 use std::path::PathBuf;
@@ -44,7 +42,6 @@ fn test_direct_check_achievements_function() {
     // Already unlocked during record_drill_run, so direct call returns empty
     assert!(direct_unlocked.is_empty());
 }
-
 
 fn get_unique_temp_file(prefix: &str) -> PathBuf {
     let nanos = std::time::SystemTime::now()
@@ -170,11 +167,14 @@ fn test_civil_date_conversions_and_leap_years() {
     assert!(iso_ts.contains('T'));
 
     // Date parsing
-    assert_eq!(parse_date_to_days(&today), Some(days_from_civil(
-        today[0..4].parse().unwrap(),
-        today[5..7].parse().unwrap(),
-        today[8..10].parse().unwrap(),
-    )));
+    assert_eq!(
+        parse_date_to_days(&today),
+        Some(days_from_civil(
+            today[0..4].parse().unwrap(),
+            today[5..7].parse().unwrap(),
+            today[8..10].parse().unwrap(),
+        ))
+    );
     assert_eq!(parse_date_to_days(""), None);
     assert_eq!(parse_date_to_days("2026-99-99"), None);
 }
@@ -387,7 +387,10 @@ fn test_persistence_full_lifecycle_and_serialization() {
     assert_eq!(loaded.achievements.len(), 1);
     assert_eq!(loaded.completed_drills.len(), 1);
 
-    let drill = loaded.completed_drills.get("playwright-ts/01_hydration").unwrap();
+    let drill = loaded
+        .completed_drills
+        .get("playwright-ts/01_hydration")
+        .unwrap();
     assert_eq!(drill.best_score, 92.5);
     assert_eq!(drill.completion_count, 1);
     assert_eq!(drill.first_completed_at, "2026-08-24T09:30:00Z");
@@ -442,7 +445,10 @@ fn test_drill_re_attempt_updates_best_score_and_count() {
     assert_eq!(xp2, 98);
     assert_eq!(state.total_xp, 88 + 98);
 
-    let drill_entry = state.completed_drills.get("playwright-ts/01_hydration").unwrap();
+    let drill_entry = state
+        .completed_drills
+        .get("playwright-ts/01_hydration")
+        .unwrap();
     assert_eq!(drill_entry.best_score, 98.0);
     assert_eq!(drill_entry.completion_count, 2);
     assert_eq!(drill_entry.first_completed_at, "2026-08-24T10:00:00Z");
@@ -473,7 +479,8 @@ fn test_render_scorecard_and_summaries_no_panic() {
     assert!(scorecard.contains("Daily Streak: 7 days"));
     assert!(scorecard.contains("ACHIEVEMENT UNLOCKED: Speed Demon"));
 
-    let scorecard_tier = render_gamification_scorecard_with_tier(150, 2, &state, std::slice::from_ref(&ach));
+    let scorecard_tier =
+        render_gamification_scorecard_with_tier(150, 2, &state, std::slice::from_ref(&ach));
     assert!(scorecard_tier.contains("Tier 2 (1.5x)"));
 
     let reveal = render_badge_reveal(&ach);
@@ -487,4 +494,3 @@ fn test_render_scorecard_and_summaries_no_panic() {
     assert!(summary.contains("Streak: 7 days"));
     assert!(summary.contains("Badges Unlocked: 1 / 8"));
 }
-

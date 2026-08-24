@@ -7,6 +7,7 @@ test('chatbot answer is strictly grounded in ground truth policy documents', asy
 
   // Verify citation grounding and ensure forbidden hallucination terms are absent
   expect(data).toHaveProperty('grounded', true);
-  expect(data.sources).toContain('policy_v2.pdf');
+  expect(data.document_title).toContain('Cherenkov Radiation Primer');
+  expect(data.source_facts.length).toBeGreaterThan(0);
   expect(data.answer.toLowerCase()).not.toContain('free unlimited retroactive refund');
 });

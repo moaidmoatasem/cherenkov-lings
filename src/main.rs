@@ -82,7 +82,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match &cli.command {
         Commands::Init { name } => {
-            let project_name = name.clone().unwrap_or_else(|| "my-sdet-journey".to_string());
+            let project_name = name
+                .clone()
+                .unwrap_or_else(|| "my-sdet-journey".to_string());
 
             // Create exercise directories
             let exercise_dirs = vec![
@@ -103,71 +105,137 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             // Rich Manual-QA-first welcome banner
             println!();
-            println!("{}", "╔══════════════════════════════════════════════════════════════════╗".bright_cyan());
-            println!("{}", "║      ⚡  CHERENKOV-LINGS  — Interactive QA Learning Platform      ║".bright_cyan());
-            println!("{}", "╚══════════════════════════════════════════════════════════════════╝".bright_cyan());
+            println!(
+                "{}",
+                "╔══════════════════════════════════════════════════════════════════╗"
+                    .bright_cyan()
+            );
+            println!(
+                "{}",
+                "║      ⚡  CHERENKOV-LINGS  — Interactive QA Learning Platform      ║"
+                    .bright_cyan()
+            );
+            println!(
+                "{}",
+                "╚══════════════════════════════════════════════════════════════════╝"
+                    .bright_cyan()
+            );
             println!();
-            println!("  {} Workspace {} ready.", "✓".green(), project_name.bright_yellow());
+            println!(
+                "  {} Workspace {} ready.",
+                "✓".green(),
+                project_name.bright_yellow()
+            );
             println!();
-            println!("{}", "  YOUR LEARNING PATH (start here, go in order):".bold().white());
+            println!(
+                "{}",
+                "  YOUR LEARNING PATH (start here, go in order):"
+                    .bold()
+                    .white()
+            );
             println!();
-            println!("  {}  {}  {}",
+            println!(
+                "  {}  {}  {}",
                 "STEP 1".bright_white().bold(),
                 "Foundations — What IS an automated test?".bright_yellow(),
                 "(no tools needed, just Python)".dimmed()
             );
-            println!("         {}", "cherenkov-lings watch --track=foundations".bright_cyan());
-            println!("         Open: {}", "exercises/00_foundations/01_what_is_a_test/exercise.py".dimmed());
+            println!(
+                "         {}",
+                "cherenkov-lings watch --track=foundations".bright_cyan()
+            );
+            println!(
+                "         Open: {}",
+                "exercises/00_foundations/01_what_is_a_test/exercise.py".dimmed()
+            );
             println!();
-            println!("  {}  {}  {}",
+            println!(
+                "  {}  {}  {}",
                 "STEP 2".bright_white().bold(),
                 "UI Automation — Playwright TypeScript".bright_yellow(),
                 "(needs Node.js)".dimmed()
             );
-            println!("         {}", "cherenkov-lings watch --track=playwright-ts".bright_cyan());
-            println!("         Open: {}", "exercises/01_web_playwright_ts/04_first_playwright_test/exercise.ts".dimmed());
+            println!(
+                "         {}",
+                "cherenkov-lings watch --track=playwright-ts".bright_cyan()
+            );
+            println!(
+                "         Open: {}",
+                "exercises/01_web_playwright_ts/04_first_playwright_test/exercise.ts".dimmed()
+            );
             println!();
-            println!("  {}  {}  {}",
+            println!(
+                "  {}  {}  {}",
                 "STEP 3".bright_white().bold(),
                 "API Automation — REST Assured Java".bright_yellow(),
                 "(needs Java + Maven)".dimmed()
             );
-            println!("         {}", "cherenkov-lings watch --track=restassured-java".bright_cyan());
+            println!(
+                "         {}",
+                "cherenkov-lings watch --track=restassured-java".bright_cyan()
+            );
             println!();
-            println!("  {}  {}  {}",
+            println!(
+                "  {}  {}  {}",
                 "STEP 4".bright_white().bold(),
                 "Mobile Automation — Maestro YAML".bright_yellow(),
                 "(needs Maestro CLI)".dimmed()
             );
-            println!("         {}", "cherenkov-lings watch --track=maestro-mobile".bright_cyan());
+            println!(
+                "         {}",
+                "cherenkov-lings watch --track=maestro-mobile".bright_cyan()
+            );
             println!();
-            println!("  {}  {}  {}",
+            println!(
+                "  {}  {}  {}",
                 "STEP 5".bright_white().bold(),
                 "Performance — k6 (modern) or JMeter (enterprise)".bright_yellow(),
                 "(needs k6 or JMeter)".dimmed()
             );
-            println!("         {}   or   {}",
+            println!(
+                "         {}   or   {}",
                 "cherenkov-lings watch --track=k6-js".bright_cyan(),
                 "cherenkov-lings watch --track=jmeter".bright_cyan()
             );
             println!();
-            println!("  {}  {}",
+            println!(
+                "  {}  {}",
                 "STEP 6".bright_white().bold(),
                 "Which tool is right for which job?".bright_yellow()
             );
-            println!("         {}", "cherenkov-lings watch --track=tool-decisions".bright_cyan());
+            println!(
+                "         {}",
+                "cherenkov-lings watch --track=tool-decisions".bright_cyan()
+            );
             println!();
-            println!("{}", "  ─────────────────────────────────────────────────────────────────".dimmed());
+            println!(
+                "{}",
+                "  ─────────────────────────────────────────────────────────────────".dimmed()
+            );
             println!();
-            println!("  {} Start the Micro-Crucible sandbox FIRST:", "⚡".yellow());
+            println!(
+                "  {} Start the Micro-Crucible sandbox FIRST:",
+                "⚡".yellow()
+            );
             println!("    {}", ".\\crucible\\start.bat".bright_white());
             println!();
             println!("  {} When you are stuck on any drill:", "💡".yellow());
-            println!("    Check {} in the same folder as your exercise.", "hints.md".bright_white());
-            println!("    Or run: {}", "cherenkov-lings diagnose --file=<path/to/exercise>".bright_cyan());
+            println!(
+                "    Check {} in the same folder as your exercise.",
+                "hints.md".bright_white()
+            );
+            println!(
+                "    Or run: {}",
+                "cherenkov-lings diagnose --file=<path/to/exercise>".bright_cyan()
+            );
             println!();
             println!("{}", "  🚀 Begin your journey:".bold().green());
-            println!("     {}", "cherenkov-lings watch --track=foundations".bold().bright_cyan());
+            println!(
+                "     {}",
+                "cherenkov-lings watch --track=foundations"
+                    .bold()
+                    .bright_cyan()
+            );
             println!();
         }
 
@@ -183,9 +251,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 // Auto-spawn background Chaos Proxy if configured in lings.toml
                 let _proxy_shutdown = if cfg.platform.chaos_proxy_port > 0 {
-                    let proxy_listen: std::net::SocketAddr = format!("127.0.0.1:{}", cfg.platform.chaos_proxy_port)
-                        .parse()
-                        .unwrap_or_else(|_| "127.0.0.1:8086".parse().unwrap());
+                    let proxy_listen: std::net::SocketAddr =
+                        format!("127.0.0.1:{}", cfg.platform.chaos_proxy_port)
+                            .parse()
+                            .unwrap_or_else(|_| "127.0.0.1:8086".parse().unwrap());
                     let proxy_upstream: std::net::SocketAddr = "127.0.0.1:8081".parse().unwrap();
 
                     let proxy_cfg = proxy::ProxyConfig {
@@ -235,7 +304,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let exercise_dir = Path::new(&track_config.exercise_dir);
                 if !exercise_dir.exists() {
                     std::fs::create_dir_all(exercise_dir)?;
-                    println!("{} Created exercise directory: {:?}", "✓".green(), exercise_dir);
+                    println!(
+                        "{} Created exercise directory: {:?}",
+                        "✓".green(),
+                        exercise_dir
+                    );
                 }
 
                 // Initialize Runner based on track runner configuration
@@ -256,7 +329,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 } else if track_config.runner == "jvm" {
                     println!("{} Initializing REST Assured JVM Runner...", "⚡".yellow());
                     let runner = runner::JvmRunner::new(&track_config.exercise_dir);
-                    println!("{} REST Assured JVM Runner initialized (Maven: {}).", "✓".green(), runner.maven_cmd().bright_yellow());
+                    println!(
+                        "{} REST Assured JVM Runner initialized (Maven: {}).",
+                        "✓".green(),
+                        runner.maven_cmd().bright_yellow()
+                    );
                     Some(Arc::new(runner::AnyRunner::Jvm(Arc::new(runner))))
                 } else if track_config.runner == "k6" {
                     println!("{} Initializing k6 Load Testing Runner...", "⚡".yellow());
@@ -266,7 +343,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 } else if track_config.runner == "maestro" {
                     println!("{} Initializing Maestro Mobile Runner...", "⚡".yellow());
                     let runner = runner::MaestroRunner::new();
-                    println!("{} Maestro Mobile Definition Runner initialized.", "✓".green());
+                    println!(
+                        "{} Maestro Mobile Definition Runner initialized.",
+                        "✓".green()
+                    );
                     Some(Arc::new(runner::AnyRunner::Maestro(Arc::new(runner))))
                 } else if track_config.runner == "python" {
                     println!("{} Initializing Pytest Runner...", "⚡".yellow());
@@ -290,30 +370,53 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 tokio::spawn(async move {
                     while let Some(path) = rx.recv().await {
                         // Filter out build artifacts, target/ directory, .class files, or non-matching extensions
-                        if watcher::should_ignore_path(Path::new(&path)) || !path.ends_with(&track_ext) {
+                        if watcher::should_ignore_path(Path::new(&path))
+                            || !path.ends_with(&track_ext)
+                        {
                             continue;
                         }
 
                         println!("\n{}", "========================================================================================".cyan());
-                        println!(" {} v{}  |  Track: [{}]", "CHERENKOV-LINGS".bold().bright_cyan(), platform_version, track_name.bright_yellow());
+                        println!(
+                            " {} v{}  |  Track: [{}]",
+                            "CHERENKOV-LINGS".bold().bright_cyan(),
+                            platform_version,
+                            track_name.bright_yellow()
+                        );
                         println!(" File saved: {}", path.bright_white());
                         println!("{}", "========================================================================================".cyan());
 
                         if let Some(ref runner) = runner_for_task {
-                            let chaos_header = format!("delay={}ms;jitter={}ms", chaos_latency, chaos_jitter);
+                            let chaos_header =
+                                format!("delay={}ms;jitter={}ms", chaos_latency, chaos_jitter);
                             let total_timeout = timeout_per_iter * (flakiness_iterations as u64);
 
-                            println!("{} Running {} test suite ({} iterations with chaos: {})...", "⏳".yellow(), track_name, flakiness_iterations, chaos_header);
+                            println!(
+                                "{} Running {} test suite ({} iterations with chaos: {})...",
+                                "⏳".yellow(),
+                                track_name,
+                                flakiness_iterations,
+                                chaos_header
+                            );
 
-                            match runner.run_drill(&path, &chaos_header, flakiness_iterations, total_timeout).await {
+                            match runner
+                                .run_drill(
+                                    &path,
+                                    &chaos_header,
+                                    flakiness_iterations,
+                                    total_timeout,
+                                )
+                                .await
+                            {
                                 Ok(response) => {
                                     // Perform static AST analysis of the modified exercise file
-                                    let ast_report = feedback::analyze_file(&path).unwrap_or_else(|_| {
-                                        feedback::AstReport {
-                                            file_path: path.clone(),
-                                            ..Default::default()
-                                        }
-                                    });
+                                    let ast_report =
+                                        feedback::analyze_file(&path).unwrap_or_else(|_| {
+                                            feedback::AstReport {
+                                                file_path: path.clone(),
+                                                ..Default::default()
+                                            }
+                                        });
 
                                     // Evaluate the 4D Feedback Matrix
                                     let scorecard = feedback::evaluate_feedback(
@@ -331,10 +434,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                                     // Gamification: Record progress and render progression scorecard on pass
                                     let drill_id = gamification::extract_drill_id_from_path(&path);
-                                    let tier = gamification::tier_for_track_or_drill(&task_track_id, &drill_id);
+                                    let tier = gamification::tier_for_track_or_drill(
+                                        &task_track_id,
+                                        &drill_id,
+                                    );
 
                                     if scorecard.passed {
-                                        let mut state = gamification::load_progress(None::<&Path>).unwrap_or_default();
+                                        let mut state = gamification::load_progress(None::<&Path>)
+                                            .unwrap_or_default();
                                         let run_ctx = gamification::DrillRunContext {
                                             track_id: task_track_id.clone(),
                                             drill_id: drill_id.clone(),
@@ -348,7 +455,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             passed_iterations: response.passed_iterations,
                                             iterations: response.iterations,
                                             avg_duration_ms: if response.iterations > 0 {
-                                                response.total_duration_ms / (response.iterations as u64)
+                                                response.total_duration_ms
+                                                    / (response.iterations as u64)
                                             } else {
                                                 response.total_duration_ms
                                             },
@@ -357,26 +465,42 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             timestamp: None,
                                         };
 
-                                        let (xp_earned, newly_unlocked) = state.record_drill_run(&run_ctx);
-                                        if let Err(e) = gamification::save_progress(&state, None::<&Path>) {
-                                            eprintln!("{} Failed to save progress to {}: {}", "⚠️".yellow(), gamification::PROGRESS_FILE, e);
+                                        let (xp_earned, newly_unlocked) =
+                                            state.record_drill_run(&run_ctx);
+                                        if let Err(e) =
+                                            gamification::save_progress(&state, None::<&Path>)
+                                        {
+                                            eprintln!(
+                                                "{} Failed to save progress to {}: {}",
+                                                "⚠️".yellow(),
+                                                gamification::PROGRESS_FILE,
+                                                e
+                                            );
                                         }
 
-                                        let gamification_footer = gamification::render_gamification_scorecard_with_tier(
-                                            xp_earned,
-                                            tier,
-                                            &state,
-                                            &newly_unlocked,
-                                        );
+                                        let gamification_footer =
+                                            gamification::render_gamification_scorecard_with_tier(
+                                                xp_earned,
+                                                tier,
+                                                &state,
+                                                &newly_unlocked,
+                                            );
                                         print!("{}", gamification_footer);
                                     }
                                 }
                                 Err(err) => {
-                                    eprintln!("{} Runner communication error: {}", "✗".bold().red(), err);
+                                    eprintln!(
+                                        "{} Runner communication error: {}",
+                                        "✗".bold().red(),
+                                        err
+                                    );
                                 }
                             }
                         } else {
-                            println!(" Runner for track '{}' is not currently active.", track_name);
+                            println!(
+                                " Runner for track '{}' is not currently active.",
+                                track_name
+                            );
                         }
                     }
                 });
@@ -384,12 +508,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 watcher::watch_exercises(exercise_dir, tx).await?;
             } else {
                 eprintln!("Error: Track '{}' not found in lings.toml", track);
-                eprintln!("Available tracks: playwright-ts, restassured-java, k6-js, maestro-mobile, genai-qa");
+                eprintln!(
+                    "Available tracks: playwright-ts, restassured-java, k6-js, maestro-mobile, genai-qa"
+                );
             }
         }
         Commands::Diagnose { file } => {
             let target = file.clone().unwrap_or_else(|| {
-                let default_exercise = "exercises/01_web_playwright_ts/01_hydration_timing/exercise.ts";
+                let default_exercise =
+                    "exercises/01_web_playwright_ts/01_hydration_timing/exercise.ts";
                 default_exercise.to_string()
             });
 
@@ -404,7 +531,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
 
             // Determine track name dynamically based on file path / extension
-            let track_name = if target.ends_with(".yaml") || target.ends_with(".yml") || target.contains("maestro") {
+            let track_name = if target.ends_with(".yaml")
+                || target.ends_with(".yml")
+                || target.contains("maestro")
+            {
                 "Mobile UI Automation (Maestro YAML)"
             } else if target.ends_with(".java") || target.contains("restassured") {
                 "API Resilience & Security (REST Assured Java)"
@@ -452,9 +582,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             };
 
             println!("{}", "========================================================================================".cyan());
-            println!(" {} v1.0.0  |  Programmable Chaos Proxy", "CHERENKOV-LINGS".bold().bright_cyan());
-            println!(" Listening on:     {}", format!("http://{}", listen_addr).bright_yellow());
-            println!(" Forwarding to:    {}", format!("http://{}", upstream_addr).bright_white());
+            println!(
+                " {} v1.0.0  |  Programmable Chaos Proxy",
+                "CHERENKOV-LINGS".bold().bright_cyan()
+            );
+            println!(
+                " Listening on:     {}",
+                format!("http://{}", listen_addr).bright_yellow()
+            );
+            println!(
+                " Forwarding to:    {}",
+                format!("http://{}", upstream_addr).bright_white()
+            );
             if *latency > 0 || *jitter > 0 {
                 println!(" Default Latency:  {}ms (jitter: ±{}ms)", latency, jitter);
             }
@@ -462,7 +601,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!(" Default Drop Rate: {:.1}%", drop_rate * 100.0);
             }
             println!("{}", "========================================================================================".cyan());
-            println!("{} Proxy running. Press Ctrl+C to terminate.", "⚡".yellow());
+            println!(
+                "{} Proxy running. Press Ctrl+C to terminate.",
+                "⚡".yellow()
+            );
 
             let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel();
             let server = proxy::ProxyServer::new(config);
@@ -481,30 +623,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             mcp::run_mcp_server();
         }
         Commands::Dashboard => {
-            let cfg = config::load_config("lings.toml").unwrap_or_else(|_| {
-                config::Config {
-                    platform: config::PlatformConfig {
-                        name: "cherenkov-lings".to_string(),
-                        version: "1.0.0".to_string(),
-                        sandbox_port: 8080,
-                        chaos_proxy_port: 8086,
-                        telemetry: false,
-                    },
-                    evaluation: config::EvaluationConfig {
-                        pass_threshold: 85.0,
-                        flakiness_iterations: 5,
-                        flakiness_timeout_ms: 5000,
-                        chaos_latency_ms: 200,
-                        chaos_jitter_ms: 75,
-                    },
-                    ui: config::UiConfig {
-                        theme: "cherenkov-blue".to_string(),
-                        show_hints_on_failure: true,
-                        enable_audio_bell: false,
-                        language: "en".to_string(),
-                    },
-                    tracks: gamification::default_curriculum_tracks(),
-                }
+            let cfg = config::load_config("lings.toml").unwrap_or_else(|_| config::Config {
+                platform: config::PlatformConfig {
+                    name: "cherenkov-lings".to_string(),
+                    version: "1.0.0".to_string(),
+                    sandbox_port: 8080,
+                    chaos_proxy_port: 8086,
+                    telemetry: false,
+                },
+                evaluation: config::EvaluationConfig {
+                    pass_threshold: 85.0,
+                    flakiness_iterations: 5,
+                    flakiness_timeout_ms: 5000,
+                    chaos_latency_ms: 200,
+                    chaos_jitter_ms: 75,
+                },
+                ui: config::UiConfig {
+                    theme: "cherenkov-blue".to_string(),
+                    show_hints_on_failure: true,
+                    enable_audio_bell: false,
+                    language: "en".to_string(),
+                },
+                tracks: gamification::default_curriculum_tracks(),
             });
 
             let state = gamification::load_progress(None::<&Path>).unwrap_or_default();
@@ -525,9 +665,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn run_curriculum_audit() {
     use std::fs;
 
-    println!("{}", "════════════════════════════════════════════════════════════════════════════════════════".bright_cyan());
-    println!("{}", "   🔬  CHERENKOV-LINGS CURRICULUM AUDIT & INTEGRITY VERIFICATION  🔬".bold().bright_white());
-    println!("{}", "════════════════════════════════════════════════════════════════════════════════════════".bright_cyan());
+    println!(
+        "{}",
+        "════════════════════════════════════════════════════════════════════════════════════════"
+            .bright_cyan()
+    );
+    println!(
+        "{}",
+        "   🔬  CHERENKOV-LINGS CURRICULUM AUDIT & INTEGRITY VERIFICATION  🔬"
+            .bold()
+            .bright_white()
+    );
+    println!(
+        "{}",
+        "════════════════════════════════════════════════════════════════════════════════════════"
+            .bright_cyan()
+    );
     println!();
 
     let cfg = config::load_config("lings.toml").unwrap_or_else(|_| config::Config {
@@ -560,8 +713,13 @@ fn run_curriculum_audit() {
     let mut passed_checks = 0;
     let mut issues: Vec<String> = Vec::new();
 
-    println!(" {:<46} │ {:<8} │ {:<14} │ {:<8}", "Track Name", "Drills", "Contract Files", "Health");
-    println!(" ───────────────────────────────────────────────┼──────────┼────────────────┼────────");
+    println!(
+        " {:<46} │ {:<8} │ {:<14} │ {:<8}",
+        "Track Name", "Drills", "Contract Files", "Health"
+    );
+    println!(
+        " ───────────────────────────────────────────────┼──────────┼────────────────┼────────"
+    );
 
     for track in &cfg.tracks {
         let track_path = Path::new(&track.exercise_dir);
@@ -576,7 +734,7 @@ fn run_curriculum_audit() {
                 .filter_map(|e| e.ok())
                 .filter(|e| e.path().is_dir())
                 .collect();
-            
+
             // Special handling for java directory layout (src/test/java/com/cherenkov)
             if track.id == "restassured-java" {
                 let java_base = track_path.join("src/test/java/com/cherenkov");
@@ -610,15 +768,31 @@ fn run_curriculum_audit() {
                 };
 
                 let has_exercise = p.join(&ex_name).exists();
-                let has_solution = p.join(&sol_name).exists() || (ext == ".jmx" && p.join("solution.sh").exists());
+                let has_solution =
+                    p.join(&sol_name).exists() || (ext == ".jmx" && p.join("solution.sh").exists());
                 let has_hints = p.join("hints.md").exists();
                 let has_theory = p.join("theory.md").exists();
 
                 total_checks += 4;
                 let mut dir_passed = 0;
-                if has_exercise { passed_checks += 1; dir_passed += 1; } else { issues.push(format!("Missing {}: {}", ex_name, p.display())); }
-                if has_solution { passed_checks += 1; dir_passed += 1; } else { issues.push(format!("Missing {}: {}", sol_name, p.display())); }
-                if has_hints { passed_checks += 1; dir_passed += 1; } else { issues.push(format!("Missing hints.md: {}", p.display())); }
+                if has_exercise {
+                    passed_checks += 1;
+                    dir_passed += 1;
+                } else {
+                    issues.push(format!("Missing {}: {}", ex_name, p.display()));
+                }
+                if has_solution {
+                    passed_checks += 1;
+                    dir_passed += 1;
+                } else {
+                    issues.push(format!("Missing {}: {}", sol_name, p.display()));
+                }
+                if has_hints {
+                    passed_checks += 1;
+                    dir_passed += 1;
+                } else {
+                    issues.push(format!("Missing hints.md: {}", p.display()));
+                }
                 if has_theory {
                     passed_checks += 1;
                     dir_passed += 1;
@@ -626,7 +800,11 @@ fn run_curriculum_audit() {
                     if let Ok(content) = fs::read_to_string(p.join("theory.md")) {
                         let word_count = content.split_whitespace().count();
                         if word_count < 150 {
-                            issues.push(format!("Short theory.md ({} words): {}", word_count, p.display()));
+                            issues.push(format!(
+                                "Short theory.md ({} words): {}",
+                                word_count,
+                                p.display()
+                            ));
                         }
                     }
                 } else {
@@ -649,30 +827,66 @@ fn run_curriculum_audit() {
         };
 
         let file_summary = format!("{}/{} drills OK", track_complete_count, track_drill_count);
-        println!(" {:<46} │ {:<8} │ {:<14} │ {}", track.name, track_drill_count, file_summary, status_emoji);
+        println!(
+            " {:<46} │ {:<8} │ {:<14} │ {}",
+            track.name, track_drill_count, file_summary, status_emoji
+        );
     }
 
-    println!(" ───────────────────────────────────────────────┴──────────┴────────────────┴────────");
+    println!(
+        " ───────────────────────────────────────────────┴──────────┴────────────────┴────────"
+    );
     println!();
 
-    let health_pct = if total_checks > 0 { (passed_checks as f64 / total_checks as f64) * 100.0 } else { 0.0 };
+    let health_pct = if total_checks > 0 {
+        (passed_checks as f64 / total_checks as f64) * 100.0
+    } else {
+        0.0
+    };
     println!(" 📊 AUDIT SUMMARY:");
-    println!("    Total Tracks Scanned:     {}", cfg.tracks.len().to_string().cyan());
-    println!("    Total Drills Validated:   {}", total_drills.to_string().green());
-    println!("    Fully Compliant Drills:   {}/{} ({}%)", complete_drills, total_drills, if total_drills > 0 { (complete_drills as f64 / total_drills as f64 * 100.0).round() as u32 } else { 0 });
-    println!("    Contract Verification:    {}/{} checks passed", passed_checks, total_checks);
+    println!(
+        "    Total Tracks Scanned:     {}",
+        cfg.tracks.len().to_string().cyan()
+    );
+    println!(
+        "    Total Drills Validated:   {}",
+        total_drills.to_string().green()
+    );
+    println!(
+        "    Fully Compliant Drills:   {}/{} ({}%)",
+        complete_drills,
+        total_drills,
+        if total_drills > 0 {
+            (complete_drills as f64 / total_drills as f64 * 100.0).round() as u32
+        } else {
+            0
+        }
+    );
+    println!(
+        "    Contract Verification:    {}/{} checks passed",
+        passed_checks, total_checks
+    );
     println!("    Overall Curriculum Health: {:.1}%", health_pct);
     println!();
 
     if issues.is_empty() {
-        println!(" {}", "✓ ALL DRILL CONTRACTS VERIFIED (100% HEALTHY). ZERO DISCREPANCIES DETECTED.".bold().green());
+        println!(
+            " {}",
+            "✓ ALL DRILL CONTRACTS VERIFIED (100% HEALTHY). ZERO DISCREPANCIES DETECTED."
+                .bold()
+                .green()
+        );
     } else {
         println!(" {} Issues Found:", "✗".red());
         for issue in &issues {
             println!("   - {}", issue.yellow());
         }
     }
-    println!("{}", "════════════════════════════════════════════════════════════════════════════════════════".bright_cyan());
+    println!(
+        "{}",
+        "════════════════════════════════════════════════════════════════════════════════════════"
+            .bright_cyan()
+    );
 }
 
 fn run_new_drill(track_id: &str, drill_name: &str, title: Option<&str>) {
@@ -705,14 +919,27 @@ fn run_new_drill(track_id: &str, drill_name: &str, title: Option<&str>) {
     let track = match cfg.tracks.iter().find(|t| t.id == track_id) {
         Some(t) => t,
         None => {
-            eprintln!("{} Unknown track '{}'. Available tracks: {}", "✗".red(), track_id, cfg.tracks.iter().map(|t| t.id.as_str()).collect::<Vec<_>>().join(", "));
+            eprintln!(
+                "{} Unknown track '{}'. Available tracks: {}",
+                "✗".red(),
+                track_id,
+                cfg.tracks
+                    .iter()
+                    .map(|t| t.id.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            );
             return;
         }
     };
 
     let target_dir = Path::new(&track.exercise_dir).join(drill_name);
     if target_dir.exists() {
-        eprintln!("{} Directory already exists: {}", "✗".red(), target_dir.display());
+        eprintln!(
+            "{} Directory already exists: {}",
+            "✗".red(),
+            target_dir.display()
+        );
         return;
     }
 
@@ -728,13 +955,19 @@ fn run_new_drill(track_id: &str, drill_name: &str, title: Option<&str>) {
     let exercise_content = format!(
         "/**\n * PRODUCTION STORY:\n * Real-world incident case study for {human_title}.\n * Brief summary of the outage or flakiness pattern.\n */\n\n// TODO: Implement fix for {human_title} anti-pattern.\n"
     );
-    let _ = fs::write(target_dir.join(format!("exercise{}", ext)), exercise_content);
+    let _ = fs::write(
+        target_dir.join(format!("exercise{}", ext)),
+        exercise_content,
+    );
 
     // 2. solution file
     let solution_content = format!(
         "/**\n * SDET Resilient Reference Solution for {human_title}.\n * Demonstrates resilient synchronization and robust assertions.\n */\n"
     );
-    let _ = fs::write(target_dir.join(format!("solution{}", ext)), solution_content);
+    let _ = fs::write(
+        target_dir.join(format!("solution{}", ext)),
+        solution_content,
+    );
 
     // 3. hints.md
     let hints_content = "## Hint 1 (Architectural Nudge)\nUnderstand why this pattern fails under asynchronous latency and network jitter.\n\n## Hint 2 (API Pattern)\nLook at the recommended synchronization or assertion pattern.\n\n## Hint 3 (Code Diff)\n```diff\n- // Old brittle code\n+ // New resilient code\n```\n";
@@ -746,7 +979,11 @@ fn run_new_drill(track_id: &str, drill_name: &str, title: Option<&str>) {
     );
     let _ = fs::write(target_dir.join("theory.md"), theory_content);
 
-    println!("{} Scaffolding complete for new drill '{}'!", "✓".green(), human_title.bold());
+    println!(
+        "{} Scaffolding complete for new drill '{}'!",
+        "✓".green(),
+        human_title.bold()
+    );
     println!("   Directory: {}", target_dir.display().to_string().cyan());
     println!("   Files created:");
     println!("   - exercise{}", ext);
@@ -754,5 +991,8 @@ fn run_new_drill(track_id: &str, drill_name: &str, title: Option<&str>) {
     println!("   - hints.md");
     println!("   - theory.md");
     println!();
-    println!("   Start watching with: {}", format!("cherenkov-lings watch --track={}", track_id).yellow());
+    println!(
+        "   Start watching with: {}",
+        format!("cherenkov-lings watch --track={}", track_id).yellow()
+    );
 }

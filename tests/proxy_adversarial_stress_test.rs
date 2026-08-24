@@ -1,14 +1,16 @@
-use cherenkov_lings::proxy::{parse_duration_ms, ChaosDirectives, ProxyConfig, ProxyServer};
+use cherenkov_lings::proxy::{ChaosDirectives, ProxyConfig, ProxyServer, parse_duration_ms};
 use std::net::SocketAddr;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 
 /// Helper: starts a mock HTTP echo/response server on an OS-assigned ephemeral port.
 async fn spawn_echo_upstream() -> SocketAddr {
-    let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind echo upstream");
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind echo upstream");
     let local_addr = listener.local_addr().expect("local addr");
 
     tokio::spawn(async move {
@@ -36,7 +38,9 @@ async fn spawn_echo_upstream() -> SocketAddr {
 
 /// Helper: starts an upstream that abruptly closes connection at different phases.
 async fn spawn_flaky_terminating_upstream() -> SocketAddr {
-    let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind flaky upstream");
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind flaky upstream");
     let local_addr = listener.local_addr().expect("local addr");
     let counter = Arc::new(AtomicUsize::new(0));
 
@@ -90,7 +94,9 @@ async fn test_stress_high_concurrency_burst_100_requests() {
     drop(proxy_listener);
 
     let config = ProxyConfig::new(proxy_addr, upstream_addr);
-    let (handle, shutdown_tx) = ProxyServer::spawn_background(config).await.expect("spawn proxy");
+    let (handle, shutdown_tx) = ProxyServer::spawn_background(config)
+        .await
+        .expect("spawn proxy");
 
     let total_clients = 100;
     let success_count = Arc::new(AtomicUsize::new(0));
@@ -158,7 +164,9 @@ async fn test_stress_concurrent_mixed_workload() {
     drop(proxy_listener);
 
     let config = ProxyConfig::new(proxy_addr, upstream_addr);
-    let (handle, shutdown_tx) = ProxyServer::spawn_background(config).await.expect("spawn proxy");
+    let (handle, shutdown_tx) = ProxyServer::spawn_background(config)
+        .await
+        .expect("spawn proxy");
 
     let total_requests = 120;
     let normal_count = Arc::new(AtomicUsize::new(0));
@@ -178,7 +186,7 @@ async fn test_stress_concurrent_mixed_workload() {
             let mut client = TcpStream::connect(proxy_addr).await.expect("connect");
 
             let chaos_header = match i % 4 {
-                0 => "", // Normal
+                0 => "",                       // Normal
                 1 => "X-Chaos: drop=true\r\n", // L4 Drop
                 2 => "X-Chaos: fault=502\r\n", // Synthetic 502
                 _ => "X-Chaos: fault=504\r\n", // Synthetic 504
@@ -209,12 +217,15 @@ async fn test_stress_concurrent_mixed_workload() {
                     }
                 }
                 2 => {
-                    if n > 0 && String::from_utf8_lossy(&resp_buf[..n]).contains("502 Bad Gateway") {
+                    if n > 0 && String::from_utf8_lossy(&resp_buf[..n]).contains("502 Bad Gateway")
+                    {
                         f502.fetch_add(1, Ordering::Relaxed);
                     }
                 }
                 _ => {
-                    if n > 0 && String::from_utf8_lossy(&resp_buf[..n]).contains("504 Gateway Timeout") {
+                    if n > 0
+                        && String::from_utf8_lossy(&resp_buf[..n]).contains("504 Gateway Timeout")
+                    {
                         f504.fetch_add(1, Ordering::Relaxed);
                     }
                 }
@@ -282,7 +293,9 @@ fn test_chaos_directives_parser_malformed_and_adversarial() {
     assert_eq!(d4.fault_status, None);
 
     // 5. Huge number overflow test
-    let d5 = ChaosDirectives::parse_x_chaos_value("delay=999999999999999999999999999999999999ms;fault=999999");
+    let d5 = ChaosDirectives::parse_x_chaos_value(
+        "delay=999999999999999999999999999999999999ms;fault=999999",
+    );
     assert_eq!(d5.fault_status, None); // status > u16::MAX fails parse::<u16>()
 
     // 6. Conflicting drop tokens in same value
@@ -291,7 +304,8 @@ fn test_chaos_directives_parser_malformed_and_adversarial() {
     assert_eq!(d6.fault_status, Some(502));
 
     // 7. Case insensitivity and whitespace fuzzing
-    let d7 = ChaosDirectives::parse_x_chaos_value("  dRoP = TrUe ;  FaUlT =  504  ;  DeLaY = 50Ms ");
+    let d7 =
+        ChaosDirectives::parse_x_chaos_value("  dRoP = TrUe ;  FaUlT =  504  ;  DeLaY = 50Ms ");
     assert!(d7.drop);
     assert_eq!(d7.fault_status, Some(504));
     assert_eq!(d7.delay_ms, Some(50));
@@ -317,7 +331,9 @@ async fn test_proxy_handles_malformed_header_requests_without_panic() {
     drop(proxy_listener);
 
     let config = ProxyConfig::new(proxy_addr, upstream_addr);
-    let (handle, shutdown_tx) = ProxyServer::spawn_background(config).await.expect("spawn proxy");
+    let (handle, shutdown_tx) = ProxyServer::spawn_background(config)
+        .await
+        .expect("spawn proxy");
 
     let malformed_headers = vec![
         "X-Chaos: \r\n",
@@ -346,9 +362,16 @@ async fn test_proxy_handles_malformed_header_requests_without_panic() {
 
         let mut resp_buf = vec![0u8; 2048];
         let n = client.read(&mut resp_buf).await.unwrap_or(0);
-        assert!(n > 0, "Proxy must not crash on malformed header: {}", header);
+        assert!(
+            n > 0,
+            "Proxy must not crash on malformed header: {}",
+            header
+        );
         let resp_str = String::from_utf8_lossy(&resp_buf[..n]);
-        assert!(resp_str.contains("200 OK"), "Expected fallback to normal forward on malformed header");
+        assert!(
+            resp_str.contains("200 OK"),
+            "Expected fallback to normal forward on malformed header"
+        );
     }
 
     let _ = shutdown_tx.send(());
@@ -368,11 +391,15 @@ async fn test_proxy_survives_upstream_sudden_termination() {
     drop(proxy_listener);
 
     let config = ProxyConfig::new(proxy_addr, flaky_upstream_addr);
-    let (handle, shutdown_tx) = ProxyServer::spawn_background(config).await.expect("spawn proxy");
+    let (handle, shutdown_tx) = ProxyServer::spawn_background(config)
+        .await
+        .expect("spawn proxy");
 
     // Send 30 requests to the flaky terminating upstream
     for i in 0..30 {
-        let mut client = TcpStream::connect(proxy_addr).await.expect("connect to proxy");
+        let mut client = TcpStream::connect(proxy_addr)
+            .await
+            .expect("connect to proxy");
         let req = format!(
             "GET /flaky/{} HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nConnection: close\r\n\r\n",
             i,
@@ -388,7 +415,9 @@ async fn test_proxy_survives_upstream_sudden_termination() {
     }
 
     // Now verify the proxy is still healthy by redirecting a healthy upstream or checking response
-    let mut check_client = TcpStream::connect(proxy_addr).await.expect("proxy must remain responsive");
+    let mut check_client = TcpStream::connect(proxy_addr)
+        .await
+        .expect("proxy must remain responsive");
     let req = format!(
         "GET /check HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nConnection: close\r\n\r\n",
         proxy_addr.port()
@@ -409,7 +438,9 @@ async fn test_proxy_handles_client_premature_disconnect() {
     drop(proxy_listener);
 
     let config = ProxyConfig::new(proxy_addr, upstream_addr);
-    let (handle, shutdown_tx) = ProxyServer::spawn_background(config).await.expect("spawn proxy");
+    let (handle, shutdown_tx) = ProxyServer::spawn_background(config)
+        .await
+        .expect("spawn proxy");
 
     for _ in 0..20 {
         // Connect, send 5 bytes (incomplete request), then immediately drop client stream
@@ -420,7 +451,9 @@ async fn test_proxy_handles_client_premature_disconnect() {
     }
 
     // Proxy must still accept valid connections
-    let mut healthy_client = TcpStream::connect(proxy_addr).await.expect("connect after drops");
+    let mut healthy_client = TcpStream::connect(proxy_addr)
+        .await
+        .expect("connect after drops");
     let req = format!(
         "GET /health HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nConnection: close\r\n\r\n",
         proxy_addr.port()
@@ -460,7 +493,9 @@ async fn test_rapid_proxy_start_stop_supervisor_cycles() {
             .unwrap_or_else(|_| panic!("spawn proxy iteration {}", i));
 
         // Connect and send a request
-        let mut client = TcpStream::connect(proxy_addr).await.expect("connect to proxy cycle");
+        let mut client = TcpStream::connect(proxy_addr)
+            .await
+            .expect("connect to proxy cycle");
         let req = format!(
             "GET /cycle/{} HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nConnection: close\r\n\r\n",
             i, target_port
@@ -484,7 +519,9 @@ async fn test_rapid_proxy_start_stop_supervisor_cycles() {
 #[tokio::test]
 async fn test_proxy_streaming_large_payload_5mb() {
     // Upstream server that echoes full body length
-    let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind upstream");
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind upstream");
     let upstream_addr = listener.local_addr().expect("local addr");
 
     tokio::spawn(async move {
@@ -529,7 +566,9 @@ async fn test_proxy_streaming_large_payload_5mb() {
     drop(proxy_listener);
 
     let config = ProxyConfig::new(proxy_addr, upstream_addr);
-    let (handle, shutdown_tx) = ProxyServer::spawn_background(config).await.expect("spawn proxy");
+    let (handle, shutdown_tx) = ProxyServer::spawn_background(config)
+        .await
+        .expect("spawn proxy");
 
     let mut client = TcpStream::connect(proxy_addr).await.expect("connect");
 
@@ -572,7 +611,9 @@ async fn test_proxy_drops_oversized_headers_exceeding_64kb() {
     drop(proxy_listener);
 
     let config = ProxyConfig::new(proxy_addr, upstream_addr);
-    let (handle, shutdown_tx) = ProxyServer::spawn_background(config).await.expect("spawn proxy");
+    let (handle, shutdown_tx) = ProxyServer::spawn_background(config)
+        .await
+        .expect("spawn proxy");
 
     let mut client = TcpStream::connect(proxy_addr).await.expect("connect");
 
@@ -584,9 +625,11 @@ async fn test_proxy_drops_oversized_headers_exceeding_64kb() {
     // Proxy must cut off stream and close connection without hanging
     let mut resp_buf = vec![0u8; 1024];
     let n = client.read(&mut resp_buf).await.unwrap_or(0);
-    assert_eq!(n, 0, "Oversized headers > 64KB should result in closed connection");
+    assert_eq!(
+        n, 0,
+        "Oversized headers > 64KB should result in closed connection"
+    );
 
     let _ = shutdown_tx.send(());
     let _ = handle.await;
 }
-

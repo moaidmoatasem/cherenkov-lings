@@ -8,13 +8,13 @@
 //! - **Lifecycle**: Background supervisor with clean oneshot shutdown channels
 
 use std::net::SocketAddr;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::oneshot;
 use tokio::task::JoinHandle;
-use tokio::time::{sleep, timeout, Duration};
+use tokio::time::{Duration, sleep, timeout};
 
 /// Thread-safe, high-speed XorShift64 pseudo-random number generator.
 pub struct FastRng {
@@ -161,9 +161,17 @@ pub fn parse_duration_ms(s: &str) -> Option<u64> {
         return None;
     }
     if let Some(num_str) = s.strip_suffix("ms") {
-        num_str.trim().parse::<f64>().ok().map(|v| v.max(0.0) as u64)
+        num_str
+            .trim()
+            .parse::<f64>()
+            .ok()
+            .map(|v| v.max(0.0) as u64)
     } else if let Some(num_str) = s.strip_suffix('s') {
-        num_str.trim().parse::<f64>().ok().map(|v| (v.max(0.0) * 1000.0) as u64)
+        num_str
+            .trim()
+            .parse::<f64>()
+            .ok()
+            .map(|v| (v.max(0.0) * 1000.0) as u64)
     } else {
         s.parse::<f64>().ok().map(|v| v.max(0.0) as u64)
     }
@@ -352,7 +360,8 @@ impl ProxyServer {
     /// Spawns the proxy server as a background Tokio task with a shutdown channel.
     pub async fn spawn_background(
         config: ProxyConfig,
-    ) -> Result<(JoinHandle<()>, oneshot::Sender<()>), Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<(JoinHandle<()>, oneshot::Sender<()>), Box<dyn std::error::Error + Send + Sync>>
+    {
         let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
         let server = Self::new(config);
 
@@ -416,12 +425,8 @@ async fn handle_connection(
     }
 
     // 4. Layer 7 Latency Jitter
-    let delay_ms = directives
-        .delay_ms
-        .unwrap_or(config.default_latency_ms);
-    let jitter_ms = directives
-        .jitter_ms
-        .unwrap_or(config.default_jitter_ms);
+    let delay_ms = directives.delay_ms.unwrap_or(config.default_latency_ms);
+    let jitter_ms = directives.jitter_ms.unwrap_or(config.default_jitter_ms);
 
     if delay_ms > 0 || jitter_ms > 0 {
         let jitter_offset = if jitter_ms > 0 {

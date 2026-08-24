@@ -113,10 +113,12 @@ fn test_maestro_drill01_biometric_fallback_ast_and_scorecard() {
     );
     assert_eq!(card_ex.flakiness.score, 40.0);
     assert!(!card_ex.passed);
-    assert!(card_ex
-        .diagnostics
-        .iter()
-        .any(|d| d.contains("Missing 'when:' condition")));
+    assert!(
+        card_ex
+            .diagnostics
+            .iter()
+            .any(|d| d.contains("Missing 'when:' condition"))
+    );
 
     // Solution evaluation must score >= pass threshold (85.0) and pass
     let card_sol = feedback::evaluate_feedback(

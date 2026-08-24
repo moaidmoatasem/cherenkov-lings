@@ -1,15 +1,13 @@
 use cherenkov_lings::feedback::{
-    self, analyze_file, analyze_source, evaluate_feedback, AntiPatternKind,
+    self, AntiPatternKind, analyze_file, analyze_source, evaluate_feedback,
 };
-use cherenkov_lings::proxy::{
-    parse_duration_ms, ChaosDirectives, ProxyConfig, ProxyServer,
-};
+use cherenkov_lings::proxy::{ChaosDirectives, ProxyConfig, ProxyServer, parse_duration_ms};
 use cherenkov_lings::runner::{DrillResponse, JvmRunner, RunResult};
 use std::fs;
 use std::net::SocketAddr;
 use std::path::Path;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
@@ -17,7 +15,9 @@ use tokio::net::{TcpListener, TcpStream};
 /// Helper: Spawns a mock HTTP server on an OS-assigned ephemeral port (`127.0.0.1:0`).
 /// Returns the bound `SocketAddr` and an MPSC receiver for inspected raw request strings.
 async fn spawn_mock_upstream_server() -> (SocketAddr, tokio::sync::mpsc::Receiver<String>) {
-    let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind mock upstream");
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind mock upstream");
     let local_addr = listener.local_addr().expect("get local addr");
     let (tx, rx) = tokio::sync::mpsc::channel(100);
 
@@ -32,23 +32,23 @@ async fn spawn_mock_upstream_server() -> (SocketAddr, tokio::sync::mpsc::Receive
                     let req_str = String::from_utf8_lossy(&buf[..n]).to_string();
                     let _ = tx.send(req_str.clone()).await;
 
-                        let resp_body = if req_str.starts_with("POST /checkout") {
-                            r#"{"status":"success","order_id":"ORD-9021"}"#
-                        } else if req_str.starts_with("POST /auth/login") {
-                            r#"{"access_token":"fresh_token_123","expires_in":3600}"#
-                        } else if req_str.starts_with("GET /balance") {
-                            r#"{"balance":750.0,"pending_count":0}"#
-                        } else {
-                            r#"{"status":"ok","message":"mock upstream ready"}"#
-                        };
+                    let resp_body = if req_str.starts_with("POST /checkout") {
+                        r#"{"status":"success","order_id":"ORD-9021"}"#
+                    } else if req_str.starts_with("POST /auth/login") {
+                        r#"{"access_token":"fresh_token_123","expires_in":3600}"#
+                    } else if req_str.starts_with("GET /balance") {
+                        r#"{"balance":750.0,"pending_count":0}"#
+                    } else {
+                        r#"{"status":"ok","message":"mock upstream ready"}"#
+                    };
 
-                        let resp = format!(
-                            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-                            resp_body.len(),
-                            resp_body
-                        );
-                        let _ = stream.write_all(resp.as_bytes()).await;
-                        let _ = stream.flush().await;
+                    let resp = format!(
+                        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                        resp_body.len(),
+                        resp_body
+                    );
+                    let _ = stream.write_all(resp.as_bytes()).await;
+                    let _ = stream.flush().await;
                 }
             });
         }
@@ -73,9 +73,13 @@ async fn test_tier1_proxy_routing_default_ports() {
     assert_eq!(config.listen_addr, proxy_addr);
     assert_eq!(config.upstream_addr, upstream_addr);
 
-    let (handle, shutdown_tx) = ProxyServer::spawn_background(config).await.expect("spawn proxy");
+    let (handle, shutdown_tx) = ProxyServer::spawn_background(config)
+        .await
+        .expect("spawn proxy");
 
-    let mut client = TcpStream::connect(proxy_addr).await.expect("connect to proxy");
+    let mut client = TcpStream::connect(proxy_addr)
+        .await
+        .expect("connect to proxy");
     let req = format!(
         "GET /health HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nConnection: close\r\n\r\n",
         proxy_addr.port()
@@ -107,7 +111,9 @@ async fn test_tier1_proxy_l4_tcp_connection_drops() {
     drop(proxy_listener);
 
     let config = ProxyConfig::new(proxy_addr, upstream_addr);
-    let (handle, shutdown_tx) = ProxyServer::spawn_background(config).await.expect("spawn proxy");
+    let (handle, shutdown_tx) = ProxyServer::spawn_background(config)
+        .await
+        .expect("spawn proxy");
 
     // Case 1: X-Chaos: drop=true
     {
@@ -167,7 +173,9 @@ async fn test_tier1_proxy_l7_fault_injection_and_jitter() {
     drop(proxy_listener);
 
     let config = ProxyConfig::new(proxy_addr, upstream_addr);
-    let (handle, shutdown_tx) = ProxyServer::spawn_background(config).await.expect("spawn proxy");
+    let (handle, shutdown_tx) = ProxyServer::spawn_background(config)
+        .await
+        .expect("spawn proxy");
 
     // 1. Synthetic 502 Bad Gateway
     {
@@ -234,7 +242,11 @@ async fn test_tier1_proxy_l7_fault_injection_and_jitter() {
 #[test]
 fn test_tier1_pom_xml_java_track_structure() {
     let pom_path = Path::new("exercises/02_api_restassured_java/pom.xml");
-    assert!(pom_path.exists(), "pom.xml must exist at {}", pom_path.display());
+    assert!(
+        pom_path.exists(),
+        "pom.xml must exist at {}",
+        pom_path.display()
+    );
 
     let pom_content = fs::read_to_string(pom_path).expect("read pom.xml");
     assert!(pom_content.contains("restassured-java-drills"));
@@ -269,9 +281,21 @@ fn test_tier1_drills_file_structure_and_hints_contracts() {
 
         // Validate 3 progressive hints
         let hint_content = fs::read_to_string(hints).expect("read hints.md");
-        assert!(hint_content.contains("Hint 1:"), "hints.md in {} must have Hint 1", dir);
-        assert!(hint_content.contains("Hint 2:"), "hints.md in {} must have Hint 2", dir);
-        assert!(hint_content.contains("Hint 3:"), "hints.md in {} must have Hint 3", dir);
+        assert!(
+            hint_content.contains("Hint 1:"),
+            "hints.md in {} must have Hint 1",
+            dir
+        );
+        assert!(
+            hint_content.contains("Hint 2:"),
+            "hints.md in {} must have Hint 2",
+            dir
+        );
+        assert!(
+            hint_content.contains("Hint 3:"),
+            "hints.md in {} must have Hint 3",
+            dir
+        );
     }
 }
 
@@ -318,8 +342,12 @@ fn test_tier1_jvm_runner_class_extraction() {
 
 #[test]
 fn test_tier1_cli_proxy_and_diagnose_integration() {
-    let d1_ex = Path::new("exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill01_idempotency/Exercise.java");
-    let d3_ex = Path::new("exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill03_kafka_lag/Exercise.java");
+    let d1_ex = Path::new(
+        "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill01_idempotency/Exercise.java",
+    );
+    let d3_ex = Path::new(
+        "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill03_kafka_lag/Exercise.java",
+    );
 
     if d1_ex.exists() {
         let rep1 = analyze_file(d1_ex).expect("analyze drill 1");
@@ -328,7 +356,10 @@ fn test_tier1_cli_proxy_and_diagnose_integration() {
 
     if d3_ex.exists() {
         let rep3 = analyze_file(d3_ex).expect("analyze drill 3");
-        assert!(rep3.has_wait_for_timeout, "Drill 3 Exercise must detect Thread.sleep");
+        assert!(
+            rep3.has_wait_for_timeout,
+            "Drill 3 Exercise must detect Thread.sleep"
+        );
         let rendered = feedback::render_diagnostic(&rep3, "REST Assured Java", "1.0.0");
         assert!(rendered.contains("CHERENKOV-LINGS DIAGNOSTIC"));
         assert!(rendered.contains("Thread.sleep"));
@@ -353,7 +384,10 @@ async fn test_tier2_proxy_port_conflict_error_handling() {
 
     // Running server on already-bound port must return an Err
     let result = server.run(shutdown_rx).await;
-    assert!(result.is_err(), "ProxyServer::run should error on port conflict");
+    assert!(
+        result.is_err(),
+        "ProxyServer::run should error on port conflict"
+    );
 }
 
 #[test]
@@ -389,9 +423,13 @@ async fn test_tier2_proxy_unreachable_upstream_returns_502_bad_gateway() {
     drop(proxy_listener);
 
     let config = ProxyConfig::new(proxy_addr, dead_upstream_addr);
-    let (handle, shutdown_tx) = ProxyServer::spawn_background(config).await.expect("spawn proxy");
+    let (handle, shutdown_tx) = ProxyServer::spawn_background(config)
+        .await
+        .expect("spawn proxy");
 
-    let mut client = TcpStream::connect(proxy_addr).await.expect("connect to proxy");
+    let mut client = TcpStream::connect(proxy_addr)
+        .await
+        .expect("connect to proxy");
     let req = format!(
         "GET /test-unreachable HTTP/1.1\r\nHost: 127.0.0.1:{}\r\n\r\n",
         proxy_addr.port()
@@ -420,7 +458,9 @@ async fn test_tier2_proxy_malformed_packets_and_non_http_data() {
     drop(proxy_listener);
 
     let config = ProxyConfig::new(proxy_addr, upstream_addr);
-    let (handle, shutdown_tx) = ProxyServer::spawn_background(config).await.expect("spawn proxy");
+    let (handle, shutdown_tx) = ProxyServer::spawn_background(config)
+        .await
+        .expect("spawn proxy");
 
     // Send binary non-HTTP garbage data and shutdown write
     let garbage = vec![0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0xFF, 0x42];
@@ -434,7 +474,9 @@ async fn test_tier2_proxy_malformed_packets_and_non_http_data() {
     drop(client);
 
     // Verify proxy is still alive after receiving binary garbage
-    let mut healthy_client = TcpStream::connect(proxy_addr).await.expect("connect healthy client");
+    let mut healthy_client = TcpStream::connect(proxy_addr)
+        .await
+        .expect("connect healthy client");
     let req = format!(
         "GET /health HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nConnection: close\r\n\r\n",
         proxy_addr.port()
@@ -489,7 +531,9 @@ async fn test_tier3_proxy_micro_crucible_chaos_end_to_end() {
     drop(proxy_listener);
 
     let config = ProxyConfig::new(proxy_addr, upstream_addr);
-    let (handle, shutdown_tx) = ProxyServer::spawn_background(config).await.expect("spawn proxy");
+    let (handle, shutdown_tx) = ProxyServer::spawn_background(config)
+        .await
+        .expect("spawn proxy");
 
     // Scenario: POST /checkout with application chaos passthrough headers
     let mut client = TcpStream::connect(proxy_addr).await.expect("connect");
@@ -530,11 +574,16 @@ async fn test_tier3_watch_lifecycle_and_background_proxy_management() {
     drop(proxy_listener);
 
     let config = ProxyConfig::new(proxy_addr, upstream_addr);
-    let (handle, shutdown_tx) = ProxyServer::spawn_background(config).await.expect("spawn proxy");
+    let (handle, shutdown_tx) = ProxyServer::spawn_background(config)
+        .await
+        .expect("spawn proxy");
 
     // Confirm proxy is operational
     let mut client = TcpStream::connect(proxy_addr).await.expect("connect");
-    let req = format!("GET /ping HTTP/1.1\r\nHost: 127.0.0.1:{}\r\n\r\n", proxy_addr.port());
+    let req = format!(
+        "GET /ping HTTP/1.1\r\nHost: 127.0.0.1:{}\r\n\r\n",
+        proxy_addr.port()
+    );
     client.write_all(req.as_bytes()).await.unwrap();
     client.flush().await.unwrap();
 
@@ -561,7 +610,8 @@ fn test_tier3_jvm_runner_surefire_to_feedback_matrix_integration() {
 
     let d1_sol = reports_dir.join("TEST-com.cherenkov.drill01_idempotency.Solution.xml");
     if d1_sol.exists() {
-        let surefire_report = JvmRunner::parse_surefire_report(&d1_sol).expect("parse surefire report");
+        let surefire_report =
+            JvmRunner::parse_surefire_report(&d1_sol).expect("parse surefire report");
         let passed = surefire_report.failures == 0 && surefire_report.errors == 0;
         assert!(passed, "Drill 1 Solution Surefire report must pass");
 
@@ -570,17 +620,31 @@ fn test_tier3_jvm_runner_surefire_to_feedback_matrix_integration() {
             ok: true,
             passed,
             iterations: surefire_report.tests,
-            passed_iterations: surefire_report.tests - surefire_report.failures - surefire_report.errors,
+            passed_iterations: surefire_report.tests
+                - surefire_report.failures
+                - surefire_report.errors,
             failed_iterations: surefire_report.failures + surefire_report.errors,
             total_duration_ms: (surefire_report.time_sec * 1000.0) as u64,
             runs: vec![
-                RunResult { iteration: 1, passed: true, duration_ms: 200, error: None },
-                RunResult { iteration: 2, passed: true, duration_ms: 200, error: None },
+                RunResult {
+                    iteration: 1,
+                    passed: true,
+                    duration_ms: 200,
+                    error: None,
+                },
+                RunResult {
+                    iteration: 2,
+                    passed: true,
+                    duration_ms: 200,
+                    error: None,
+                },
             ],
             error: None,
         };
 
-        let d1_sol_source = Path::new("exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill01_idempotency/Solution.java");
+        let d1_sol_source = Path::new(
+            "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill01_idempotency/Solution.java",
+        );
         let ast_report = if d1_sol_source.exists() {
             analyze_file(d1_sol_source).unwrap()
         } else {
@@ -621,7 +685,10 @@ fn test_tier4_all_3_drills_exercise_failure_vs_solution_pass_surefire() {
     if d1_ex.exists() && d1_sol.exists() {
         let rep_ex = JvmRunner::parse_surefire_report(&d1_ex).expect("parse d1 exercise");
         let rep_sol = JvmRunner::parse_surefire_report(&d1_sol).expect("parse d1 solution");
-        assert!(rep_ex.failures > 0, "Drill 1 Exercise must fail on 409 Conflict");
+        assert!(
+            rep_ex.failures > 0,
+            "Drill 1 Exercise must fail on 409 Conflict"
+        );
         assert_eq!(rep_sol.failures, 0, "Drill 1 Solution must pass");
     }
 
@@ -631,7 +698,10 @@ fn test_tier4_all_3_drills_exercise_failure_vs_solution_pass_surefire() {
     if d2_ex.exists() && d2_sol.exists() {
         let rep_ex = JvmRunner::parse_surefire_report(&d2_ex).expect("parse d2 exercise");
         let rep_sol = JvmRunner::parse_surefire_report(&d2_sol).expect("parse d2 solution");
-        assert!(rep_ex.failures > 0, "Drill 2 Exercise must fail on 401 Unauthorized");
+        assert!(
+            rep_ex.failures > 0,
+            "Drill 2 Exercise must fail on 401 Unauthorized"
+        );
         assert_eq!(rep_sol.failures, 0, "Drill 2 Solution must pass");
     }
 
@@ -641,15 +711,22 @@ fn test_tier4_all_3_drills_exercise_failure_vs_solution_pass_surefire() {
     if d3_ex.exists() && d3_sol.exists() {
         let rep_ex = JvmRunner::parse_surefire_report(&d3_ex).expect("parse d3 exercise");
         let rep_sol = JvmRunner::parse_surefire_report(&d3_sol).expect("parse d3 solution");
-        assert!(rep_ex.failures > 0, "Drill 3 Exercise must fail on stale balance");
+        assert!(
+            rep_ex.failures > 0,
+            "Drill 3 Exercise must fail on stale balance"
+        );
         assert_eq!(rep_sol.failures, 0, "Drill 3 Solution must pass");
     }
 }
 
 #[test]
 fn test_tier4_feedback_matrix_4d_scoring_and_ast_sleep_penalty() {
-    let d3_ex = Path::new("exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill03_kafka_lag/Exercise.java");
-    let d3_sol = Path::new("exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill03_kafka_lag/Solution.java");
+    let d3_ex = Path::new(
+        "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill03_kafka_lag/Exercise.java",
+    );
+    let d3_sol = Path::new(
+        "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill03_kafka_lag/Solution.java",
+    );
 
     if !d3_ex.exists() || !d3_sol.exists() {
         eprintln!("Skipping: Drill 3 source files not present");
@@ -659,14 +736,22 @@ fn test_tier4_feedback_matrix_4d_scoring_and_ast_sleep_penalty() {
     let ast_ex = analyze_file(d3_ex).expect("analyze drill 3 exercise");
     let ast_sol = analyze_file(d3_sol).expect("analyze drill 3 solution");
 
-    assert!(ast_ex.has_wait_for_timeout, "Exercise must flag Thread.sleep");
+    assert!(
+        ast_ex.has_wait_for_timeout,
+        "Exercise must flag Thread.sleep"
+    );
     assert_eq!(ast_ex.anti_patterns.len(), 1);
     assert_eq!(
         ast_ex.anti_patterns[0].kind,
-        AntiPatternKind::ThreadSleep { duration_ms: Some(100) }
+        AntiPatternKind::ThreadSleep {
+            duration_ms: Some(100)
+        }
     );
 
-    assert!(!ast_sol.has_wait_for_timeout, "Solution must NOT flag Thread.sleep");
+    assert!(
+        !ast_sol.has_wait_for_timeout,
+        "Solution must NOT flag Thread.sleep"
+    );
     assert_eq!(ast_sol.anti_patterns.len(), 0);
 
     // Mock 5-run passing test execution
@@ -679,24 +764,77 @@ fn test_tier4_feedback_matrix_4d_scoring_and_ast_sleep_penalty() {
         failed_iterations: 0,
         total_duration_ms: 2500,
         runs: vec![
-            RunResult { iteration: 1, passed: true, duration_ms: 500, error: None },
-            RunResult { iteration: 2, passed: true, duration_ms: 500, error: None },
-            RunResult { iteration: 3, passed: true, duration_ms: 500, error: None },
-            RunResult { iteration: 4, passed: true, duration_ms: 500, error: None },
-            RunResult { iteration: 5, passed: true, duration_ms: 500, error: None },
+            RunResult {
+                iteration: 1,
+                passed: true,
+                duration_ms: 500,
+                error: None,
+            },
+            RunResult {
+                iteration: 2,
+                passed: true,
+                duration_ms: 500,
+                error: None,
+            },
+            RunResult {
+                iteration: 3,
+                passed: true,
+                duration_ms: 500,
+                error: None,
+            },
+            RunResult {
+                iteration: 4,
+                passed: true,
+                duration_ms: 500,
+                error: None,
+            },
+            RunResult {
+                iteration: 5,
+                passed: true,
+                duration_ms: 500,
+                error: None,
+            },
         ],
         error: None,
     };
 
     // Exercise scorecard with Thread.sleep penalty cap
-    let card_ex = evaluate_feedback(&mock_response, &ast_ex, "REST Assured Java", "1.0.0", 85.0, 1000);
-    assert_eq!(card_ex.flakiness.score, 40.0, "Flakiness score must be capped at 40.0 on Thread.sleep");
-    assert!(card_ex.total_score < 85.0, "Total score must be below 85.0 threshold");
-    assert!(!card_ex.passed, "Scorecard must fail on Thread.sleep anti-pattern");
-    assert!(card_ex.diagnostics.iter().any(|d| d.contains("Thread.sleep(100ms)")));
+    let card_ex = evaluate_feedback(
+        &mock_response,
+        &ast_ex,
+        "REST Assured Java",
+        "1.0.0",
+        85.0,
+        1000,
+    );
+    assert_eq!(
+        card_ex.flakiness.score, 40.0,
+        "Flakiness score must be capped at 40.0 on Thread.sleep"
+    );
+    assert!(
+        card_ex.total_score < 85.0,
+        "Total score must be below 85.0 threshold"
+    );
+    assert!(
+        !card_ex.passed,
+        "Scorecard must fail on Thread.sleep anti-pattern"
+    );
+    assert!(
+        card_ex
+            .diagnostics
+            .iter()
+            .any(|d| d.contains("Thread.sleep(100ms)"))
+    );
 
     // Solution scorecard
-    let card_sol = evaluate_feedback(&mock_response, &ast_sol, "REST Assured Java", "1.0.0", 85.0, 1000);
+    let card_sol = evaluate_feedback(
+        &mock_response,
+        &ast_sol,
+        "REST Assured Java",
+        "1.0.0",
+        85.0,
+        1000,
+    );
     assert_eq!(card_sol.flakiness.score, 100.0);
     assert_eq!(card_sol.total_score, 100.0);
     assert!(card_sol.passed, "Solution must pass with 100.0 score");
@@ -711,7 +849,9 @@ async fn test_tier4_high_volume_chaos_proxy_stress_scenario() {
     drop(proxy_listener);
 
     let config = ProxyConfig::new(proxy_addr, upstream_addr);
-    let (handle, shutdown_tx) = ProxyServer::spawn_background(config).await.expect("spawn proxy");
+    let (handle, shutdown_tx) = ProxyServer::spawn_background(config)
+        .await
+        .expect("spawn proxy");
 
     let total_requests = 60;
     let normal_count = Arc::new(AtomicUsize::new(0));
@@ -800,21 +940,42 @@ fn test_tier1_genai_qa_track_artifacts_and_playwright_config() {
         assert!(hints.exists(), "hints.md must exist in {}", dir);
 
         let hints_text = fs::read_to_string(&hints).expect("read hints.md");
-        assert!(hints_text.contains("Hint 1"), "Missing Hint 1 in {}", hints.display());
-        assert!(hints_text.contains("Hint 2"), "Missing Hint 2 in {}", hints.display());
-        assert!(hints_text.contains("Hint 3"), "Missing Hint 3 in {}", hints.display());
+        assert!(
+            hints_text.contains("Hint 1"),
+            "Missing Hint 1 in {}",
+            hints.display()
+        );
+        assert!(
+            hints_text.contains("Hint 2"),
+            "Missing Hint 2 in {}",
+            hints.display()
+        );
+        assert!(
+            hints_text.contains("Hint 3"),
+            "Missing Hint 3 in {}",
+            hints.display()
+        );
     }
 
     let pw_cfg = Path::new("playwright.config.ts");
     assert!(pw_cfg.exists(), "playwright.config.ts must exist");
     let pw_content = fs::read_to_string(pw_cfg).expect("read playwright config");
-    assert!(pw_content.contains("exercises"), "playwright config must target exercises");
+    assert!(
+        pw_content.contains("exercises"),
+        "playwright config must target exercises"
+    );
 }
 
 #[test]
 fn test_tier1_polyglot_5_tracks_directory_layout_and_contracts() {
     let toml_str = fs::read_to_string("lings.toml").expect("read lings.toml");
-    let track_ids = ["playwright-ts", "restassured-java", "k6-js", "maestro-mobile", "genai-qa"];
+    let track_ids = [
+        "playwright-ts",
+        "restassured-java",
+        "k6-js",
+        "maestro-mobile",
+        "genai-qa",
+    ];
 
     for id in track_ids {
         assert!(
@@ -845,7 +1006,11 @@ fn test_tier1_polyglot_5_tracks_directory_layout_and_contracts() {
     for drill in all_14_drills {
         let p = Path::new(drill);
         assert!(p.exists(), "Drill directory {} must exist", drill);
-        assert!(p.join("hints.md").exists(), "hints.md must exist in {}", drill);
+        assert!(
+            p.join("hints.md").exists(),
+            "hints.md must exist in {}",
+            drill
+        );
     }
 }
 
@@ -895,11 +1060,36 @@ fn test_tier3_genai_qa_and_polyglot_feedback_matrix_flow() {
         failed_iterations: 0,
         total_duration_ms: 500,
         runs: vec![
-            RunResult { iteration: 1, passed: true, duration_ms: 100, error: None },
-            RunResult { iteration: 2, passed: true, duration_ms: 100, error: None },
-            RunResult { iteration: 3, passed: true, duration_ms: 100, error: None },
-            RunResult { iteration: 4, passed: true, duration_ms: 100, error: None },
-            RunResult { iteration: 5, passed: true, duration_ms: 100, error: None },
+            RunResult {
+                iteration: 1,
+                passed: true,
+                duration_ms: 100,
+                error: None,
+            },
+            RunResult {
+                iteration: 2,
+                passed: true,
+                duration_ms: 100,
+                error: None,
+            },
+            RunResult {
+                iteration: 3,
+                passed: true,
+                duration_ms: 100,
+                error: None,
+            },
+            RunResult {
+                iteration: 4,
+                passed: true,
+                duration_ms: 100,
+                error: None,
+            },
+            RunResult {
+                iteration: 5,
+                passed: true,
+                duration_ms: 100,
+                error: None,
+            },
         ],
         error: None,
     };
@@ -920,8 +1110,9 @@ fn test_tier4_all_5_tracks_exercise_anti_patterns_vs_solutions() {
     // Check GenAI QA drill 01
     let d1_ex = fs::read_to_string("exercises/05_genai_qa/01_rag_context_faithfulness/exercise.ts")
         .expect("read d1 exercise");
-    let d1_sol = fs::read_to_string("exercises/05_genai_qa/01_rag_context_faithfulness/solution.ts")
-        .expect("read d1 solution");
+    let d1_sol =
+        fs::read_to_string("exercises/05_genai_qa/01_rag_context_faithfulness/solution.ts")
+            .expect("read d1 solution");
     assert!(d1_ex.contains("body.answer") && d1_ex.contains(".toBe("));
     assert!(d1_sol.contains("body.grounded") && d1_sol.contains("body.source_facts"));
 
@@ -938,14 +1129,26 @@ fn test_tier4_all_5_tracks_exercise_anti_patterns_vs_solutions() {
         .expect("analyze m1 ex");
     let m1_sol = analyze_file("exercises/03_mobile_maestro/01_biometric_fallback/solution.yaml")
         .expect("analyze m1 sol");
-    assert!(m1_ex.has_wait_for_timeout, "Mobile drill 01 exercise must flag anti-pattern");
-    assert!(!m1_sol.has_wait_for_timeout, "Mobile drill 01 solution must have 0 anti-patterns");
+    assert!(
+        m1_ex.has_wait_for_timeout,
+        "Mobile drill 01 exercise must flag anti-pattern"
+    );
+    assert!(
+        !m1_sol.has_wait_for_timeout,
+        "Mobile drill 01 solution must have 0 anti-patterns"
+    );
 
     // Check Java drill 03
     let j3_ex = analyze_file("exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill03_kafka_lag/Exercise.java")
         .expect("analyze j3 ex");
     let j3_sol = analyze_file("exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill03_kafka_lag/Solution.java")
         .expect("analyze j3 sol");
-    assert!(j3_ex.has_wait_for_timeout, "Java drill 03 exercise must flag Thread.sleep");
-    assert!(!j3_sol.has_wait_for_timeout, "Java drill 03 solution must have 0 Thread.sleep");
+    assert!(
+        j3_ex.has_wait_for_timeout,
+        "Java drill 03 exercise must flag Thread.sleep"
+    );
+    assert!(
+        !j3_sol.has_wait_for_timeout,
+        "Java drill 03 solution must have 0 Thread.sleep"
+    );
 }
