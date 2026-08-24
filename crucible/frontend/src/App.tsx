@@ -5,6 +5,7 @@ import { CheckoutPage } from './pages/CheckoutPage';
 import { TransferPage } from './pages/TransferPage';
 import { SearchPage } from './pages/SearchPage';
 import { ShadowDomPage } from './pages/ShadowDomPage';
+import { MissionControlPage } from './pages/MissionControlPage';
 
 export const App: React.FC = () => {
   const [currentPath, setCurrentPath] = useState<string>(() => {
@@ -28,6 +29,8 @@ export const App: React.FC = () => {
 
   const renderPage = () => {
     switch (currentPath) {
+      case '/mission-control':
+        return <MissionControlPage />;
       case '/checkout':
         return <CheckoutPage />;
       case '/transfer':

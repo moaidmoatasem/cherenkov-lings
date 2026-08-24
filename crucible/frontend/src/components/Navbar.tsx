@@ -8,6 +8,7 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate }) => {
   const navItems = [
     { path: '/', label: 'Overview', icon: '⚡' },
+    { path: '/mission-control', label: 'Mission Control (XP & Drills)', icon: '🏆' },
     { path: '/checkout', label: 'Checkout (Hydration)', icon: '🛒' },
     { path: '/transfer', label: 'Transfer (Kafka Lag)', icon: '💸' },
     { path: '/search', label: 'Search (Race Condition)', icon: '🔍' },
