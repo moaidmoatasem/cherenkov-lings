@@ -60,6 +60,20 @@ enum Commands {
     Mcp,
     /// View interactive QA learning progress, XP level, badges, and curriculum completion
     Dashboard,
+    /// Audit and verify the integrity, contract completeness, and health of the entire curriculum
+    Audit,
+    /// Scaffold a new drill with standard contracts (exercise, solution, hints, and theory)
+    NewDrill {
+        /// Track ID (e.g. playwright-ts, restassured-java, k6-js, maestro-mobile, jmeter, foundations)
+        #[arg(short, long)]
+        track: String,
+        /// Drill folder name (e.g. 11_network_throttling)
+        #[arg(short, long)]
+        name: String,
+        /// Human-readable title
+        #[arg(long)]
+        title: Option<String>,
+    },
 }
 
 #[tokio::main]
@@ -497,7 +511,250 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let dashboard_output = gamification::render_dashboard(&state, &cfg);
             print!("{}", dashboard_output);
         }
+        Commands::Audit => {
+            run_curriculum_audit();
+        }
+        Commands::NewDrill { track, name, title } => {
+            run_new_drill(track, name, title.as_deref());
+        }
     }
 
     Ok(())
+}
+
+fn run_curriculum_audit() {
+    use std::fs;
+
+    println!("{}", "════════════════════════════════════════════════════════════════════════════════════════".bright_cyan());
+    println!("{}", "   🔬  CHERENKOV-LINGS CURRICULUM AUDIT & INTEGRITY VERIFICATION  🔬".bold().bright_white());
+    println!("{}", "════════════════════════════════════════════════════════════════════════════════════════".bright_cyan());
+    println!();
+
+    let cfg = config::load_config("lings.toml").unwrap_or_else(|_| config::Config {
+        platform: config::PlatformConfig {
+            name: "cherenkov-lings".to_string(),
+            version: "1.0.0".to_string(),
+            sandbox_port: 8080,
+            chaos_proxy_port: 8086,
+            telemetry: false,
+        },
+        evaluation: config::EvaluationConfig {
+            pass_threshold: 85.0,
+            flakiness_iterations: 5,
+            flakiness_timeout_ms: 5000,
+            chaos_latency_ms: 200,
+            chaos_jitter_ms: 75,
+        },
+        ui: config::UiConfig {
+            theme: "cherenkov-blue".to_string(),
+            show_hints_on_failure: true,
+            enable_audio_bell: false,
+            language: "en".to_string(),
+        },
+        tracks: gamification::default_curriculum_tracks(),
+    });
+
+    let mut total_drills = 0;
+    let mut complete_drills = 0;
+    let mut total_checks = 0;
+    let mut passed_checks = 0;
+    let mut issues: Vec<String> = Vec::new();
+
+    println!(" {:<46} │ {:<8} │ {:<14} │ {:<8}", "Track Name", "Drills", "Contract Files", "Health");
+    println!(" ───────────────────────────────────────────────┼──────────┼────────────────┼────────");
+
+    for track in &cfg.tracks {
+        let track_path = Path::new(&track.exercise_dir);
+        let mut track_drill_count = 0;
+        let mut track_complete_count = 0;
+
+        if track_path.exists() {
+            // Find drill subdirectories
+            let mut subdirs: Vec<_> = fs::read_dir(track_path)
+                .into_iter()
+                .flatten()
+                .filter_map(|e| e.ok())
+                .filter(|e| e.path().is_dir())
+                .collect();
+            
+            // Special handling for java directory layout (src/test/java/com/cherenkov)
+            if track.id == "restassured-java" {
+                let java_base = track_path.join("src/test/java/com/cherenkov");
+                if java_base.exists() {
+                    subdirs = fs::read_dir(java_base)
+                        .into_iter()
+                        .flatten()
+                        .filter_map(|e| e.ok())
+                        .filter(|e| e.path().is_dir())
+                        .collect();
+                }
+            }
+
+            subdirs.sort_by_key(|a| a.file_name());
+
+            for dir in subdirs {
+                let p = dir.path();
+                let dir_name = p.file_name().unwrap_or_default().to_string_lossy();
+                if dir_name.starts_with('.') || dir_name == "target" || dir_name == "src" {
+                    continue;
+                }
+
+                track_drill_count += 1;
+                total_drills += 1;
+
+                let ext = &track.extension;
+                let (ex_name, sol_name) = if track.id == "restassured-java" {
+                    ("Exercise.java".to_string(), "Solution.java".to_string())
+                } else {
+                    (format!("exercise{}", ext), format!("solution{}", ext))
+                };
+
+                let has_exercise = p.join(&ex_name).exists();
+                let has_solution = p.join(&sol_name).exists() || (ext == ".jmx" && p.join("solution.sh").exists());
+                let has_hints = p.join("hints.md").exists();
+                let has_theory = p.join("theory.md").exists();
+
+                total_checks += 4;
+                let mut dir_passed = 0;
+                if has_exercise { passed_checks += 1; dir_passed += 1; } else { issues.push(format!("Missing {}: {}", ex_name, p.display())); }
+                if has_solution { passed_checks += 1; dir_passed += 1; } else { issues.push(format!("Missing {}: {}", sol_name, p.display())); }
+                if has_hints { passed_checks += 1; dir_passed += 1; } else { issues.push(format!("Missing hints.md: {}", p.display())); }
+                if has_theory {
+                    passed_checks += 1;
+                    dir_passed += 1;
+                    // Check theory length
+                    if let Ok(content) = fs::read_to_string(p.join("theory.md")) {
+                        let word_count = content.split_whitespace().count();
+                        if word_count < 150 {
+                            issues.push(format!("Short theory.md ({} words): {}", word_count, p.display()));
+                        }
+                    }
+                } else {
+                    issues.push(format!("Missing theory.md: {}", p.display()));
+                }
+
+                if dir_passed == 4 {
+                    track_complete_count += 1;
+                    complete_drills += 1;
+                }
+            }
+        }
+
+        let status_emoji = if track_drill_count > 0 && track_complete_count == track_drill_count {
+            "✅ 100%".green()
+        } else if track_drill_count > 0 {
+            format!("🟡 {}/{}", track_complete_count, track_drill_count).yellow()
+        } else {
+            "⏳ N/A".bright_black()
+        };
+
+        let file_summary = format!("{}/{} drills OK", track_complete_count, track_drill_count);
+        println!(" {:<46} │ {:<8} │ {:<14} │ {}", track.name, track_drill_count, file_summary, status_emoji);
+    }
+
+    println!(" ───────────────────────────────────────────────┴──────────┴────────────────┴────────");
+    println!();
+
+    let health_pct = if total_checks > 0 { (passed_checks as f64 / total_checks as f64) * 100.0 } else { 0.0 };
+    println!(" 📊 AUDIT SUMMARY:");
+    println!("    Total Tracks Scanned:     {}", cfg.tracks.len().to_string().cyan());
+    println!("    Total Drills Validated:   {}", total_drills.to_string().green());
+    println!("    Fully Compliant Drills:   {}/{} ({}%)", complete_drills, total_drills, if total_drills > 0 { (complete_drills as f64 / total_drills as f64 * 100.0).round() as u32 } else { 0 });
+    println!("    Contract Verification:    {}/{} checks passed", passed_checks, total_checks);
+    println!("    Overall Curriculum Health: {:.1}%", health_pct);
+    println!();
+
+    if issues.is_empty() {
+        println!(" {}", "✓ ALL DRILL CONTRACTS VERIFIED (100% HEALTHY). ZERO DISCREPANCIES DETECTED.".bold().green());
+    } else {
+        println!(" {} Issues Found:", "✗".red());
+        for issue in &issues {
+            println!("   - {}", issue.yellow());
+        }
+    }
+    println!("{}", "════════════════════════════════════════════════════════════════════════════════════════".bright_cyan());
+}
+
+fn run_new_drill(track_id: &str, drill_name: &str, title: Option<&str>) {
+    use std::fs;
+
+    let cfg = config::load_config("lings.toml").unwrap_or_else(|_| config::Config {
+        platform: config::PlatformConfig {
+            name: "cherenkov-lings".to_string(),
+            version: "1.0.0".to_string(),
+            sandbox_port: 8080,
+            chaos_proxy_port: 8086,
+            telemetry: false,
+        },
+        evaluation: config::EvaluationConfig {
+            pass_threshold: 85.0,
+            flakiness_iterations: 5,
+            flakiness_timeout_ms: 5000,
+            chaos_latency_ms: 200,
+            chaos_jitter_ms: 75,
+        },
+        ui: config::UiConfig {
+            theme: "cherenkov-blue".to_string(),
+            show_hints_on_failure: true,
+            enable_audio_bell: false,
+            language: "en".to_string(),
+        },
+        tracks: gamification::default_curriculum_tracks(),
+    });
+
+    let track = match cfg.tracks.iter().find(|t| t.id == track_id) {
+        Some(t) => t,
+        None => {
+            eprintln!("{} Unknown track '{}'. Available tracks: {}", "✗".red(), track_id, cfg.tracks.iter().map(|t| t.id.as_str()).collect::<Vec<_>>().join(", "));
+            return;
+        }
+    };
+
+    let target_dir = Path::new(&track.exercise_dir).join(drill_name);
+    if target_dir.exists() {
+        eprintln!("{} Directory already exists: {}", "✗".red(), target_dir.display());
+        return;
+    }
+
+    if let Err(e) = fs::create_dir_all(&target_dir) {
+        eprintln!("{} Failed to create directory: {}", "✗".red(), e);
+        return;
+    }
+
+    let human_title = title.unwrap_or(drill_name);
+    let ext = &track.extension;
+
+    // 1. exercise file
+    let exercise_content = format!(
+        "/**\n * PRODUCTION STORY:\n * Real-world incident case study for {human_title}.\n * Brief summary of the outage or flakiness pattern.\n */\n\n// TODO: Implement fix for {human_title} anti-pattern.\n"
+    );
+    let _ = fs::write(target_dir.join(format!("exercise{}", ext)), exercise_content);
+
+    // 2. solution file
+    let solution_content = format!(
+        "/**\n * SDET Resilient Reference Solution for {human_title}.\n * Demonstrates resilient synchronization and robust assertions.\n */\n"
+    );
+    let _ = fs::write(target_dir.join(format!("solution{}", ext)), solution_content);
+
+    // 3. hints.md
+    let hints_content = format!(
+        "## Hint 1 (Architectural Nudge)\nUnderstand why this pattern fails under asynchronous latency and network jitter.\n\n## Hint 2 (API Pattern)\nLook at the recommended synchronization or assertion pattern.\n\n## Hint 3 (Code Diff)\n```diff\n- // Old brittle code\n+ // New resilient code\n```\n"
+    );
+    let _ = fs::write(target_dir.join("hints.md"), hints_content);
+
+    // 4. theory.md
+    let theory_content = format!(
+        "# Theoretical Context: {human_title}\n\n## Real-World Incident Case Study\nIn a high-profile production incident, unhandled timing discrepancies caused significant disruption...\n\n## Protocol & Runtime Mechanism\nUnder the hood, asynchronous event dispatching and network race conditions lead to state desynchronization...\n\n```\n  [ Client / Test ] ────────► [ Network Buffer ] ────────► [ Target Service ]\n           │                           │                          │\n           ▼                           ▼                          ▼\n     Fast Dispatch              Variable Jitter           Asynchronous State\n```\n\n## You will now simulate this in the Crucible\nExecute this drill using `cherenkov-lings watch --track={track_id}` and verify the resilient pattern under injected chaos.\n"
+    );
+    let _ = fs::write(target_dir.join("theory.md"), theory_content);
+
+    println!("{} Scaffolding complete for new drill '{}'!", "✓".green(), human_title.bold());
+    println!("   Directory: {}", target_dir.display().to_string().cyan());
+    println!("   Files created:");
+    println!("   - exercise{}", ext);
+    println!("   - solution{}", ext);
+    println!("   - hints.md");
+    println!("   - theory.md");
+    println!();
+    println!("   Start watching with: {}", format!("cherenkov-lings watch --track={}", track_id).yellow());
 }
