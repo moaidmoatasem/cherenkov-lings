@@ -9,6 +9,12 @@ services:
       - "8081:8081"
     environment:
       - PYTHONUNBUFFERED=1
+      - CRUCIBLE_JWT_SECRET=${CRUCIBLE_JWT_SECRET:-cherenkov-crucible-secret-key-2026}
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/health')"]
       interval: 30s
@@ -25,6 +31,11 @@ services:
       - "8080:8080"
     depends_on:
       - backend
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/"]
       interval: 30s

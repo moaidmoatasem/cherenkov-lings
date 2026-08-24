@@ -75,21 +75,20 @@ export const MissionControlPage: React.FC = () => {
   const [chaosStatusCode, setChaosStatusCode] = useState<number | null>(null);
 
   useEffect(() => {
-    // Fetch progress from backend
-    fetch(apiUrl('/api/progress'))
+    const ctrl = new AbortController();
+    fetch(apiUrl('/api/progress'), { signal: ctrl.signal })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data) setProgress(data);
       })
       .catch(() => {});
-
-    // Fetch curriculum metadata
-    fetch(apiUrl('/api/curriculum'))
+    fetch(apiUrl('/api/curriculum'), { signal: ctrl.signal })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data && data.tracks) setCurriculum(data.tracks);
       })
       .catch(() => {});
+    return () => ctrl.abort();
   }, []);
 
   const openDrillModal = (drill: DrillInfo) => {
@@ -111,9 +110,13 @@ export const MissionControlPage: React.FC = () => {
     setTheoryData(null);
   };
 
-  const handleCopyCli = (trackId: string, path: string) => {
+  const handleCopyCli = async (trackId: string, path: string) => {
     const cmd = `cherenkov-lings watch --track=${trackId}`;
-    navigator.clipboard.writeText(cmd);
+    try {
+      await navigator.clipboard.writeText(cmd);
+    } catch {
+      // fallback: ignore in insecure context
+    }
     setCopiedPath(path);
     setTimeout(() => setCopiedPath(null), 2500);
   };
