@@ -2,8 +2,12 @@ mod config;
 pub mod feedback;
 pub mod gamification;
 pub mod mcp;
+pub mod pipeline;
 pub mod proxy;
+pub mod reports;
+pub mod review;
 pub mod runner;
+pub mod triage;
 mod watcher;
 
 use clap::{Parser, Subcommand};
@@ -73,6 +77,71 @@ enum Commands {
         /// Human-readable title
         #[arg(long)]
         title: Option<String>,
+    },
+    /// [Sprint 4] AI-powered virtual Senior QA code review and architectural mentorship
+    Review {
+        /// Target file or exercise path to review (positional)
+        #[arg(value_name = "TARGET")]
+        target: Option<String>,
+        /// Optional flag alias for target file
+        #[arg(short, long)]
+        file: Option<String>,
+        /// Optional local LLM endpoint (e.g., http://localhost:11434/api/generate)
+        #[arg(long)]
+        llm: Option<String>,
+        /// Model name for LLM (e.g., llama3, mistral, codellama)
+        #[arg(long)]
+        model: Option<String>,
+        /// Automatically apply fixes without interactive prompt
+        #[arg(long)]
+        fix: bool,
+        /// Strict mode (fails on any warning or error)
+        #[arg(long)]
+        strict: bool,
+    },
+    /// [Sprint 4] Local CI/CD Pipeline Simulator for GitHub Actions / GitLab
+    Pipeline {
+        /// Pipeline action ('run' or 'validate') or path to workflow YAML file
+        #[arg(default_value = "run")]
+        action: String,
+        /// Path to workflow YAML file (defaults to .github/workflows/ci.yml if omitted)
+        path: Option<String>,
+        /// Enforce strict SDET validation failure
+        #[arg(short, long)]
+        strict: bool,
+        /// Verbose output with full runner logs
+        #[arg(short, long)]
+        verbose: bool,
+    },
+    /// [Sprint 4] Interactive Root-Cause Triage Hypothesis Engine
+    Triage {
+        /// Test ID to investigate or evaluate (e.g. BUG-101, FLAKE-201, ANTI-301)
+        #[arg(short, long)]
+        test_id: Option<String>,
+        /// Category hypothesis (real_bug, flaky_infra, anti_pattern)
+        #[arg(short, long)]
+        category: Option<String>,
+        /// Root-cause explanation
+        #[arg(short, long)]
+        explanation: Option<String>,
+        /// Suggested remediation / fix
+        #[arg(long)]
+        fix: Option<String>,
+        /// Generate Allure JSON results and interactive HTML report
+        #[arg(short, long)]
+        report: bool,
+        /// Output directory for Allure report
+        #[arg(short, long, default_value = "target/allure-report")]
+        output_dir: String,
+        /// List all chaotic test failures available for triage
+        #[arg(short, long)]
+        list: bool,
+    },
+    /// [Sprint 4] Generate Allure-compatible JSON test results and interactive HTML report
+    Report {
+        /// Output directory for Allure report
+        #[arg(short, long, default_value = "target/allure-report")]
+        output_dir: String,
     },
 }
 
@@ -682,6 +751,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::NewDrill { track, name, title } => {
             run_new_drill(track, name, title.as_deref());
         }
+        Commands::Review { target, file, llm, model, fix, strict } => {
+            run_review(target.as_deref().or(file.as_deref()), llm.as_deref(), model.as_deref(), *fix, *strict);
+        }
+        Commands::Pipeline { action, path, strict, verbose } => {
+            run_pipeline(action, path.as_deref(), *strict, *verbose);
+        }
+        Commands::Triage {
+            test_id,
+            category,
+            explanation,
+            fix,
+            report,
+            output_dir,
+            list,
+        } => {
+            run_triage_cmd(
+                test_id.as_deref(),
+                category.as_deref(),
+                explanation.as_deref(),
+                fix.as_deref(),
+                *report,
+                output_dir,
+                *list,
+            )?;
+        }
+        Commands::Report { output_dir } => {
+            run_report_cmd(output_dir)?;
+        }
     }
 
     Ok(())
@@ -1045,3 +1142,266 @@ fn run_new_drill(track_id: &str, drill_name: &str, title: Option<&str>) {
         format!("cherenkov-lings watch --track={}", track_id).yellow()
     );
 }
+
+fn run_review(
+    file_or_target: Option<&str>,
+    llm: Option<&str>,
+    model: Option<&str>,
+    fix: bool,
+    strict: bool,
+) {
+    let target = file_or_target.unwrap_or("exercises/01_web_playwright_ts/04_first_playwright_test/exercise.ts");
+    let target_path = std::path::Path::new(target);
+
+    let config = review::ReviewConfig {
+        llm_endpoint: llm.map(|s| s.to_string()),
+        llm_model: model.map(|s| s.to_string()),
+        offline_fallback: true,
+        strict_mode: strict,
+        score_threshold: 80,
+    };
+
+    if fix {
+        match review::apply_all_fixes(target_path) {
+            Ok(_) => {
+                println!(
+                    "{} Successfully applied automated AST fixes to '{}'!",
+                    "✓".green().bold(),
+                    target.bright_white()
+                );
+            }
+            Err(e) => {
+                eprintln!("{} Failed to apply automated fixes: {}", "✗".red().bold(), e);
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
+
+    if let Err(e) = review::run_interactive_review(target, &config) {
+        eprintln!("{} Review error: {}", "✗".red().bold(), e);
+        std::process::exit(1);
+    }
+}
+
+fn run_pipeline(action: &str, path: Option<&str>, strict: bool, verbose: bool) {
+    let (actual_action, workflow_path) = match (action, path) {
+        ("run", Some(p)) => ("run", std::path::PathBuf::from(p)),
+        ("validate", Some(p)) => ("validate", std::path::PathBuf::from(p)),
+        ("run", None) => {
+            let default_path = std::path::PathBuf::from(".github/workflows/ci.yml");
+            if default_path.exists() {
+                ("run", default_path)
+            } else if let Ok(entries) = std::fs::read_dir(".github/workflows") {
+                let mut found = None;
+                for entry in entries.flatten() {
+                    let p = entry.path();
+                    if p.extension().map_or(false, |ext| ext == "yml" || ext == "yaml") {
+                        found = Some(p);
+                        break;
+                    }
+                }
+                if let Some(f) = found {
+                    ("run", f)
+                } else {
+                    eprintln!("{} No GitHub Actions workflow found at .github/workflows/ci.yml or in .github/workflows/", "✗".red());
+                    std::process::exit(1);
+                }
+            } else {
+                eprintln!("{} No .github/workflows directory found. Specify a path explicitly: cherenkov-lings pipeline run <path>", "✗".red());
+                std::process::exit(1);
+            }
+        }
+        ("validate", None) => {
+            let default_path = std::path::PathBuf::from(".github/workflows/ci.yml");
+            if default_path.exists() {
+                ("validate", default_path)
+            } else {
+                eprintln!("{} No workflow file found to validate at .github/workflows/ci.yml", "✗".red());
+                std::process::exit(1);
+            }
+        }
+        (other_path, None) => {
+            // User provided path as first argument (e.g. `cherenkov-lings pipeline my_workflow.yml`)
+            ("run", std::path::PathBuf::from(other_path))
+        }
+        (act, Some(p)) => (act, std::path::PathBuf::from(p)),
+    };
+
+    if !workflow_path.exists() {
+        eprintln!("{} Workflow file does not exist: {}", "✗".red(), workflow_path.display());
+        std::process::exit(1);
+    }
+
+    match actual_action {
+        "validate" => {
+            let content = match std::fs::read_to_string(&workflow_path) {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!("{} Failed to read workflow file: {}", "✗".red(), e);
+                    std::process::exit(1);
+                }
+            };
+            let validation = pipeline::validate_workflow(&content);
+            println!("{}", "========================================================================================".cyan());
+            println!(" {} v1.0.0  |  {}", "CHERENKOV-LINGS".bold().bright_cyan(), "CI/CD Policy Validator".bright_yellow());
+            println!("{}", "========================================================================================".cyan());
+            println!();
+            println!("{} File: {}", "▶".bright_blue(), workflow_path.display().to_string().bold());
+            println!("  SDET Policy Score: {}/100", validation.sdet_score);
+            println!("  Status: {}", if validation.valid { "VALID".green().bold() } else { "POLICY VIOLATIONS FOUND".red().bold() });
+            println!();
+            for err in &validation.errors {
+                println!("  {} [{}] {}", "✗".red().bold(), err.code.bright_red(), err.message);
+                if let Some(ref s) = err.suggestion {
+                    println!("    {} {}", "💡 Fix:".yellow(), s.italic());
+                }
+            }
+            for warn in &validation.warnings {
+                println!("  {} [{}] {}", "⚠".yellow(), warn.code.bright_yellow(), warn.message);
+                if let Some(ref s) = warn.suggestion {
+                    println!("    {} {}", "💡 Suggestion:".yellow(), s.italic());
+                }
+            }
+            println!();
+            if !validation.valid {
+                std::process::exit(1);
+            }
+        }
+        _ => {
+            let opts = pipeline::PipelineRunOptions {
+                parallel: true,
+                fail_fast: false,
+                animated: true,
+                max_parallel: None,
+                verbose,
+                strict_validation: strict,
+            };
+            match pipeline::run_pipeline(&workflow_path, &opts) {
+                Ok(result) => {
+                    pipeline::render_pipeline_summary(&result);
+                    if verbose {
+                        println!("{}", "─── Detailed Runner Execution Logs ──────────────────────────────────────────────".dimmed());
+                        for log in &result.logs {
+                            let lvl_str = match log.level {
+                                pipeline::LogLevel::Info => "INFO".bright_blue(),
+                                pipeline::LogLevel::Warn => "WARN".yellow(),
+                                pipeline::LogLevel::Error => "ERROR".red(),
+                                pipeline::LogLevel::Debug => "DEBUG".dimmed(),
+                            };
+                            println!("  [{}] [{}] ({}) {}", lvl_str, log.runner.dimmed(), log.step.dimmed(), log.message);
+                        }
+                        println!();
+                    }
+                    if !result.success {
+                        std::process::exit(1);
+                    }
+                }
+                Err(e) => {
+                    eprintln!("{} Failed to execute pipeline: {}", "✗".red(), e);
+                    std::process::exit(1);
+                }
+            }
+        }
+    }
+}
+
+fn run_triage_cmd(
+    test_id: Option<&str>,
+    category: Option<&str>,
+    explanation: Option<&str>,
+    fix: Option<&str>,
+    report: bool,
+    output_dir: &str,
+    list: bool,
+) -> std::io::Result<()> {
+    if report {
+        return run_report_cmd(output_dir);
+    }
+
+    if list {
+        let failures = reports::get_failing_tests();
+        println!();
+        println!(
+            "{}",
+            "─── CHERENKOV-LINGS CHAOTIC TEST FAILURES FOR TRIAGE ───"
+                .bold()
+                .bright_cyan()
+        );
+        println!();
+        triage::display_failure_summary_table(&failures);
+        println!();
+        println!("Run `cherenkov-lings triage --test-id <ID>` to investigate a specific failure.");
+        println!();
+        return Ok(());
+    }
+
+    triage::run_interactive_triage(test_id, category, explanation, fix)
+}
+
+fn run_report_cmd(output_dir: &str) -> std::io::Result<()> {
+    let out_path = Path::new(output_dir);
+    println!(
+        "{}",
+        "========================================================================================"
+            .cyan()
+    );
+    println!(
+        " {} v1.0.0  |  {}",
+        "CHERENKOV-LINGS".bold().bright_cyan(),
+        "Enterprise Allure Chaos Reporter".bright_yellow()
+    );
+    println!(
+        "{}",
+        "========================================================================================"
+            .cyan()
+    );
+    println!();
+    println!(
+        "{} Generating Allure JSON test results and interactive HTML report...",
+        "⏳".yellow()
+    );
+
+    match reports::generate_chaos_allure_report(out_path) {
+        Ok(summary) => {
+            println!("{} Allure Report generated successfully!", "✓".bold().green());
+            println!(
+                "   Total Tests:         {}",
+                summary.total_tests.to_string().cyan()
+            );
+            println!(
+                "   Pass Rate:           {:.1}% ({} passed, {} failed, {} broken, {} flaky)",
+                summary.pass_percentage,
+                summary.passed,
+                summary.failed,
+                summary.broken,
+                summary.flaky
+            );
+            println!(
+                "   Taxonomy Breakdown:  {} Product Bugs, {} Flaky Infra, {} Anti-Patterns",
+                summary.real_bugs.to_string().bright_red(),
+                summary.flaky_infra.to_string().bright_blue(),
+                summary.anti_patterns.to_string().bright_magenta()
+            );
+            println!(
+                "   Allure Results Dir:  {}",
+                summary.results_dir.bright_yellow()
+            );
+            println!(
+                "   Interactive HTML:    {}",
+                summary.report_html_path.bright_white().bold()
+            );
+            println!();
+            println!("Open the report in your browser:");
+            println!("   {}", summary.report_html_path.cyan());
+            println!();
+        }
+        Err(e) => {
+            eprintln!("{} Failed to generate report: {}", "✗".red(), e);
+            return Err(e);
+        }
+    }
+
+    Ok(())
+}
+

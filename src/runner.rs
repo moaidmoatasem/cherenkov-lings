@@ -1829,7 +1829,11 @@ impl Default for JMeterRunner {
     }
 }
 
-pub struct PytestRunner;
+pub struct PytestRunner {
+    python_cmd: String,
+    worker_script: PathBuf,
+    request_counter: AtomicU64,
+}
 
 impl Default for PytestRunner {
     fn default() -> Self {
@@ -1839,7 +1843,23 @@ impl Default for PytestRunner {
 
 impl PytestRunner {
     pub fn new() -> Self {
-        Self
+        Self::with_config("python", PathBuf::from("workers/pytest_worker.py"))
+    }
+
+    pub fn with_config(python_cmd: &str, worker_script: PathBuf) -> Self {
+        Self {
+            python_cmd: python_cmd.to_string(),
+            worker_script,
+            request_counter: AtomicU64::new(1),
+        }
+    }
+
+    pub fn python_cmd(&self) -> &str {
+        &self.python_cmd
+    }
+
+    pub fn worker_script(&self) -> &Path {
+        &self.worker_script
     }
 }
 
@@ -1847,32 +1867,115 @@ impl Runner for PytestRunner {
     fn run_drill(
         &self,
         path: &str,
-        _chaos_header: &str,
-        _iterations: u32,
-        _timeout_ms: u64,
+        chaos_header: &str,
+        iterations: u32,
+        timeout_ms: u64,
     ) -> impl std::future::Future<Output = Result<DrillResponse, RunnerError>> + Send {
         let path = path.to_string();
+        let chaos = chaos_header.to_string();
+        let python_cmd = self.python_cmd.clone();
+        let worker_script = self.worker_script.clone();
+        let req_id = format!(
+            "pytest-req-{}",
+            self.request_counter.fetch_add(1, Ordering::SeqCst)
+        );
+
         async move {
-            let output = tokio::process::Command::new("python")
-                .arg("workers/pytest_worker.py")
+            let iterations = iterations.max(1);
+            let start_time = std::time::Instant::now();
+
+            let mut cmd = Command::new(&python_cmd);
+            cmd.arg(&worker_script)
                 .arg(&path)
-                .output()
-                .await
-                .map_err(RunnerError::Io)?;
+                .arg("--iterations")
+                .arg(iterations.to_string())
+                .arg("--timeout")
+                .arg(timeout_ms.to_string());
+
+            if !chaos.is_empty() {
+                cmd.arg("--chaos").arg(&chaos);
+                cmd.env("CHAOS_DIRECTIVES", &chaos);
+                cmd.env("PW_CHAOS_HEADER", &chaos);
+            }
+
+            cmd.stdout(Stdio::piped());
+            cmd.stderr(Stdio::piped());
+
+            let timeout_duration = Duration::from_millis(timeout_ms.max(5000));
+            let child = cmd.spawn().map_err(RunnerError::Io)?;
+
+            let output = match timeout(timeout_duration, child.wait_with_output()).await {
+                Ok(res) => res.map_err(RunnerError::Io)?,
+                Err(_) => {
+                    return Ok(DrillResponse {
+                        id: req_id,
+                        ok: false,
+                        passed: false,
+                        iterations,
+                        passed_iterations: 0,
+                        failed_iterations: iterations,
+                        total_duration_ms: start_time.elapsed().as_millis() as u64,
+                        runs: vec![],
+                        error: Some(format!(
+                            "Pytest execution timed out after {}ms",
+                            timeout_ms
+                        )),
+                    });
+                }
+            };
 
             let stdout = String::from_utf8_lossy(&output.stdout);
-            let passed = stdout.contains("\"passed\": true");
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let elapsed_ms = start_time.elapsed().as_millis() as u64;
+
+            // Attempt to parse structured DrillResponse JSON from worker stdout
+            for line in stdout.lines().rev() {
+                let trimmed = line.trim();
+                if trimmed.starts_with('{') && trimmed.ends_with('}') {
+                    if let Ok(mut drill_resp) = serde_json::from_str::<DrillResponse>(trimmed) {
+                        drill_resp.id = req_id;
+                        return Ok(drill_resp);
+                    }
+                }
+            }
+
+            // Fallback parsing if JSON wasn't returned
+            let passed = output.status.success() && stdout.contains("\"passed\": true");
+            let error_msg = if !passed {
+                let err = stderr.trim();
+                if !err.is_empty() {
+                    Some(err.to_string())
+                } else {
+                    let out = stdout.trim();
+                    if !out.is_empty() {
+                        Some(out.to_string())
+                    } else {
+                        Some(format!("Worker process exited with status {:?}", output.status))
+                    }
+                }
+            } else {
+                None
+            };
+
+            let runs = (1..=iterations)
+                .map(|i| RunResult {
+                    iteration: i,
+                    passed,
+                    duration_ms: elapsed_ms / (iterations as u64).max(1),
+                    error: error_msg.clone(),
+                })
+                .collect();
 
             Ok(DrillResponse {
-                id: "pytest-run".to_string(),
-                ok: true,
+                id: req_id,
+                ok: output.status.success(),
                 passed,
-                iterations: 5,
-                passed_iterations: if passed { 5 } else { 0 },
-                failed_iterations: if passed { 0 } else { 5 },
-                total_duration_ms: 1000,
-                error: None,
-                runs: vec![],
+                iterations,
+                passed_iterations: if passed { iterations } else { 0 },
+                failed_iterations: if passed { 0 } else { iterations },
+                total_duration_ms: elapsed_ms,
+                runs,
+                error: error_msg,
             })
         }
     }
@@ -2615,6 +2718,45 @@ Expected status code <200> but was <409>.
                 assert_eq!(r.jmeter_cmd(), "jmeter");
             }
             _ => panic!("Expected AnyRunner::Jmeter"),
+        }
+    }
+
+    #[test]
+    fn test_pytest_runner_options_and_default() {
+        let runner = PytestRunner::new();
+        assert_eq!(runner.python_cmd(), "python");
+        assert_eq!(runner.worker_script(), Path::new("workers/pytest_worker.py"));
+
+        let default_runner = PytestRunner::default();
+        assert_eq!(default_runner.python_cmd(), "python");
+
+        let custom = PytestRunner::with_config("python3", PathBuf::from("custom/worker.py"));
+        assert_eq!(custom.python_cmd(), "python3");
+        assert_eq!(custom.worker_script(), Path::new("custom/worker.py"));
+    }
+
+    #[tokio::test]
+    async fn test_pytest_runner_nonexistent_file() {
+        let runner = PytestRunner::new();
+        let response = runner
+            .run_drill("non_existent_exercise_file_9999.py", "", 1, 5000)
+            .await
+            .expect("Runner execution");
+        assert!(!response.ok);
+        assert!(!response.passed);
+        assert!(response.error.is_some());
+        assert!(response.error.unwrap().contains("does not exist"));
+    }
+
+    #[test]
+    fn test_any_runner_pytest_wrapping() {
+        let runner = Arc::new(PytestRunner::new());
+        let any_runner = AnyRunner::Pytest(runner);
+        match any_runner {
+            AnyRunner::Pytest(r) => {
+                assert_eq!(r.python_cmd(), "python");
+            }
+            _ => panic!("Expected AnyRunner::Pytest"),
         }
     }
 }

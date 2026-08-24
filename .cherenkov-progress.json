@@ -1,0 +1,17 @@
+{
+  "total_xp": 723,
+  "level_name": "Junior QA",
+  "streak_days": 1,
+  "last_active_date": "2026-08-24T16:39:40.603492+00:00",
+  "flakiness_100_streak": 0,
+  "perfect_locator_count": 0,
+  "achievements": [
+    {
+      "id": "first_triage",
+      "name": "Triage Detective",
+      "description": "Successfully diagnose your first chaotic test root-cause failure",
+      "unlocked_at": "2026-08-24T16:12:19Z"
+    }
+  ],
+  "completed_drills": {}
+}

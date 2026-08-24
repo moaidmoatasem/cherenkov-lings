@@ -199,3 +199,267 @@ class GraphQLRequest(BaseModel):
         default=None, description="Optional operation name"
     )
 
+
+# =============================================================================
+# Sprint 4 Models: Review Engine, CI Pipeline Simulator, Allure Reports & Triage
+# =============================================================================
+
+
+class AstViolation(BaseModel):
+    """AST static code rule violation schema."""
+
+    rule_id: str
+    severity: str = "warning"
+    file_path: str = "unknown"
+    line_number: int = 1
+    message: str
+    code_snippet: str
+    suggested_fix: str | None = None
+
+
+class ReviewRequest(BaseModel):
+    """Code review submission request schema."""
+
+    code: str | None = None
+    file_path: str | None = None
+    exercise_path: str | None = None
+    target: str | None = None
+    language: str | None = None
+    strict: bool = False
+    score_threshold: int = 80
+    llm_endpoint: str | None = None
+    llm_model: str | None = None
+    offline_fallback: bool = True
+
+
+class ReviewReport(BaseModel):
+    """Code review evaluation report schema."""
+
+    exercise_name: str
+    score: int
+    passed: bool
+    violations: list[AstViolation] = Field(default_factory=list)
+    mentor_critique: str
+    socratic_questions: list[str] = Field(default_factory=list)
+    suggested_diff: str | None = None
+
+
+class ReviewFixRequest(BaseModel):
+    """Automated code patch request schema."""
+
+    code: str | None = None
+    file_path: str | None = None
+    fix_id: str = "all"
+    rule_id: str | None = None
+
+
+class ReviewFixResponse(BaseModel):
+    """Automated code patch response schema."""
+
+    patched_code: str
+    original_code: str = ""
+    applied_fixes: list[str] = Field(default_factory=list)
+    diff: str | None = None
+    success: bool = True
+
+
+class PipelineError(BaseModel):
+    """CI/CD pipeline policy error schema."""
+
+    code: str
+    message: str
+    job: str | None = None
+    step: str | None = None
+    line: int | None = None
+    suggestion: str | None = None
+
+
+class PipelineWarning(BaseModel):
+    """CI/CD pipeline policy warning schema."""
+
+    code: str
+    message: str
+    job: str | None = None
+    step: str | None = None
+    suggestion: str | None = None
+
+
+class PipelineValidation(BaseModel):
+    """CI/CD pipeline policy validation report schema."""
+
+    valid: bool
+    sdet_score: int
+    matrix_detected: bool
+    artifact_upload_detected: bool
+    errors: list[PipelineError] = Field(default_factory=list)
+    warnings: list[PipelineWarning] = Field(default_factory=list)
+    summary: str
+
+
+class PipelineValidateRequest(BaseModel):
+    """CI/CD pipeline validation request schema."""
+
+    workflow_yaml: str | None = None
+    yaml_content: str | None = None
+    content: str | None = None
+    strict: bool = False
+
+
+class StepRunResult(BaseModel):
+    """Simulated step execution result."""
+
+    name: str
+    status: str = "passed"
+    duration_ms: int = 0
+    exit_code: int = 0
+    output: str = ""
+
+
+class JobRunResult(BaseModel):
+    """Simulated parallel job execution result."""
+
+    job_id: str
+    runner_name: str
+    matrix_combination: dict[str, str] = Field(default_factory=dict)
+    status: str = "passed"
+    duration_ms: int = 0
+    steps: list[StepRunResult] = Field(default_factory=list)
+
+
+class LogEntry(BaseModel):
+    """Simulated CI runner execution log entry."""
+
+    timestamp: int
+    runner: str
+    step: str
+    level: str = "info"
+    message: str
+
+
+class PipelineRunResult(BaseModel):
+    """Simulated CI pipeline execution outcome schema."""
+
+    workflow_name: str
+    jobs: list[JobRunResult] = Field(default_factory=list)
+    duration_ms: int = 0
+    success: bool = True
+    logs: list[LogEntry] = Field(default_factory=list)
+    validation: PipelineValidation | None = None
+
+
+class PipelineRunRequest(BaseModel):
+    """CI/CD pipeline execution request schema."""
+
+    workflow_yaml: str | None = None
+    yaml_content: str | None = None
+    content: str | None = None
+    parallel: bool = True
+    fail_fast: bool = False
+    strict_validation: bool = False
+    verbose: bool = True
+
+
+class ChaosEventTelemetry(BaseModel):
+    """Network/proxy chaos telemetry schema."""
+
+    layer: str = "L7"
+    event_type: str = "none"
+    latency_ms: int = 0
+    jitter_ms: int = 0
+    packet_loss_rate: float = 0.0
+    proxy_log: str | None = None
+    correlated_timestamp: str = "2026-08-24T18:00:00Z"
+    retry_attempts: int = 0
+    injection_target: str = "127.0.0.1:8086"
+
+
+class FlakinessMetrics(BaseModel):
+    """Multi-iteration flakiness telemetry schema."""
+
+    iterations: int = 5
+    passed_iterations: int = 5
+    failed_iterations: int = 0
+    flakiness_rate: float = 0.0
+    avg_duration_ms: int = 100
+    duration_stddev_ms: float = 0.0
+    historical_flake_score: float = 0.0
+
+
+class TestStepTelemetry(BaseModel):
+    """Step execution telemetry within a test."""
+
+    name: str
+    status: str = "passed"
+    duration_ms: int = 0
+    error: str | None = None
+
+
+class ChaosTestResultItem(BaseModel):
+    """Chaotic test result item schema."""
+
+    test_id: str
+    name: str
+    suite: str
+    track_id: str
+    status: str
+    category: str
+    duration_ms: int
+    error_message: str | None = None
+    stack_trace: str | None = None
+    chaos_event: ChaosEventTelemetry | None = None
+    flakiness_metrics: FlakinessMetrics | None = None
+    steps: list[TestStepTelemetry] = Field(default_factory=list)
+    labels: dict[str, str] = Field(default_factory=dict)
+    root_cause_hint: str | None = None
+
+
+class AllureSummaryResponse(BaseModel):
+    """Allure test report summary schema."""
+
+    total_tests: int
+    passed: int
+    failed: int
+    broken: int
+    flaky: int
+    skipped: int
+    real_bugs: int
+    flaky_infra: int
+    anti_patterns: int
+    duration_ms: int
+    pass_percentage: float
+    results_dir: str
+    report_html_path: str
+    generated_at: str
+    tests: list[ChaosTestResultItem] = Field(default_factory=list)
+    taxonomy_breakdown: dict[str, int] = Field(default_factory=dict)
+
+
+class TriageSubmissionRequest(BaseModel):
+    """Triage hypothesis submission request schema."""
+
+    test_id: str
+    category: str | None = None
+    learner_category: str | None = None
+    explanation: str | None = None
+    root_cause_explanation: str | None = None
+    fix: str | None = None
+    suggested_fix: str | None = None
+
+
+class TriageResultResponse(BaseModel):
+    """Triage evaluation result schema."""
+
+    test_id: str
+    correct: bool
+    actual_category: str
+    learner_category: str
+    score_awarded: int
+    base_score: int
+    explanation_score: int
+    fix_score: int
+    feedback: str
+    badge_unlocked: str | None = None
+    detailed_reasons: list[str] = Field(default_factory=list)
+    updated_progress: dict[str, Any] | None = None
+
+

@@ -20,7 +20,10 @@ import jwt
 
 from crucible.backend.chaos import ChaosMiddleware
 from crucible.backend.models import (
+    AllureSummaryResponse,
+    AstViolation,
     BalanceResponse,
+    ChaosTestResultItem,
     CheckoutRequest,
     CheckoutResponse,
     CheckoutStateResponse,
@@ -30,16 +33,30 @@ from crucible.backend.models import (
     LlmResponse,
     LoginRequest,
     LoginResponse,
+    PipelineRunRequest,
+    PipelineRunResult,
+    PipelineValidateRequest,
+    PipelineValidation,
     ProductItem,
     ProductListResponse,
     RagResponse,
     ResetResponse,
+    ReviewFixRequest,
+    ReviewFixResponse,
+    ReviewReport,
+    ReviewRequest,
     SearchResponse,
     TransferRequest,
     TransferResponse,
+    TriageResultResponse,
+    TriageSubmissionRequest,
     UploadResponse,
     UserMeResponse,
 )
+from crucible.backend.pipeline import simulate_pipeline_run, validate_workflow_yaml
+from crucible.backend.reports import generate_chaos_dataset, render_html_report_string, summarize_dataset
+from crucible.backend.review import apply_review_fix, run_code_review
+from crucible.backend.triage import evaluate_triage_submission
 
 # JWT configuration
 SECRET_KEY = "cherenkov-crucible-secret-key-2026"
@@ -1140,5 +1157,133 @@ async def get_drill_theory(path: str) -> JSONResponse:
             "has_hints": hints_file.exists(),
         },
     )
+
+
+# =============================================================================
+# Sprint 4 REST Endpoints: Review, CI Pipeline, Allure Reports, Triage
+# =============================================================================
+
+
+@app.post("/api/review", response_model=ReviewReport)
+async def post_review(req: ReviewRequest) -> ReviewReport:
+    """Execute static AST code review, rule violation detection, and AI Senior QA critique."""
+    code_content = req.code
+    file_path = req.file_path or req.exercise_path or req.target or "exercise.ts"
+
+    if not code_content:
+        p = Path(file_path)
+        if p.exists() and p.is_file():
+            try:
+                code_content = p.read_text(encoding="utf-8")
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Failed to read file '{file_path}': {e}")
+        else:
+            raise HTTPException(status_code=400, detail=f"No code provided and file '{file_path}' does not exist.")
+
+    return run_code_review(
+        content=code_content,
+        file_path=file_path,
+        strict=req.strict,
+        score_threshold=req.score_threshold,
+    )
+
+
+@app.post("/api/review/fix", response_model=ReviewFixResponse)
+async def post_review_fix(req: ReviewFixRequest) -> ReviewFixResponse:
+    """Apply automated AST patch fixes to code or target exercise file."""
+    code_content = req.code
+    file_path = req.file_path or "exercise.ts"
+    fix_id = req.fix_id or req.rule_id or "all"
+
+    if not code_content and req.file_path:
+        p = Path(req.file_path)
+        if p.exists() and p.is_file():
+            try:
+                code_content = p.read_text(encoding="utf-8")
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Failed to read file '{req.file_path}': {e}")
+        else:
+            raise HTTPException(status_code=400, detail=f"File '{req.file_path}' does not exist.")
+
+    if not code_content:
+        raise HTTPException(status_code=400, detail="No code content or valid file_path provided.")
+
+    fix_res = apply_review_fix(content=code_content, file_path=file_path, fix_id=fix_id)
+
+    # If file_path on disk exists and was target of fix, update file
+    if req.file_path:
+        p = Path(req.file_path)
+        if p.exists() and p.is_file() and fix_res.patched_code:
+            try:
+                p.write_text(fix_res.patched_code, encoding="utf-8")
+            except Exception:
+                pass
+
+    return fix_res
+
+
+@app.post("/api/pipeline/validate", response_model=PipelineValidation)
+async def post_pipeline_validate(req: PipelineValidateRequest) -> PipelineValidation:
+    """Validate workflow YAML against enterprise SDET policies."""
+    yaml_content = req.workflow_yaml or req.yaml_content or req.content
+    if yaml_content is None:
+        raise HTTPException(status_code=400, detail="Missing workflow YAML content in request.")
+    return validate_workflow_yaml(yaml_content, strict=req.strict)
+
+
+@app.post("/api/pipeline/run", response_model=PipelineRunResult)
+async def post_pipeline_run(req: PipelineRunRequest) -> PipelineRunResult:
+    """Execute simulated matrix pipeline execution."""
+    yaml_content = req.workflow_yaml or req.yaml_content or req.content
+    if yaml_content is None:
+        raise HTTPException(status_code=400, detail="Missing workflow YAML content in request.")
+    return simulate_pipeline_run(
+        yaml_content=yaml_content,
+        parallel=req.parallel,
+        fail_fast=req.fail_fast,
+        strict_validation=req.strict_validation,
+        verbose=req.verbose,
+    )
+
+
+@app.get("/api/reports/allure", response_model=AllureSummaryResponse)
+async def get_allure_report_summary() -> AllureSummaryResponse:
+    """Retrieve summary of chaotic test executions with telemetry."""
+    dataset = generate_chaos_dataset()
+    return summarize_dataset(dataset)
+
+
+@app.get("/api/reports/allure/html", response_class=HTMLResponse)
+async def get_allure_html_report() -> HTMLResponse:
+    """Serve interactive Allure HTML report."""
+    dataset = generate_chaos_dataset()
+    html_content = render_html_report_string(dataset)
+    return HTMLResponse(content=html_content, status_code=200)
+
+
+@app.get("/api/triage/tests", response_model=list[ChaosTestResultItem])
+async def get_triage_tests(
+    category: str | None = None,
+    failing_only: bool = True,
+    track: str | None = None,
+) -> list[ChaosTestResultItem]:
+    """Retrieve list of chaotic tests for triage challenge."""
+    dataset = generate_chaos_dataset()
+    filtered = dataset
+    if category and category.lower() != "all":
+        norm_cat = category.lower().replace(" ", "_")
+        filtered = [t for t in filtered if t.category == norm_cat]
+    if failing_only:
+        filtered = [t for t in filtered if t.status in ("failed", "broken", "flaky")]
+    if track:
+        filtered = [t for t in filtered if t.track_id == track]
+    return filtered
+
+
+@app.post("/api/triage/submit", response_model=TriageResultResponse)
+async def post_triage_submit(req: TriageSubmissionRequest) -> TriageResultResponse:
+    """Submit root-cause hypothesis, award XP, update streak, and unlock badges."""
+    return evaluate_triage_submission(req)
+
 
 

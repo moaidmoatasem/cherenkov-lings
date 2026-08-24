@@ -1,18 +1,6 @@
-"""
-PRODUCTION STORY:
-NASA Mars Climate Orbiter (1999)
-A $327M spacecraft was destroyed in Mars' atmosphere because the ground software produced output
-in non-metric units (pound-seconds) while the trajectory models expected metric (newton-seconds).
-No automated assertions existed to verify unit conversions, causing the orbiter to disintegrate.
-"""
-
+# I AM NOT DONE
 # Drill 01: What is an Automated Test?
-# As a Manual QA engineer you know how to CHECK something manually.
-# An automated test is just that same check -- written as code.
-#
-# Right now this "test" just runs the checkout logic but never checks anything.
-# The result could be wrong and nobody would know!
-# TODO: Add an assert statement to check that the total price is correct.
+# Fix this test by adding an assertion that verifies the checkout total.
 
 def calculate_total(item_price: float, quantity: int, tax_rate: float) -> float:
     """Calculates the final checkout total including tax."""
@@ -21,6 +9,6 @@ def calculate_total(item_price: float, quantity: int, tax_rate: float) -> float:
 
 def test_checkout_total():
     total = calculate_total(item_price=10.00, quantity=3, tax_rate=0.1)
-    # This test always passes even if calculate_total is completely broken!
-    # A test without an assert is just code that runs silently.
-    pass  # TODO: Replace this with: assert total == 33.0
+    # 10.00 * 3 = 30.00, plus 10% tax = 33.00
+    # TODO: Replace the line below with: assert total == 33.0, f"Expected 33.0 but got {total}"
+    assert False, "TODO: Implement assert statement to verify checkout total"

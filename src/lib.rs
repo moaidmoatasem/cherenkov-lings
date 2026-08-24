@@ -1,6 +1,10 @@
 pub mod config;
 pub mod feedback;
 pub mod gamification;
+pub mod pipeline;
 pub mod proxy;
+pub mod reports;
+pub mod review;
 pub mod runner;
+pub mod triage;
 pub mod watcher;

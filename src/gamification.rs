@@ -1908,7 +1908,8 @@ mod tests {
 
     #[test]
     fn test_persistence_save_and_load() {
-        let temp_dir = std::env::temp_dir().join("cherenkov_gamification_test");
+        let unique_id = format!("{}_{}", std::process::id(), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
+        let temp_dir = std::env::temp_dir().join(format!("cherenkov_gamification_test_{}", unique_id));
         let temp_file = temp_dir.join(".cherenkov-progress.json");
 
         if temp_file.exists() {

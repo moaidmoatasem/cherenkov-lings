@@ -11,6 +11,9 @@ import { ProfilePage } from './pages/ProfilePage';
 import { PaymentPage } from './pages/PaymentPage';
 import { MissionControlPage } from './pages/MissionControlPage';
 import { MobileTestPage } from './pages/MobileTestPage';
+import { CodeReviewPage } from './pages/CodeReviewPage';
+import { PipelineBuilderPage } from './pages/PipelineBuilderPage';
+import { AllureTriagePage } from './pages/AllureTriagePage';
 
 export const App: React.FC = () => {
   const [currentPath, setCurrentPath] = useState<string>(() => {
@@ -36,6 +39,12 @@ export const App: React.FC = () => {
     switch (currentPath) {
       case '/mission-control':
         return <MissionControlPage />;
+      case '/code-review':
+        return <CodeReviewPage />;
+      case '/pipeline-builder':
+        return <PipelineBuilderPage />;
+      case '/allure-triage':
+        return <AllureTriagePage />;
       case '/checkout':
         return <CheckoutPage />;
       case '/transfer':

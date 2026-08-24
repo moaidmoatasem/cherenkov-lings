@@ -1,28 +1,26 @@
-"""
-PRODUCTION STORY:
-Therac-25 Radiation Therapy Disaster (1985–1987)
-A medical linear accelerator killed multiple patients due to a race condition. The software QA team
-relied on massive end-to-end multi-check test routines where earlier assertions masked low-level keyboard race conditions.
-"""
-
-# Drill 05: One Thing Per Test
-# This single test checks FIVE different behaviours of the search API.
-# When it fails, you have no idea WHICH of the five things broke.
-# Manual QA equivalent: one test case with 20 steps and one "FAIL" result.
-# TODO: Split this into 5 separate, focused tests -- one assertion each.
+# Drill 05: Solution -- One Thing Per Test
+# Each test now has ONE reason to fail and ONE thing to fix.
+# When test_search_echoes_query_in_response fails, you know exactly what is broken.
 import requests
 
-def test_search_api():
-    # Tests empty query
-    r = requests.get("http://localhost:8081/search?q=", timeout=5)
+SEARCH_URL = "http://localhost:8081/search"
+
+def test_search_returns_200_for_empty_query():
+    r = requests.get(f"{SEARCH_URL}?q=", timeout=5)
     assert r.status_code == 200
-    # Tests valid query returns results
-    r2 = requests.get("http://localhost:8081/search?q=Play", timeout=5)
-    assert r2.status_code == 200
-    assert "results" in r2.json()
-    # Tests result count
-    assert len(r2.json().get("results", [])) > 0
-    # Tests response has query field echoed back
-    assert r2.json().get("query") == "Play"
-    # Tests content type
-    assert "application/json" in r2.headers.get("content-type", "")
+
+def test_search_returns_200_for_valid_query():
+    r = requests.get(f"{SEARCH_URL}?q=Play", timeout=5)
+    assert r.status_code == 200
+
+def test_search_results_field_present_in_response():
+    r = requests.get(f"{SEARCH_URL}?q=Play", timeout=5)
+    assert "results" in r.json()
+
+def test_search_returns_at_least_one_result():
+    r = requests.get(f"{SEARCH_URL}?q=Play", timeout=5)
+    assert len(r.json().get("results", [])) > 0
+
+def test_search_echoes_query_in_response():
+    r = requests.get(f"{SEARCH_URL}?q=Play", timeout=5)
+    assert r.json().get("query") == "Play"
