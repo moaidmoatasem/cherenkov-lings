@@ -4,7 +4,7 @@
 In 2020, a SaaS analytics company modified an API response structure by transforming a flat JSON dictionary into a nested object to support internationalization. While web clients received the frontend update simultaneously, third-party webhook integrations and enterprise API consumers experienced immediate parsing failures, leading to data loss across 200+ partner organizations.
 
 ## Protocol & Runtime Mechanism
-When microservice APIs evolve, teams must adhere to Postel’s Law (*The Robustness Principle*): *"Be conservative in what you do, be liberal in what you accept from others."*
+When microservice APIs evolve, teams must adhere to Postelâ€™s Law (*The Robustness Principle*): *"Be conservative in what you do, be liberal in what you accept from others."*
 
 In contract testing, changes are classified into two categories:
 
@@ -26,4 +26,4 @@ $$\text{Breaking (Unsafe)}: \text{Schema}_{\text{v2}} \not\supseteq \text{Schema
 Automated contract testing prevents destructive evolution by ensuring that every newly added capability is strictly additive and existing fields retain their names, semantics, and structural types.
 
 ## You will now simulate this in the Crucible
-Run `cherenkov-lings watch --track=contract-pact` and verify non-breaking backward compatibility.
+Run `cherenkov-lings watch --track=contract-pact` and verify non-breaking backward compatibility.

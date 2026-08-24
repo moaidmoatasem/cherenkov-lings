@@ -6,6 +6,7 @@ flakiness statistics, failure taxonomies, Allure summary metrics, and an interac
 
 from __future__ import annotations
 
+import functools
 import json
 from typing import Any
 
@@ -18,6 +19,7 @@ from crucible.backend.models import (
 )
 
 
+@functools.lru_cache(maxsize=1)
 def generate_chaos_dataset() -> list[ChaosTestResultItem]:
     """Generate the deterministic dataset of 70 chaotic test executions."""
     tests: list[ChaosTestResultItem] = []

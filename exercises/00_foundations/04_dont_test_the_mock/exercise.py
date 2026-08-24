@@ -1,19 +1,25 @@
-# Drill 04: Solution -- Test Real Behaviour via the Crucible
-# By calling the real Crucible API, we test actual request/response behaviour.
-# If the endpoint changes, returns a 500, or the contract breaks, THIS test fails.
-# The fake would never catch that.
+# I AM NOT DONE
+"""
+PRODUCTION STORY:
+Knight Capital Group ($440M Trading Loss, 2012)
+Engineers repurposed an old testing flag in high-frequency trading code and tested it solely against
+internal mock engines that echoed back expected test data, concealing catastrophic live routing behavior.
+"""
+
+# Drill 04: Do Not Test the Mock
+# When you stub or fake every part of the system, you only prove
+# that your fake works correctly -- not your real code.
+# This test stubs the entire payment gateway and asserts on the stub.
+# It gives 100% false confidence.
+# TODO: Change the test to call the REAL Crucible API endpoint instead.
 import requests
 
-CRUCIBLE_URL = "http://localhost:8081"
+class FakePaymentGateway:
+    def charge(self, amount):
+        return {}
 
-def test_checkout_endpoint_accepts_valid_item():
-    # ARRANGE
-    payload = {"item_id": "item-1", "quantity": 1}
-
-    # ACT -- calling the REAL Crucible, not a fake
-    response = requests.post(f"{CRUCIBLE_URL}/checkout", json=payload, timeout=5)
-
-    # ASSERT on the real response
-    assert response.status_code == 200
-    body = response.json()
-    assert "order_id" in body or "status" in body
+def test_payment_gateway_charges_correctly():
+    gateway = FakePaymentGateway()
+    result = gateway.charge(50.00)
+    assert result["status"] == "success"
+    assert result["amount"] == 50.00

@@ -59,8 +59,12 @@ from crucible.backend.review import apply_review_fix, run_code_review
 from crucible.backend.triage import evaluate_triage_submission
 
 # JWT configuration
-SECRET_KEY = "cherenkov-crucible-secret-key-2026"
+import os as _os
+SECRET_KEY = _os.getenv("CRUCIBLE_JWT_SECRET", "cherenkov-crucible-secret-key-2026")
 ALGORITHM = "HS256"
+_ledger_lock = asyncio.Lock()
+_progress_lock = asyncio.Lock()
+_MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 
 # In-memory Ledger State
 DEFAULT_ACCOUNTS: dict[str, float] = {
@@ -361,89 +365,47 @@ async def post_checkout(
 @app.get("/balance", response_model=BalanceResponse)
 async def get_balance(account_id: str = "ACC-001") -> BalanceResponse:
     """Inquire bank account balance after settling matured Kafka ledger transfers."""
-    settle_pending_transfers()
-    if account_id not in accounts:
-        raise HTTPException(
-            status_code=404, detail=f"Account '{account_id}' not found"
-        )
-
-    pending_cnt = sum(
-        1
-        for t in pending_transfers
-        if t["from_account"] == account_id or t["to_account"] == account_id
-    )
-    return BalanceResponse(
-        account_id=account_id,
-        balance=accounts[account_id],
-        pending_count=pending_cnt,
-        currency="USD",
-    )
+    async with _ledger_lock:
+        settle_pending_transfers()
+        if account_id not in accounts:
+            raise HTTPException(status_code=404, detail=f"Account '{account_id}' not found")
+        pending_cnt = sum(1 for t in pending_transfers if t["from_account"] == account_id or t["to_account"] == account_id)
+        bal = accounts[account_id]
+    return BalanceResponse(account_id=account_id, balance=bal, pending_count=pending_cnt, currency="USD")
 
 
 @app.post("/transfer", response_model=TransferResponse)
-async def post_transfer(
-    req: TransferRequest, request: Request
-) -> TransferResponse:
+async def post_transfer(req: TransferRequest, request: Request) -> TransferResponse:
     """Initiate an async ledger transfer subject to Kafka lag."""
     global accounts, pending_transfers
-    settle_pending_transfers()
-
-    if req.from_account not in accounts:
-        raise HTTPException(
-            status_code=404, detail=f"Source account '{req.from_account}' not found"
-        )
-    if req.to_account not in accounts:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Destination account '{req.to_account}' not found",
-        )
-    if accounts[req.from_account] < req.amount:
-        raise HTTPException(status_code=400, detail="Insufficient funds")
-
-    chaos = getattr(request.state, "chaos", {})
-    # Check if kafka_lag is provided in chaos header, default to 1500ms if header provided with lag
-    kafka_lag_ms = float(chaos.get("kafka_lag", 1500.0 if "kafka_lag" in chaos else 0.0))
-
-    transfer_id = f"TX-{random.randint(10000, 99999)}"
-
-    if kafka_lag_ms > 0.0:
-        settle_time = time.time() + (kafka_lag_ms / 1000.0)
-        pending_transfers.append(
-            {
-                "transfer_id": transfer_id,
-                "from_account": req.from_account,
-                "to_account": req.to_account,
-                "amount": req.amount,
-                "settle_time": settle_time,
-            }
-        )
-    else:
-        # Immediate settlement
-        accounts[req.from_account] = round(
-            accounts[req.from_account] - req.amount, 2
-        )
-        accounts[req.to_account] = round(
-            accounts[req.to_account] + req.amount, 2
-        )
-
-    return TransferResponse(
-        status="QUEUED_LEDGER",
-        transfer_id=transfer_id,
-        amount=req.amount,
-        lag_ms=kafka_lag_ms,
-        message="Transfer queued in Kafka topic ledger-events",
-    )
+    async with _ledger_lock:
+        settle_pending_transfers()
+        if req.from_account not in accounts:
+            raise HTTPException(status_code=404, detail=f"Source account '{req.from_account}' not found")
+        if req.to_account not in accounts:
+            raise HTTPException(status_code=404, detail=f"Destination account '{req.to_account}' not found")
+        if accounts[req.from_account] < req.amount:
+            raise HTTPException(status_code=400, detail="Insufficient funds")
+        chaos = getattr(request.state, "chaos", {})
+        kafka_lag_ms = float(chaos.get("kafka_lag", 1500.0 if "kafka_lag" in chaos else 0.0))
+        transfer_id = f"TX-{random.randint(10000, 99999)}"
+        if kafka_lag_ms > 0.0:
+            settle_time = time.time() + (kafka_lag_ms / 1000.0)
+            pending_transfers.append({"transfer_id": transfer_id, "from_account": req.from_account, "to_account": req.to_account, "amount": req.amount, "settle_time": settle_time})
+        else:
+            accounts[req.from_account] = round(accounts[req.from_account] - req.amount, 2)
+            accounts[req.to_account] = round(accounts[req.to_account] + req.amount, 2)
+    return TransferResponse(status="QUEUED_LEDGER", transfer_id=transfer_id, amount=req.amount, lag_ms=kafka_lag_ms, message="Transfer queued in Kafka topic ledger-events")
 
 
 @app.post("/reset", response_model=ResetResponse)
 async def post_reset() -> ResetResponse:
     """Reset in-memory bank ledger balances and pending transfers."""
     global accounts, pending_transfers
-    accounts = dict(DEFAULT_ACCOUNTS)
-    pending_transfers = []
-    return ResetResponse(
-        status="ok", message="Ledger and state reset to initial values"
-    )
+    async with _ledger_lock:
+        accounts = dict(DEFAULT_ACCOUNTS)
+        pending_transfers = []
+    return ResetResponse(status="ok", message="Ledger and state reset to initial values")
 
 
 @app.get("/search", response_model=SearchResponse)
@@ -713,6 +675,8 @@ async def post_upload(
         )
 
     content = await file.read()
+    if len(content) > _MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail=f"Upload too large: {len(content)} bytes exceeds {_MAX_UPLOAD_BYTES} limit")
     return UploadResponse(
         filename=file.filename or "unknown",
         content_type=file.content_type or "application/octet-stream",
@@ -1164,14 +1128,27 @@ async def get_drill_theory(path: str) -> JSONResponse:
 # =============================================================================
 
 
+def _guard_path(p: Path, base: Path = Path("exercises").resolve()) -> None:
+    try:
+        p.resolve().relative_to(base)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Access denied: '{p}' outside exercises directory")
+    if ".." in str(p):
+        raise HTTPException(status_code=400, detail="Path traversal not allowed")
+
+
 @app.post("/api/review", response_model=ReviewReport)
 async def post_review(req: ReviewRequest) -> ReviewReport:
     """Execute static AST code review, rule violation detection, and AI Senior QA critique."""
     code_content = req.code
     file_path = req.file_path or req.exercise_path or req.target or "exercise.ts"
-
     if not code_content:
         p = Path(file_path)
+        if ".." in str(p):
+            try:
+                _guard_path(p)
+            except HTTPException:
+                raise HTTPException(status_code=400, detail=f"Invalid file path '{file_path}'")
         if p.exists() and p.is_file():
             try:
                 code_content = p.read_text(encoding="utf-8")
@@ -1179,13 +1156,7 @@ async def post_review(req: ReviewRequest) -> ReviewReport:
                 raise HTTPException(status_code=400, detail=f"Failed to read file '{file_path}': {e}")
         else:
             raise HTTPException(status_code=400, detail=f"No code provided and file '{file_path}' does not exist.")
-
-    return run_code_review(
-        content=code_content,
-        file_path=file_path,
-        strict=req.strict,
-        score_threshold=req.score_threshold,
-    )
+    return run_code_review(content=code_content, file_path=file_path, strict=req.strict, score_threshold=req.score_threshold)
 
 
 @app.post("/api/review/fix", response_model=ReviewFixResponse)
@@ -1194,7 +1165,11 @@ async def post_review_fix(req: ReviewFixRequest) -> ReviewFixResponse:
     code_content = req.code
     file_path = req.file_path or "exercise.ts"
     fix_id = req.fix_id or req.rule_id or "all"
-
+    if req.file_path and ".." in str(req.file_path):
+        try:
+            _guard_path(Path(req.file_path))
+        except HTTPException:
+            raise HTTPException(status_code=400, detail=f"Invalid file path '{req.file_path}'")
     if not code_content and req.file_path:
         p = Path(req.file_path)
         if p.exists() and p.is_file():
@@ -1204,21 +1179,21 @@ async def post_review_fix(req: ReviewFixRequest) -> ReviewFixResponse:
                 raise HTTPException(status_code=400, detail=f"Failed to read file '{req.file_path}': {e}")
         else:
             raise HTTPException(status_code=400, detail=f"File '{req.file_path}' does not exist.")
-
     if not code_content:
         raise HTTPException(status_code=400, detail="No code content or valid file_path provided.")
-
     fix_res = apply_review_fix(content=code_content, file_path=file_path, fix_id=fix_id)
-
-    # If file_path on disk exists and was target of fix, update file
     if req.file_path:
         p = Path(req.file_path)
         if p.exists() and p.is_file() and fix_res.patched_code:
+            if ".." in str(p):
+                try:
+                    _guard_path(p)
+                except HTTPException:
+                    raise HTTPException(status_code=400, detail=f"Invalid file path '{req.file_path}'")
             try:
                 p.write_text(fix_res.patched_code, encoding="utf-8")
             except Exception:
                 pass
-
     return fix_res
 
 
@@ -1237,13 +1212,14 @@ async def post_pipeline_run(req: PipelineRunRequest) -> PipelineRunResult:
     yaml_content = req.workflow_yaml or req.yaml_content or req.content
     if yaml_content is None:
         raise HTTPException(status_code=400, detail="Missing workflow YAML content in request.")
-    return simulate_pipeline_run(
-        yaml_content=yaml_content,
-        parallel=req.parallel,
-        fail_fast=req.fail_fast,
-        strict_validation=req.strict_validation,
-        verbose=req.verbose,
-    )
+    try:
+        return simulate_pipeline_run(yaml_content=yaml_content, parallel=req.parallel, fail_fast=req.fail_fast, strict_validation=req.strict_validation, verbose=req.verbose)
+    except ValueError as e:
+        if "exceeds cap" in str(e):
+            raise HTTPException(status_code=400, detail=str(e))
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.get("/api/reports/allure", response_model=AllureSummaryResponse)
