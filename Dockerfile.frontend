@@ -1,0 +1,12 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY crucible/frontend/package*.json ./
+RUN npm install
+
+COPY crucible/frontend/ ./
+
+EXPOSE 8080
+
+CMD ["npx", "vite", "--port", "8080", "--host", "0.0.0.0"]

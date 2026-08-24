@@ -1,0 +1,14 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY crucible/backend/requirements.txt ./crucible/backend/requirements.txt
+RUN pip install --no-cache-dir -r crucible/backend/requirements.txt
+
+COPY crucible/ ./crucible/
+COPY lings.toml .
+COPY .cherenkov-progress.json* .
+
+EXPOSE 8081
+
+CMD ["python", "-m", "uvicorn", "crucible.backend.app:app", "--host", "0.0.0.0", "--port", "8081"]

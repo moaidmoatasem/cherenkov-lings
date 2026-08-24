@@ -1,211 +1,174 @@
-﻿# cherenkov-lings
+﻿# ⚡ cherenkov-lings
 
 > **An interactive, local-first experiential learning platform for QA Engineers and SDETs.**
-> Master modern test automation across UI, API, Mobile, Performance, and GenAI — with zero cloud, zero GPU, zero vendor lock-in.
+> Master modern test automation across UI, API, Mobile, Performance, Security, and GenAI — with zero cloud, zero GPU, zero vendor lock-in.
 
 [![CI](https://github.com/your-org/cherenkov-lings/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/cherenkov-lings/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Rust](https://img.shields.io/badge/rust-stable-orange)](https://www.rust-lang.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com)
+[![Playwright](https://img.shields.io/badge/Playwright-1.50+-45ba4b.svg)](https://playwright.dev)
 
 ---
 
-## What is this?
+## 💡 The Core Idea
 
-Cherenkov-lings is inspired by [Rustlings](https://github.com/rust-lang/rustlings). The core idea: **you learn test automation by breaking real things, not reading slides.**
+Cherenkov-lings is inspired by [Rustlings](https://github.com/rust-lang/rustlings) and modern engineering pedagogy: **You master test automation by breaking real systems, not by reading slides.**
 
-Every drill runs against a purposely pathological embedded application, the **Micro-Crucible**, simulating exact production failures: React hydration races, Kafka lag, JWT mid-session expiry, database pool starvation, biometric auth failures, and LLM hallucinations.
+Every drill runs against a purposely pathological embedded application — the **Micro-Crucible** — which reproduces the exact production failures QA Engineers face in real-world environments:
+* React 19 hydration timing click drops
+* Distributed Kafka eventual consistency lag
+* JWT mid-session token invalidation
+* Out-of-order debounced search clobbering
+* Closed Shadow DOM encapsulation boundaries
+* Concurrency connection pool starvation
+* Non-deterministic LLM hallucinations
 
-When you save an exercise file, the Rust watcher detects the change within **50ms** and prints your 4D Feedback Matrix:
+When you save an exercise file, the sub-50ms Rust watcher triggers the feedback loop and immediately evaluates your code against the **4D Feedback Matrix**:
 
 ```
-======= CHERENKOV-LINGS 4D FEEDBACK MATRIX =======
-  Correctness      |   0  | [FAIL] waitForTimeout caused race
-  Flakiness Guard  |  20  | Anti-pattern: waitForTimeout on line 8
-  Locator Quality  | 100  | getByRole - semantic and resilient
-  Speed            |  85  | 1.2s vs 1.0s baseline
-  TOTAL SCORE: 42/100 -- check hints.md for guidance
-==================================================
+╔══════════════════════════════════════════════════════════════════════════════════════╗
+║  4D LEARNING & FEEDBACK MATRIX — cherenkov-lings v1.0.0                              ║
+╠══════════════════════════════════════════════════════════════════════════════════════╣
+║  Track   │  Modern Web Automation (Playwright TypeScript)                            ║
+║  File    │  01_hydration_timing/exercise.ts                                          ║
+╠═══════════════════╦══════╦═══════════════════════════════════════════════════════════╣
+║  Dimension        ║ Score║ Diagnostic Insight                                        ║
+╠═══════════════════╬══════╬═══════════════════════════════════════════════════════════╣
+║  Correctness      ║  100 ║ [PASS] All assertions verified                            ║
+║  Flakiness Guard  ║  100 ║ [PASS] 5/5 consecutive passes under injected network chaos║
+║  Locator Quality  ║  100 ║ getByRole — semantic accessibility tree locator           ║
+║  Speed            ║   92 ║ 820ms vs 1000ms baseline benchmark                        ║
+╠═══════════════════╩══════╩═══════════════════════════════════════════════════════════╣
+║  TOTAL SCORE: 98/100  │  [PASSED]  │  +150 XP Earned  │  Rank: Mid QA                ║
+╚══════════════════════════════════════════════════════════════════════════════════════╝
 ```
 
 ---
 
-## Who is this for?
+## 🎮 Gamification & Career Progression
 
-| Persona | Track |
-|---|---|
-| Manual QA transitioning to automation | Playwright TypeScript (Web UI) |
-| Automation Engineer | REST Assured Java (API), Maestro YAML (Mobile) |
-| Performance / Load Engineer | k6 JavaScript |
-| AI-Era QA Engineer | Playwright TypeScript (GenAI Testing) |
-| DevOps / Security QA | Python Pytest (DevSecOps) |
+Track your journey from Manual QA to SDET Master:
+
+```
+  🌱 Trainee (0 XP) ──► 🔍 Junior QA (500 XP) ──► ⚡ Mid QA (1,500 XP)
+                             │
+                             ▼
+  🔥 Senior QA (3,000 XP) ──► 🎯 Lead QA (6,000 XP) ──► 🏗️ QA Architect (10,000 XP)
+                                                                 │
+                                                                 ▼
+                                                    ⚛️ SDET Master (20,000 XP)
+```
+
+* **8 Specialist Badges**: `First Blood`, `Flakiness Slayer`, `Chaos Survivor`, `Tool Polyglot`, `The Architect`, `Perfect Locator`, `Speed Demon`, `SDET Master`.
+* **Real-Time Dashboards**: View via terminal (`cherenkov-lings dashboard`) or browser (`http://localhost:8080/mission-control`).
 
 ---
 
-## Quick Start
+## 🚀 Quick Start
 
-### Prerequisites
+### 1. Install cherenkov-lings globally
 
-- **Rust (MSVC)**: https://rustup.rs
-- **Node.js 18+**: https://nodejs.org
-- **Python 3.11+**: https://python.org
-- **Java 17 + Maven**: https://openjdk.org
-
-### 1. Install globally
-
+**Windows (PowerShell):**
 ```powershell
 git clone https://github.com/your-org/cherenkov-lings
 cd cherenkov-lings
 .\install.ps1
 ```
 
-### 2. Start the Micro-Crucible sandbox
+**macOS / Linux:**
+```bash
+git clone https://github.com/your-org/cherenkov-lings
+cd cherenkov-lings
+chmod +x install.sh && ./install.sh
+```
 
-```powershell
+---
+
+### 2. Start the Micro-Crucible Sandbox
+
+**Native:**
+```bash
+# Windows
 .\crucible\start.bat
+
+# macOS / Linux
+chmod +x crucible/start.sh && ./crucible/start.sh
 ```
 
-Starts FastAPI backend on port 8081 and React frontend on port 8080.
-
-### 3. Start the interactive watcher
-
-```powershell
-cherenkov-lings watch --track=playwright-ts
+**Or with Docker (zero-install):**
+```bash
+docker compose up
 ```
 
-Available tracks: `playwright-ts`, `restassured-java`, `maestro-mobile`, `k6-js`, `genai-qa`, `devsecops-python`
-
-### 4. Start learning!
-
-Open any `exercise.ts` / `exercise.java` / `exercise.js` / `exercise.yaml` / `exercise.py` in your editor and hit Save. The feedback loop fires instantly. Check `hints.md` in the same drill directory when you are stuck.
+Services will be live at:
+* 🌐 **Web Sandbox & Pathology Demos**: `http://localhost:8080`
+* 🏆 **Mission Control & Badges**: `http://localhost:8080/mission-control`
+* 🔬 **FastAPI Backend Swagger**: `http://localhost:8081/docs`
 
 ---
 
-## Track Index
-
-### Track 1: Modern Web Automation (Playwright TypeScript)
-exercises/01_web_playwright_ts/
-
-| Drill | Anti-Pattern | Learning |
-|---|---|---|
-| 01_hydration_timing | waitForTimeout on hydrating button | waitFor attribute assertion |
-| 02_shadow_dom_v2 | XPath into closed shadow root | pierce + semantic locators |
-| 03_debounce_race_condition | Fixed assertion on out-of-order responses | Promise race handling |
-
-### Track 2: API Resilience (REST Assured Java)
-exercises/02_api_restassured_java/
-
-| Drill | Anti-Pattern | Learning |
-|---|---|---|
-| drill01_idempotency | No retry on HTTP 409 | Idempotency key strategy |
-| drill02_jwt_auth | No token refresh on 401 | JwtRefreshFilter pattern |
-| drill03_kafka_lag | Thread.sleep() for async wait | Awaitility poll |
-
-### Track 3: Mobile Automation (Maestro YAML)
-exercises/03_mobile_maestro/
-
-| Drill | Anti-Pattern | Learning |
-|---|---|---|
-| 01_biometric_fallback | No conditional flow on auth failure | runFlow: when: visible |
-| 02_deep_link_cold_start | openLink assumes warm process | launchApp: arguments.deeplink |
-| 03_activity_recreation | No post-rotation assertion | setOrientation + re-assert |
-
-### Track 4: Load Testing (k6 JavaScript)
-exercises/04_perf_k6_js/
-
-| Drill | Anti-Pattern | Learning |
-|---|---|---|
-| 01_database_pool_starvation | 50 flat VUs cold start | Staged ramp-up with stages |
-| 02_spike_profile_p99 | No tail latency metric | Trend metric + p99 threshold |
-| 03_chaos_sla_assertion | No error rate tracking | Rate metric + SLA threshold |
-
-### Track 5: GenAI QA (Playwright TypeScript)
-exercises/05_genai_qa/
-
-| Drill | Anti-Pattern | Learning |
-|---|---|---|
-| 01_rag_context_faithfulness | Exact-match on LLM answer string | Assert on grounded + source_facts |
-| 02_llm_assertion_flakiness | Assert on raw_text that rotates | Assert on intent + entities |
-
-### Track 6: Cloud-Native & DevSecOps (Python Pytest)
-exercises/06_cloud_devsecops/
-
-| Drill | Anti-Pattern | Learning |
-|---|---|---|
-| 01_insecure_docker_mount | docker.sock volume mount | Principle of least privilege |
-| 02_jwt_weak_signing_key | alg: none in JWT config | Whitelist secure algorithms only |
-
----
-
-## Chaos Proxy
-
-The Chaos Proxy runs on port 8086 and forwards to port 8081:
+### 3. Start Learning!
 
 ```bash
-# Inject 800ms delay
-curl -H "X-Chaos: delay=800" http://localhost:8086/checkout
+# View your progress
+cherenkov-lings dashboard
 
-# Force HTTP 502 Bad Gateway
-curl -H "X-Chaos: status=502" http://localhost:8086/checkout
-
-# Simulate Kafka eventual consistency lag
-curl -H "X-Chaos: kafka_lag=1500" http://localhost:8081/transfer
+# Start watching any curriculum track
+cherenkov-lings watch --track=foundations
+cherenkov-lings watch --track=playwright-ts
+cherenkov-lings watch --track=restassured-java
+cherenkov-lings watch --track=maestro-mobile
+cherenkov-lings watch --track=k6-js
+cherenkov-lings watch --track=jmeter
+cherenkov-lings watch --track=tool-decisions
 ```
+
+Open any `exercise.*` file in your favorite editor, write your fix, and hit **Save**. Feedback is instantaneous!
 
 ---
 
-## AI-IDE Integration (MCP Server)
+## 📚 48-Drill Curriculum Matrix (9 Tracks)
 
-Open this folder in Cursor or VS Code. The `.cursor/mcp.json` and `.vscode/mcp.json` files auto-register cherenkov-lings as an MCP server.
-
-Your AI assistant can then call:
-- **get_diagnostic_report**: AST analysis of your exercise file, structured anti-patterns with recommendations.
-- **get_hints**: Progressive 3-hint coaching for any drill.
-
-You can test MCP manually:
-```powershell
-echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | cherenkov-lings mcp
-```
-
----
-
-## Architecture
-
-```
-cherenkov-lings/
-+-- src/
-|   +-- main.rs         # CLI: init | watch | diagnose | proxy | mcp
-|   +-- watcher.rs      # 50ms debounced file watcher
-|   +-- runner.rs       # Node IPC | JVM (Maven) | k6 | Maestro | Pytest
-|   +-- feedback.rs     # 4D Feedback Matrix + AST anti-pattern scanner
-|   +-- proxy.rs        # L4/L7 Programmable Chaos Proxy (8086->8081)
-|   +-- config.rs       # lings.toml typed parser
-|   +-- mcp.rs          # JSON-RPC stdio MCP server
-+-- workers/
-|   +-- node_worker.js  # Pre-warmed NDJSON IPC Node worker
-|   +-- pytest_worker.py
-+-- crucible/
-|   +-- backend/app.py  # FastAPI: /checkout /transfer /search /api/rag /api/llm
-|   +-- frontend/       # Vite + React (hydration, Shadow DOM, debounce, iframe)
-|   +-- start.bat       # One-command Crucible launcher
-+-- exercises/          # 6 tracks, 13 drills
-+-- .cursor/mcp.json    # Cursor AI auto-registers MCP tools
-+-- .vscode/mcp.json    # VS Code / Copilot auto-registers MCP tools
-+-- lings.toml          # Platform manifest: tracks, thresholds, ports
-+-- install.ps1         # Windows global install script
-```
+| Track | Stack | Drills | Core Concepts & Incident Case Studies |
+|---|---|:---:|---|
+| **0. Foundations** | Python / Pytest | 5 | AAA pattern, assertions as documentation, avoiding mock traps, single-responsibility |
+| **1. Web UI** | Playwright TS | 10 | React 19 hydration click drops, closed Shadow DOM piercing, debounced race conditions, Page Object Model, cross-origin payment iframes, network request intercepts, visual regression thresholds, worker storageState isolation |
+| **2. API Resilience** | REST Assured Java | 7 | HTTP 409 idempotency collisions, transparent JWT 401 interceptors, Kafka lag polling, multi-page pagination loops, JSON schema contracts, aliased GraphQL queries, `RequestSpecBuilder` reuse |
+| **3. Mobile UI** | Maestro YAML | 5 | Biometric auth fallback flows, deep link cold starts, activity recreation & screen rotation UI state, dynamic list `scrollUntilVisible`, OS permission dialog handlers |
+| **4. Performance (k6)** | k6 JS | 5 | Database pool starvation, 10x spike p99 latency profiling, chaos proxy SLA thresholds, Server-Sent Events continuous streams, InfluxDB / Grafana outputs |
+| **5. Performance (JMeter)** | JMeter JMX | 8 | Non-GUI CI execution, response assertions, Gaussian random timers, listener memory leaks, CSRF extraction & correlation, throughput vs concurrency math, master-agent distributed load, automated JTL HTML dashboards |
+| **6. GenAI QA** | Playwright TS | 2 | RAG answer semantic faithfulness verification, non-deterministic LLM output schema matching |
+| **7. Cloud & DevSecOps** | Python Pytest | 2 | Docker socket volume privilege escalation, JWT `alg: none` signature bypasses |
+| **8. Tool Decisions** | Python | 4 | UI vs API layer decision matrix, k6 vs JMeter enterprise tradeoffs, Appium vs Maestro mobile strategy, Pact contract vs E2E microservice testing |
 
 ---
 
-## Philosophy
+## 🧠 Theory Modules (`theory.md`)
 
-> "Not to evaluate learners, but to help them learn from A to Z."
-
-Every word is chosen intentionally:
-- **Feedback**, not grades. **Insights**, not scores.
-- **Puzzles** to solve, not tests to pass.
-- **Detective clues** in hints, not answers handed to you.
+Every single drill directory contains a standalone `theory.md` document featuring:
+1. **Real-world case study** (e.g. Stripe, Shopify, GitHub, Spotify, Robinhood, Air Canada, Knight Capital).
+2. **Protocol-, DOM-, or runtime-level root-cause breakdown**.
+3. **Visual ASCII failure mode diagram**.
+4. **"Simulate this in the Crucible"** bridge directly connecting theory to hands-on code.
 
 ---
 
-## License
+## 🤖 AI-IDE Integration (MCP Server)
 
-MIT
+Cherenkov-lings includes a built-in Model Context Protocol (MCP) server for Cursor, VS Code, and Copilot Agent Mode:
+
+```bash
+# Starts JSON-RPC stdio MCP server
+cherenkov-lings mcp
+```
+
+* `.cursor/mcp.json` and `.vscode/mcp.json` automatically register:
+  * `get_diagnostic_report`: AST anti-pattern analysis & locator scoring.
+  * `get_hints`: Progressive 3-tier hints for any drill.
+
+---
+
+## 📜 License
+
+MIT © cherenkov-lings contributors
