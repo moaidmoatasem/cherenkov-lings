@@ -94,7 +94,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "exercises/03_mobile_maestro",
                 "exercises/04_perf_k6_js",
                 "exercises/05_perf_jmeter",
+                "exercises/05_genai_qa",
                 "exercises/06_tool_decisions",
+                "exercises/06_cloud_devsecops",
+                "exercises/07_contract_pact",
+                "exercises/08_a11y_axe",
             ];
             for dir in &exercise_dirs {
                 let p = Path::new(dir);

@@ -119,7 +119,11 @@ cherenkov-lings watch --track=restassured-java
 cherenkov-lings watch --track=maestro-mobile
 cherenkov-lings watch --track=k6-js
 cherenkov-lings watch --track=jmeter
+cherenkov-lings watch --track=genai-qa
+cherenkov-lings watch --track=devsecops-python
 cherenkov-lings watch --track=tool-decisions
+cherenkov-lings watch --track=contract-pact
+cherenkov-lings watch --track=a11y-axe
 ```
 
 Open any `exercise.*` file in your favorite editor, write your fix, and hit **Save**. Feedback is instantaneous!
