@@ -3,7 +3,7 @@
     "cherenkov-lings": {
       "command": "cherenkov-lings",
       "args": ["mcp"],
-      "description": "Interactive QA & SDET Learning Platform. Exposes AST diagnostic analysis and progressive hints as AI tools."
+      "description": "Interactive QA & SDET Learning Platform. Exposes static source diagnostics and level-by-level progressive hints as AI tools."
     }
   }
 }

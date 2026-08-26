@@ -37,7 +37,7 @@ def generate_chaos_dataset() -> list[ChaosTestResultItem]:
             category="real_bug",
             duration_ms=145,
             error_message="AssertionError: Expected HTTP 403 Forbidden for non-admin role, received HTTP 200 OK with admin access token",
-            stack_trace="File 'exercises/06_cloud_devsecops/01_rbac_security/exercise.py', line 58, in test_auth_role_privilege_escalation\n    assert response.status_code == 403\nAssertionError: Expected HTTP 403 Forbidden",
+            stack_trace="File 'exercises/07_cloud_devsecops/01_rbac_security/exercise.py', line 58, in test_auth_role_privilege_escalation\n    assert response.status_code == 403\nAssertionError: Expected HTTP 403 Forbidden",
             chaos_event=ChaosEventTelemetry(
                 layer="L7",
                 event_type="rbac_bypass",

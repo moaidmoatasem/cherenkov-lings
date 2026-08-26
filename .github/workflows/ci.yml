@@ -110,7 +110,7 @@ jobs:
 
     - name: Validate DevSecOps Track (5 drills)
       run: |
-        for dir in exercises/06_cloud_devsecops/*/; do
+        for dir in exercises/07_cloud_devsecops/*/; do
           if [ -f "$dir/solution.py" ]; then
             echo "Testing: $dir"
             python -m pytest "$dir/solution.py" -v --tb=short || exit 1
@@ -119,7 +119,7 @@ jobs:
 
     - name: Validate Tool Decisions Track (4 drills)
       run: |
-        for dir in exercises/06_tool_decisions/*/; do
+        for dir in exercises/08_tool_decisions/*/; do
           if [ -f "$dir/solution.py" ]; then
             echo "Testing: $dir"
             python -m pytest "$dir/solution.py" -v --tb=short || exit 1
@@ -128,7 +128,7 @@ jobs:
 
     - name: Validate Contract Pact Track (3 drills)
       run: |
-        for dir in exercises/07_contract_pact/*/; do
+        for dir in exercises/09_contract_pact/*/; do
           if [ -f "$dir/solution.py" ]; then
             echo "Testing: $dir"
             python -m pytest "$dir/solution.py" -v --tb=short || exit 1

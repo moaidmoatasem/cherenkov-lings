@@ -1,9 +1,11 @@
 use crate::feedback;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use std::fs;
 use std::io::{self, BufRead, Write};
 use std::path::Path;
+
+/// Protocol version echoed back when a client does not name one in `initialize`.
+const DEFAULT_PROTOCOL_VERSION: &str = "2024-11-05";
 
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]
@@ -22,6 +24,37 @@ struct RpcResponse {
     result: Option<Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     error: Option<Value>,
+}
+
+/// Render a single progressive hint level for a drill directory.
+///
+/// Deliberately returns one level at a time rather than the whole `hints.md`:
+/// the last level of every drill is a solution diff, so dumping the file hands
+/// the learner the answer on the first request.
+fn render_hint(exercise_dir: &Path, args: &Value) -> Option<String> {
+    let hints = feedback::ProgressiveHints::load_from_dir(exercise_dir)?;
+
+    let selected = match args.get("score").and_then(Value::as_f64) {
+        Some(score) => hints.get_hint_for_score(score),
+        None => {
+            let level = args.get("level").and_then(Value::as_u64).unwrap_or(1) as usize;
+            hints.get_hint_at_level(level)
+        }
+    };
+
+    let (level, total, text) = selected?;
+    let footer = if level < total {
+        format!(
+            "Hint {} of {}. Let the learner attempt a fix first; call get_hints again with \"level\": {} only if they are still stuck.",
+            level,
+            total,
+            level + 1
+        )
+    } else {
+        format!("Hint {} of {} — final level, this reveals the solution.", level, total)
+    };
+
+    Some(format!("{}\n\n---\n{}", text, footer))
 }
 
 pub fn run_mcp_server() {
@@ -49,7 +82,16 @@ pub fn run_mcp_server() {
 
                     match req.method.as_str() {
                         "initialize" => {
+                            // `protocolVersion` is required by the MCP spec; clients
+                            // that validate InitializeResult reject a handshake without it.
+                            let requested = req
+                                .params
+                                .as_ref()
+                                .and_then(|p| p.get("protocolVersion"))
+                                .and_then(Value::as_str)
+                                .unwrap_or(DEFAULT_PROTOCOL_VERSION);
                             res.result = Some(json!({
+                                "protocolVersion": requested,
                                 "serverInfo": {
                                     "name": "cherenkov-lings-mcp",
                                     "version": "1.0.0"
@@ -64,22 +106,24 @@ pub fn run_mcp_server() {
                                 "tools": [
                                     {
                                         "name": "get_diagnostic_report",
-                                        "description": "Analyzes an exercise file and returns AST anti-patterns.",
+                                        "description": "Runs static source analysis (regex-based anti-pattern and locator scanning) on an exercise file and returns detected anti-patterns plus locator quality scoring.",
                                         "inputSchema": {
                                             "type": "object",
                                             "properties": {
-                                                "file_path": { "type": "string" }
+                                                "file_path": { "type": "string", "description": "Path to the exercise file to analyze." }
                                             },
                                             "required": ["file_path"]
                                         }
                                     },
                                     {
                                         "name": "get_hints",
-                                        "description": "Returns progressive hints for an exercise.",
+                                        "description": "Returns ONE progressive hint level for a drill. Defaults to level 1 (a conceptual nudge). Escalate one level at a time, and only while the learner is still stuck — the final level contains the solution diff.",
                                         "inputSchema": {
                                             "type": "object",
                                             "properties": {
-                                                "exercise_dir": { "type": "string" }
+                                                "exercise_dir": { "type": "string", "description": "Directory of the drill, containing its hints.md." },
+                                                "level": { "type": "integer", "minimum": 1, "description": "1-based hint level, clamped to the levels available. Defaults to 1." },
+                                                "score": { "type": "number", "description": "Optional 4D Matrix total score. When supplied, the level is derived from the score and `level` is ignored." }
                                             },
                                             "required": ["exercise_dir"]
                                         }
@@ -122,11 +166,12 @@ pub fn run_mcp_server() {
                                     }
                                     "get_hints" => {
                                         let dir = args["exercise_dir"].as_str().unwrap_or("");
-                                        let hints_path = Path::new(dir).join("hints.md");
-                                        let content = fs::read_to_string(&hints_path)
-                                            .unwrap_or_else(|_| "No hints found.".to_string());
+                                        let text =
+                                            render_hint(Path::new(dir), args).unwrap_or_else(|| {
+                                                "No hints found.".to_string()
+                                            });
                                         res.result = Some(json!({
-                                            "content": [{ "type": "text", "text": content }]
+                                            "content": [{ "type": "text", "text": text }]
                                         }));
                                     }
                                     _ => {

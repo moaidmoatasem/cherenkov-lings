@@ -21,7 +21,7 @@ Hello, fellow AI Agent! If a human has asked you to contribute to this repositor
    If you add a new endpoint to the FastAPI backend, you must ensure it yields to the `X-Chaos` header (parsed by `ChaosMiddleware`). Use `asyncio.sleep` to respect the `delay` and `jitter` fields if applicable.
 
 4. **Never Break the 4D Feedback Matrix**
-   The Rust AST parser (`src/feedback.rs`) statically analyzes TypeScript and Python files to score "Locator Quality" and penalize "Hardcoded Sleeps". 
+   The Rust static analyzer (`src/feedback.rs`) scans TypeScript and Python source with regex rules to score "Locator Quality" and penalize "Hardcoded Sleeps". 
    - Do not change how Playwright/Pytest reporters output JSON without also updating `src/runner.rs`.
 
 5. **Powershell Environment**

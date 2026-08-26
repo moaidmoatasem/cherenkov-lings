@@ -14,6 +14,7 @@ import { MobileTestPage } from './pages/MobileTestPage';
 import { CodeReviewPage } from './pages/CodeReviewPage';
 import { PipelineBuilderPage } from './pages/PipelineBuilderPage';
 import { AllureTriagePage } from './pages/AllureTriagePage';
+import { LearnApp } from './learn/LearnApp';
 
 export const App: React.FC = () => {
   const [currentPath, setCurrentPath] = useState<string>(() => {
@@ -68,6 +69,12 @@ export const App: React.FC = () => {
         return <HomePage onNavigate={handleNavigate} />;
     }
   };
+
+  // The learning environment brings its own full-height shell, so it renders
+  // outside the sandbox chrome rather than inside the navbar/footer layout.
+  if (currentPath === '/learn') {
+    return <LearnApp onExit={() => handleNavigate('/')} />;
+  }
 
   return (
     <div className="app-layout">

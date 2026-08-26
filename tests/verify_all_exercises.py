@@ -7,7 +7,7 @@ This script programmatically verifies the platform's learning engine by:
 2. Verifying baseline failure: ensures broken starter code fails out-of-the-box or requires fixes.
 3. Injecting reference solutions: replaces exercise code with solution code.
 4. Executing test validation: runs the test runner (pytest) to confirm 100% pass rate.
-5. Computing 4D evaluation metrics: correctness, flakiness resilience, AST quality, and speed.
+5. Computing 4D evaluation metrics: correctness, flakiness resilience, locator quality, and speed.
 6. Restoring starter code cleanly with zero disk or environment side-effects.
 
 Usage:
@@ -23,6 +23,7 @@ import shutil
 import subprocess
 import time
 import json
+import math
 import argparse
 import atexit
 import signal
@@ -262,6 +263,8 @@ class AutomatedExerciseVerifier:
         track_cfg = self._tracks_config.get(track_name, {})
         track_ext = track_cfg.get("extension", ".py")
         runner = track_cfg.get("runner", "python")
+        track_id = track_cfg.get("id", track_name)
+        tier = _tier_for_track_or_drill(track_id, drill_name)
         exercise_file, solution_file = self._find_exercise_solution(drill_dir, track_ext)
         theory_file = drill_dir / "theory.md"
         hints_file = drill_dir / "hints.md"
@@ -343,8 +346,8 @@ class AutomatedExerciseVerifier:
             error_message = None
             if solution_passed:
                 score = 100.0
-                xp = 150
-                print(f"  [OK] Step 3: Test Validation -> PASSED in {duration_ms:.1f}ms (Score: 100.0/100, +{xp} XP)")
+                xp = _calculate_xp(score, tier)
+                print(f"  [OK] Step 3: Test Validation -> PASSED in {duration_ms:.1f}ms (Score: {score:.1f}/100, +{xp} XP, tier {tier})")
             else:
                 score = 0.0
                 xp = 0

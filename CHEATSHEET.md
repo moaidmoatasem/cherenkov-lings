@@ -22,7 +22,7 @@ cherenkov-lings dashboard
 # 3. Verify curriculum integrity (100% health check)
 cherenkov-lings audit
 
-# 4. Diagnose AST anti-patterns in any exercise file
+# 4. Diagnose anti-patterns in any exercise file (static source analysis)
 cherenkov-lings diagnose --file=exercises/01_web_playwright_ts/01_hydration_timing/exercise.ts
 
 # 5. Scaffold a brand-new drill
@@ -45,7 +45,7 @@ $$\text{Total Score} = (0.35 \times \text{Correctness}) + (0.35 \times \text{Fla
 |---|:---:|:---:|---|
 | **Correctness** | 35% | 100/100 | Test passes standard assertions under clean conditions |
 | **Flakiness Guard** | 35% | 100/100 | Test executes **5 consecutive times** under injected chaos (`X-Chaos: delay=200ms;jitter=75ms`). Penalized if `waitForTimeout` or `Thread.sleep` is detected |
-| **Locator Quality** | 15% | 100/100 | Static AST analysis of element selectors (see scoring below) |
+| **Locator Quality** | 15% | 100/100 | Static source analysis of element selectors (see scoring below) |
 | **Speed Benchmark**| 15% | 100/100 | Wall-clock execution time vs. pre-calibrated baseline |
 
 **Passing Threshold**: `Total Score >= 85.0` to complete drill and earn XP.
