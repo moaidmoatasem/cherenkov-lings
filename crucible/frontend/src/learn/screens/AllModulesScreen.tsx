@@ -1,11 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { ProgressRing, Tick } from '../components/Primitives';
-import { FILTERS, TRACKS } from '../content';
+import { FILTERS } from '../content';
+import { useCurriculumTracks } from '../useCurriculum';
 import type { CurriculumModule, Track } from '../types';
 
 interface AllModulesScreenProps {
   tracks?: Track[];
-  onOpenModule: (moduleId: string) => void;
+  /** The track is needed to name the drill's track on the drill screen. */
+  onOpenModule: (module: CurriculumModule, track: Track) => void;
 }
 
 const matchesFilter = (module: CurriculumModule, filter: string): boolean => {
@@ -22,15 +24,18 @@ const matchesFilter = (module: CurriculumModule, filter: string): boolean => {
 };
 
 export const AllModulesScreen: React.FC<AllModulesScreenProps> = ({
-  tracks = TRACKS,
+  tracks,
   onOpenModule,
 }) => {
+  // Every track lings.toml declares, not just the four with curated copy.
+  const catalog = useCurriculumTracks();
+  const source = tracks ?? catalog;
   const [query, setQuery] = useState<string>('');
   const [filter, setFilter] = useState<string>(FILTERS[0]);
 
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return tracks
+    return source
       .map((track) => ({
         ...track,
         modules: track.modules.filter((module) => {
@@ -44,7 +49,7 @@ export const AllModulesScreen: React.FC<AllModulesScreenProps> = ({
         }),
       }))
       .filter((track) => track.modules.length > 0);
-  }, [tracks, query, filter]);
+  }, [source, query, filter]);
 
   return (
     <div className="l-col" style={{ gap: 20 }}>
@@ -109,15 +114,16 @@ export const AllModulesScreen: React.FC<AllModulesScreenProps> = ({
               type="button"
               className="l-mod-row"
               data-state={module.state}
-              onClick={() => onOpenModule(module.id)}
+              onClick={() => onOpenModule(module, track)}
             >
               <Tick state={module.state} hideNowGlyph />
               <span className="l-mod-body">
                 <span className="l-mod-title">{module.title}</span>
-                {/* Names the situation it teaches, not the API. */}
-                <span className="l-mod-case">{module.situation}</span>
+                {/* Names the situation it teaches, not the API. Absent for
+                    tracks projected straight from the manifest. */}
+                {module.situation && <span className="l-mod-case">{module.situation}</span>}
               </span>
-              <span className="l-mod-time">{module.duration}</span>
+              {module.duration && <span className="l-mod-time">{module.duration}</span>}
             </button>
           ))}
         </section>

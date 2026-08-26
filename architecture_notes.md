@@ -31,7 +31,7 @@ Below is an architectural comparison of major "-lings" implementations alongside
 | :--- | :--- | :--- | :--- | :--- |
 | **Domain** | Rust language syntax, borrow checker, lifetimes, generics | Zig language syntax, manual memory management, C interop | Python syntax, data structures, OOP idioms | **Quality Engineering, SDET, UI/API/Perf/Security/GenAI Automation** |
 | **Execution Engine** | `rustc` compiler / `cargo test` | `zig test` / `zig build` | `python -m pytest` | **Polyglot Runner Pool** (Node.js IPC, Pytest JSON, JVM/Maven, k6, JMeter, Maestro) |
-| **Manifest / Discovery** | `info.toml` with strict ordered sequence | Numbered directory scan (`001_xxx.zig`) | `exercises.json` or directory scan | `lings.toml` (11 track definitions, evaluation thresholds, chaos proxy parameters) |
+| **Manifest / Discovery** | `info.toml` with strict ordered sequence | Numbered directory scan (`001_xxx.zig`) | `exercises.json` or directory scan | `lings.toml` (12 track definitions, evaluation thresholds, chaos proxy parameters) |
 | **Exercise Sentinel** | `// I AM NOT DONE` | `// "I AM NOT DONE"` or inline markers | `# I AM NOT DONE` or `TODO` tags | `// I AM NOT DONE` / `# I AM NOT DONE` + static anti-pattern scanner |
 | **Evaluation Dimensions** | 1D: Boolean compile/test pass | 1D: Boolean compilation pass | 1D: Boolean pytest assertion pass | **4D Matrix**: Correctness (35%), Chaos Flakiness (35%), Locator Quality (15%), Speed (15%) |
 | **Target Application** | Self-contained standard library calls | Self-contained Zig standard library | In-memory functions / mocks | **Micro-Crucible Live Sandbox** (FastAPI backend + Vite/React frontend + Chaos Proxy) |

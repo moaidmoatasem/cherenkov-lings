@@ -1631,15 +1631,18 @@ test('checkout hydration timing', async ({ page }) => {
 
         let mut files = Vec::new();
         collect(Path::new("exercises"), &mut files);
-        // Deliberately not an exact count: the curriculum grows, and pinning a
-        // literal here means every new drill breaks this test for no reason.
-        // The floor only proves the walk actually found the curriculum; the real
-        // invariant is the per-file assertions below.
-        assert!(
-            files.len() >= 60,
-            "expected to find the drill curriculum, only found {} hints.md files",
-            files.len()
-        );
+        // Derived from lings.toml rather than hardcoded: a literal here silently
+        // goes stale every time a drill is added, which is the exact drift the
+        // manifest exists to prevent. Counted by scanning the manifest text
+        // because several integration tests pull this module in by path, where
+        // `crate::config` is not in scope.
+        let manifest = fs::read_to_string("lings.toml").expect("lings.toml must be readable");
+        let expected = manifest
+            .lines()
+            .filter(|l| l.trim() == "[[tracks.drills]]")
+            .count();
+        assert!(expected > 0, "lings.toml declares no drills");
+        assert_eq!(files.len(), expected, "expected one hints.md per drill");
 
         for file in files {
             let dir = file.parent().expect("hints.md has a parent");

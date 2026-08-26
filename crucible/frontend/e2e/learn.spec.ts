@@ -40,7 +40,8 @@ test.describe('Learn environment — read, watch, practice, build', () => {
       { label: 'This module', heading: 'Waiting without sleeping' },
       { label: 'Browser lab', heading: 'The lab' },
       { label: 'Device lab', heading: 'The device lab' },
-      { label: 'All modules', heading: '11 tracks, 60 modules' },
+      // Counts come from GET /api/curriculum, so assert the shape, not a literal.
+      { label: 'All modules', heading: /\d+ tracks, \d+ modules/ },
       { label: 'My record', heading: 'What you can prove' },
     ];
     for (const { label, heading } of nav) {
@@ -198,7 +199,7 @@ test.describe('Learn environment — read, watch, practice, build', () => {
 
   test('All modules shows search, filters and tracks', async ({ page }) => {
     await page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'All modules' }).click();
-    await expect(page.locator('.l-h1')).toContainText('11 tracks, 60 modules');
+    await expect(page.locator('.l-h1')).toContainText(/\d+ tracks, \d+ modules/);
     const search = page.getByPlaceholder('Search modules, notes, error messages…');
     await expect(search).toBeVisible();
     await expect(search).toHaveAttribute('aria-label', 'Search modules');
@@ -269,5 +270,64 @@ test.describe('Learn environment — read, watch, practice, build', () => {
     await expect(page.locator('.learn-root')).toBeVisible();
     await expect(page.locator('.l-h1')).toContainText('Good evening, Moaid');
     await expect(page.locator('.site-footer')).toHaveCount(0);
+  });
+  test('Navbar overview entry reaches the sandbox home page', async ({ page }) => {
+    await page.goto('/checkout');
+    await page.getByTestId('nav-sandbox').click();
+    await expect(page).toHaveURL('/sandbox');
+    await expect(page.getByText('Drill 01: Hydration Timing Gap')).toBeVisible();
+  });
+
+  test('an unknown route renders a not-found page, not the Learn app', async ({ page }) => {
+    await page.goto('/no-such-page');
+    await expect(page.getByTestId('not-found')).toBeVisible();
+    await expect(page.locator('.learn-root')).toHaveCount(0);
+    await page.getByRole('link', { name: 'Sandbox overview' }).click();
+    await expect(page).toHaveURL('/sandbox');
+  });
+
+  test('the lab read link opens the module read step', async ({ page }) => {
+    await page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'Browser lab' }).click();
+    await page.getByRole('link', { name: 'Read: auto-waiting, in depth' }).click();
+    await expect(page.locator('.l-h1')).toContainText('Waiting without sleeping');
+    await expect(page.getByRole('tab', { name: /^Read/ })).toHaveAttribute('aria-current', 'step');
+  });
+
+  test('the catalog lists every track the manifest declares', async ({ page }) => {
+    await page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'All modules' }).click();
+    const heading = await page.locator('.l-h1').textContent();
+    const declared = Number(/(\d+) tracks/.exec(heading ?? '')?.[1]);
+    expect(declared).toBeGreaterThan(4);
+    await expect(page.locator('.l-track-name')).toHaveCount(declared);
+    // A track with no curated copy still arrives, straight from lings.toml.
+    await expect(page.getByText('CI/CD Pipeline Engineering')).toBeVisible();
+  });
+  test('a manifest drill opens its own theory and hints', async ({ page }) => {
+    await page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'All modules' }).click();
+    await page.getByRole('button', { name: /Docker Socket Mount/ }).click();
+
+    const drill = page.getByTestId('drill-screen');
+    await expect(drill).toBeVisible();
+    // Its own title, not the one hardcoded module every row used to open.
+    await expect(page.locator('.l-h1')).toContainText('Docker Socket Mount');
+    await expect(page.locator('.l-h1')).not.toContainText('Waiting without sleeping');
+    // Real theory.md, rendered as prose rather than raw markdown.
+    await expect(drill.locator('.l-md')).toBeVisible();
+    await expect(drill.locator('.l-md h2, .l-md h3').first()).toBeVisible();
+    await expect(drill.getByText('cherenkov-lings watch --track=devsecops-python')).toBeVisible();
+
+    await drill.getByRole('button', { name: 'Hints' }).click();
+    await expect(drill.locator('.l-md')).toBeVisible();
+
+    await drill.getByRole('button', { name: '← All modules' }).click();
+    await expect(page.locator('.l-h1')).toContainText(/tracks, \d+ modules/);
+  });
+
+  test('a curated module still opens the hand-written module screen', async ({ page }) => {
+    await page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'All modules' }).click();
+    await page.getByRole('button', { name: /Waiting without sleeping/ }).click();
+    await expect(page.locator('.l-h1')).toContainText('Waiting without sleeping');
+    await expect(page.getByTestId('drill-screen')).toHaveCount(0);
+    await expect(page.getByRole('tablist', { name: 'Module steps' })).toBeVisible();
   });
 });

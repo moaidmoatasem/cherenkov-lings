@@ -981,6 +981,7 @@ fn test_tier1_polyglot_5_tracks_directory_layout_and_contracts() {
         "tool-decisions",
         "contract-pact",
         "a11y-axe",
+        "ci-pipeline",
     ];
 
     for id in track_ids {
@@ -991,88 +992,24 @@ fn test_tier1_polyglot_5_tracks_directory_layout_and_contracts() {
         );
     }
 
-    // Verify all 60 drills across all 11 tracks exist on disk
-    let all_drills = [
-        // Track 01: Web Playwright TS (10 drills)
-        "exercises/01_web_playwright_ts/01_hydration_timing",
-        "exercises/01_web_playwright_ts/02_shadow_dom_v2",
-        "exercises/01_web_playwright_ts/03_debounce_race_condition",
-        "exercises/01_web_playwright_ts/04_first_playwright_test",
-        "exercises/01_web_playwright_ts/05_locator_hierarchy",
-        "exercises/01_web_playwright_ts/06_page_object_intro",
-        "exercises/01_web_playwright_ts/07_iframe_cross_origin",
-        "exercises/01_web_playwright_ts/08_network_intercept",
-        "exercises/01_web_playwright_ts/09_visual_regression_trap",
-        "exercises/01_web_playwright_ts/10_parallel_state_pollution",
-        // Track 02: Java REST Assured (7 drills)
-        "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill01_idempotency",
-        "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill02_jwt_auth",
-        "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill03_kafka_lag",
-        "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill04_pagination_boundary",
-        "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill05_json_schema_validation",
-        "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill06_graphql_assertions",
-        "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill07_request_spec_reuse",
-        // Track 03: Maestro Mobile (5 drills)
-        "exercises/03_mobile_maestro/01_biometric_fallback",
-        "exercises/03_mobile_maestro/02_deep_link_cold_start",
-        "exercises/03_mobile_maestro/03_activity_recreation",
-        "exercises/03_mobile_maestro/04_scroll_to_element",
-        "exercises/03_mobile_maestro/05_push_notification_handling",
-        // Track 04: k6 JS (5 drills)
-        "exercises/04_perf_k6_js/01_database_pool_starvation",
-        "exercises/04_perf_k6_js/02_spike_profile_p99",
-        "exercises/04_perf_k6_js/03_chaos_sla_assertion",
-        "exercises/04_perf_k6_js/04_streaming_sse_test",
-        "exercises/04_perf_k6_js/05_grafana_output",
-        // Track 05: JMeter (8 drills)
-        "exercises/05_perf_jmeter/01_gui_mode_antipattern",
-        "exercises/05_perf_jmeter/02_missing_assertion",
-        "exercises/05_perf_jmeter/03_constant_think_time",
-        "exercises/05_perf_jmeter/04_listener_in_production",
-        "exercises/05_perf_jmeter/05_hardcoded_token",
-        "exercises/05_perf_jmeter/06_throughput_vs_concurrency",
-        "exercises/05_perf_jmeter/07_distributed_load",
-        "exercises/05_perf_jmeter/08_jtl_dashboard",
-        // Track 06: GenAI QA (5 drills)
-        "exercises/06_genai_qa/01_rag_context_faithfulness",
-        "exercises/06_genai_qa/02_llm_assertion_flakiness",
-        "exercises/06_genai_qa/03_llm_hallucination_eval",
-        "exercises/06_genai_qa/04_prompt_injection_red_teaming",
-        "exercises/06_genai_qa/05_latency_streaming_ttft",
-        // Track 07: Foundations Python (5 drills)
-        "exercises/00_foundations/01_what_is_a_test",
-        "exercises/00_foundations/02_test_naming_matters",
-        "exercises/00_foundations/03_arrange_act_assert",
-        "exercises/00_foundations/04_dont_test_the_mock",
-        "exercises/00_foundations/05_one_thing_per_test",
-        // Track 08: DevSecOps Python (5 drills)
-        "exercises/07_cloud_devsecops/01_insecure_docker_mount",
-        "exercises/07_cloud_devsecops/02_jwt_weak_signing_key",
-        "exercises/07_cloud_devsecops/03_sql_injection_blind_timing",
-        "exercises/07_cloud_devsecops/04_ssrf_metadata_service",
-        "exercises/07_cloud_devsecops/05_cors_misconfiguration_exploit",
-        // Track 09: Tool Decisions Python (4 drills)
-        "exercises/08_tool_decisions/01_ui_vs_api_test",
-        "exercises/08_tool_decisions/02_k6_vs_jmeter",
-        "exercises/08_tool_decisions/03_appium_vs_maestro",
-        "exercises/08_tool_decisions/04_contract_vs_e2e",
-        // Track 10: Contract Pact Python (3 drills)
-        "exercises/09_contract_pact/01_pact_consumer_definition",
-        "exercises/09_contract_pact/02_pact_provider_verification",
-        "exercises/09_contract_pact/03_breaking_schema_evolution",
-        // Track 11: A11y Axe TS (3 drills)
-        "exercises/10_a11y_axe/01_wcag_color_contrast_axe",
-        "exercises/10_a11y_axe/02_keyboard_focus_trap_aria",
-        "exercises/10_a11y_axe/03_screen_reader_live_regions",
-    ];
+    // Every drill declared in the manifest must exist on disk with its hints
+    // file. Derived from lings.toml rather than a hardcoded list: the literal
+    // list this replaced had gone stale and knew nothing about the ci-pipeline
+    // track, so it asserted "all drills exist" while checking only some of them.
+    let cfg = cherenkov_lings::config::load_config("lings.toml").expect("lings.toml must parse");
+    let all_drills: Vec<String> = cfg
+        .tracks
+        .iter()
+        .flat_map(|t| t.drills.iter().map(move |d| t.drill_path(&d.id)))
+        .collect();
 
     assert_eq!(
         all_drills.len(),
-        60,
-        "Expected exactly 60 drills across all 11 tracks"
+        cfg.tracks.iter().map(|t| t.drills.len()).sum::<usize>(),
+        "drill paths must be one-to-one with manifest drills"
     );
 
-    for drill in all_drills {
+    for drill in &all_drills {
         let p = Path::new(drill);
         assert!(p.exists(), "Drill directory {} must exist", drill);
         assert!(

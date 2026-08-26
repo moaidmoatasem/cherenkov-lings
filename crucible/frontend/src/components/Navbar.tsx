@@ -7,7 +7,10 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate }) => {
   const navItems = [
-    { path: '/', label: 'Overview', icon: '⚡' },
+    // '/' serves the Learn environment, so the sandbox overview lives at
+    // /sandbox. Pointing this entry at '/' made it a duplicate of the Learn
+    // link and left HomePage with no way in.
+    { path: '/sandbox', label: 'Overview', icon: '⚡' },
     { path: '/learn', label: 'Learn', icon: '📖' },
     { path: '/mission-control', label: 'Mission Control (XP & Drills)', icon: '🏆' },
     { path: '/code-review', label: 'Code Review', icon: '🧐' },

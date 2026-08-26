@@ -12,7 +12,14 @@ import type { Kpi } from './types';
  * stays as the design specifies it, rather than being invented from thin data.
  */
 
-const TOTAL_MODULES = 60;
+/** Used only until GET /api/curriculum answers; the manifest is the authority. */
+const SEEDED_TOTAL_MODULES = 65;
+const SEEDED_TOTAL_TRACKS = 12;
+
+interface CurriculumResponse {
+  tracks?: unknown[];
+  total_drills?: number;
+}
 
 interface ProgressResponse {
   total_xp?: number;
@@ -25,7 +32,10 @@ export interface LearnerProgress {
   points: number;
   streakDays: number;
   modulesBuilt: number;
+  /** Drills declared in lings.toml, via GET /api/curriculum. */
   modulesTotal: number;
+  /** Tracks declared in lings.toml, via GET /api/curriculum. */
+  tracksTotal: number;
   kpis: Kpi[];
   live: boolean;
 }
@@ -40,7 +50,8 @@ const SEEDED: LearnerProgress = {
   points: LEARNER.points,
   streakDays: LEARNER.streakDays,
   modulesBuilt: 14,
-  modulesTotal: TOTAL_MODULES,
+  modulesTotal: SEEDED_TOTAL_MODULES,
+  tracksTotal: SEEDED_TOTAL_TRACKS,
   kpis: KPIS,
   live: false,
 };
@@ -61,11 +72,11 @@ export function useLearnerProgress(): LearnerProgress {
         const streak =
           typeof data.streak_days === 'number' ? data.streak_days : SEEDED.streakDays;
 
-        setProgress({
+        setProgress((prev) => ({
+          ...prev,
           points,
           streakDays: streak,
           modulesBuilt: built,
-          modulesTotal: TOTAL_MODULES,
           kpis: KPIS.map((kpi) => {
             if (kpi.label === 'Points') {
               return { ...kpi, value: points.toLocaleString('en-US') };
@@ -76,7 +87,24 @@ export function useLearnerProgress(): LearnerProgress {
             return kpi;
           }),
           live: true,
-        });
+        }));
+      })
+      .catch(() => {});
+
+    // The curriculum size comes from the manifest, not from a literal in this
+    // file -- a hardcoded total goes stale the moment a track is added.
+    fetch(apiUrl('/api/curriculum'), { signal: ctrl.signal })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: CurriculumResponse | null) => {
+        if (!data) return;
+        setProgress((prev) => ({
+          ...prev,
+          modulesTotal:
+            typeof data.total_drills === 'number' && data.total_drills > 0
+              ? data.total_drills
+              : prev.modulesTotal,
+          tracksTotal: Array.isArray(data.tracks) ? data.tracks.length : prev.tracksTotal,
+        }));
       })
       .catch(() => {});
 

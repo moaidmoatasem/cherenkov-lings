@@ -303,14 +303,26 @@ app = FastAPI(
 )
 
 # Attach Middlewares
+# The documented local setup (React on 8080, this API on 8081). Overridable via
+# CRUCIBLE_ALLOWED_ORIGINS as a comma-separated list, so a run on other ports --
+# CI, or a box where 8080 is taken -- does not require editing this file. The
+# default stays a closed allowlist; there is no wildcard fallback.
+_DEFAULT_ALLOWED_ORIGINS = [
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+    "http://localhost:8081",
+    "http://127.0.0.1:8081",
+]
+
+_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in _os.environ.get("CRUCIBLE_ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+] or _DEFAULT_ALLOWED_ORIGINS
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:8080",
-        "http://127.0.0.1:8080",
-        "http://localhost:8081",
-        "http://127.0.0.1:8081",
-    ],
+    allow_origins=_ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
