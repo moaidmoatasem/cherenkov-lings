@@ -64,16 +64,15 @@ export const App: React.FC = () => {
         return <PaymentPage />;
       case '/mobile-test':
         return <MobileTestPage />;
-      case '/':
-      default:
+      case '/sandbox':
         return <HomePage onNavigate={handleNavigate} />;
+      default:
+        return <LearnApp onExit={() => handleNavigate('/sandbox')} />;
     }
   };
 
-  // The learning environment brings its own full-height shell, so it renders
-  // outside the sandbox chrome rather than inside the navbar/footer layout.
-  if (currentPath === '/learn') {
-    return <LearnApp onExit={() => handleNavigate('/')} />;
+  if (currentPath === '/learn' || currentPath === '/') {
+    return <LearnApp onExit={() => handleNavigate('/sandbox')} />;
   }
 
   return (

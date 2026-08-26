@@ -67,11 +67,16 @@ export const BrowserLabScreen: React.FC<BrowserLabScreenProps> = ({ run, onRunCh
             ))}
           </div>
 
-          {/* The live page: the actual rendered sandbox page, on paper. */}
           <div className="l-preview">
             <div className="l-preview-bar">
               <span className="l-preview-url">localhost:8080/search</span>
               <span className="l-preview-lat">+200 ms</span>
+            </div>
+            <div className="l-preview-note" style={{ fontSize: 11.5, color: 'var(--l-ink-muted)', padding: '6px 12px', borderBottom: '1px solid var(--l-border)', display: 'flex', gap: 6, alignItems: 'center' }}>
+              <span style={{ fontWeight: 600, color: 'var(--l-ink)' }}>Static preview</span>
+              <span>— teaching replica of</span>
+              <a href="/search" style={{ color: 'var(--l-blue)', textDecoration: 'underline', fontWeight: 500 }}>live /search</a>
+              <span>· real test runs in browser at +200 ms</span>
             </div>
 
             <div className="l-stage">

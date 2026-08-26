@@ -78,6 +78,12 @@ export const DeviceLabScreen: React.FC = () => {
       </div>
 
       <div className="l-device-rail l-sticky">
+        <div className="l-device-preview-note" style={{ fontSize: 11.5, color: 'var(--l-ink-muted)', padding: '0 2px 8px', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+          <span style={{ fontWeight: 600, color: 'var(--l-ink)' }}>Static preview</span>
+          <span>— handset mock of</span>
+          <a href="/sandbox" style={{ color: 'var(--l-blue)', textDecoration: 'underline', fontWeight: 500 }}>live sandbox</a>
+          <span>· real Maestro flow runs on device</span>
+        </div>
         <div className="l-bezel">
           <div className="l-screen">
             <div className="l-screen-status">
