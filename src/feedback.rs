@@ -1122,7 +1122,11 @@ pub fn render_scorecard(card: &Scorecard) -> String {
 }
 
 /// Render standalone diagnostic view (for `cherenkov-lings diagnose`)
-pub fn render_diagnostic(ast: &StaticAnalysisReport, track_name: &str, platform_version: &str) -> String {
+pub fn render_diagnostic(
+    ast: &StaticAnalysisReport,
+    track_name: &str,
+    platform_version: &str,
+) -> String {
     let mut out = String::new();
     let border =
         "========================================================================================"
@@ -1627,7 +1631,18 @@ test('checkout hydration timing', async ({ page }) => {
 
         let mut files = Vec::new();
         collect(Path::new("exercises"), &mut files);
-        assert_eq!(files.len(), 60, "expected one hints.md per drill");
+        // Derived from lings.toml rather than hardcoded: a literal here silently
+        // goes stale every time a drill is added, which is the exact drift the
+        // manifest exists to prevent. Counted by scanning the manifest text
+        // because several integration tests pull this module in by path, where
+        // `crate::config` is not in scope.
+        let manifest = fs::read_to_string("lings.toml").expect("lings.toml must be readable");
+        let expected = manifest
+            .lines()
+            .filter(|l| l.trim() == "[[tracks.drills]]")
+            .count();
+        assert!(expected > 0, "lings.toml declares no drills");
+        assert_eq!(files.len(), expected, "expected one hints.md per drill");
 
         for file in files {
             let dir = file.parent().expect("hints.md has a parent");

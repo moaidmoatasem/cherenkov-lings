@@ -14,7 +14,7 @@ export const NAV: NavEntry[] = [
   { id: 'module', label: 'This module', meta: '3 of 4' },
   { id: 'lab', label: 'Browser lab', meta: '' },
   { id: 'device', label: 'Device lab', meta: '' },
-  { id: 'tracks', label: 'All modules', meta: '60' },
+  { id: 'tracks', label: 'All modules', meta: '' },
   { id: 'progress', label: 'My record', meta: '' },
 ];
 
@@ -78,7 +78,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             <span className="l-nav-item-dot" />
             <span className="l-nav-item-label">{item.label}</span>
-            <span className="l-nav-item-meta">{item.meta}</span>
+            <span className="l-nav-item-meta">
+              {item.id === 'tracks' ? String(modulesTotal) : item.meta}
+            </span>
           </button>
         ))}
       </nav>

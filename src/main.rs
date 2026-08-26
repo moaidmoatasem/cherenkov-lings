@@ -68,7 +68,8 @@ enum Commands {
     Audit,
     /// Scaffold a new drill with standard contracts (exercise, solution, hints, and theory)
     NewDrill {
-        /// Track ID (e.g. playwright-ts, restassured-java, k6-js, maestro-mobile, genai-qa, devsecops-python, foundations, jmeter, tool-decisions, contract-pact, a11y-axe)
+        /// Track ID as declared in lings.toml (run `cherenkov-lings audit` to
+        /// list them; an unknown id prints the full set)
         #[arg(short, long)]
         track: String,
         /// Drill folder name (e.g. 11_network_throttling)
@@ -155,24 +156,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .clone()
                 .unwrap_or_else(|| "my-sdet-journey".to_string());
 
-            // Create exercise directories
-            let exercise_dirs = vec![
-                "exercises/00_foundations",
-                "exercises/01_web_playwright_ts",
-                "exercises/02_api_restassured_java",
-                "exercises/03_mobile_maestro",
-                "exercises/04_perf_k6_js",
-                "exercises/05_perf_jmeter",
-                "exercises/06_genai_qa",
-                "exercises/08_tool_decisions",
-                "exercises/07_cloud_devsecops",
-                "exercises/09_contract_pact",
-                "exercises/10_a11y_axe",
-            ];
-            for dir in &exercise_dirs {
-                let p = Path::new(dir);
-                if !p.exists() {
-                    std::fs::create_dir_all(p)?;
+            // Create exercise directories from the manifest. Hardcoding them
+            // here meant a new track silently got no directory -- the list this
+            // replaced had never learned about the ci-pipeline track.
+            let init_cfg = config::load_config("lings.toml")
+                .unwrap_or_else(|_| gamification::embedded_config());
+            for track in &init_cfg.tracks {
+                for dir in [track.exercise_dir.as_str(), track.drill_root()] {
+                    let p = Path::new(dir);
+                    if !p.exists() {
+                        std::fs::create_dir_all(p)?;
+                    }
                 }
             }
 
@@ -734,7 +728,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             print!("{}", dashboard_output);
         }
         Commands::Audit => {
-            run_curriculum_audit();
+            if !run_curriculum_audit() {
+                std::process::exit(1);
+            }
         }
         Commands::NewDrill { track, name, title } => {
             run_new_drill(track, name, title.as_deref());
@@ -790,7 +786,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn run_curriculum_audit() {
+/// Returns `true` when the curriculum is clean. The caller turns a `false`
+/// into a non-zero exit code -- an audit that always exits 0 cannot gate CI.
+fn run_curriculum_audit() -> bool {
     use std::fs;
 
     println!(
@@ -828,42 +826,36 @@ fn run_curriculum_audit() {
     );
 
     for track in &cfg.tracks {
-        let track_path = Path::new(&track.exercise_dir);
+        let drill_root = Path::new(track.drill_root());
         let mut track_drill_count = 0;
         let mut track_complete_count = 0;
 
-        if track_path.exists() {
-            // Find drill subdirectories
-            let mut subdirs: Vec<_> = fs::read_dir(track_path)
-                .into_iter()
-                .flatten()
-                .filter_map(|e| e.ok())
-                .filter(|e| e.path().is_dir())
-                .collect();
+        if !drill_root.exists() {
+            issues.push(format!(
+                "Track '{}' declares drill root '{}' which does not exist on disk",
+                track.id,
+                drill_root.display()
+            ));
+        }
 
-            // Tracks whose drills do not sit directly under exercise_dir (the
-            // Maven-structured Java track) declare a drill_root in lings.toml.
-            let drill_root = Path::new(track.drill_root());
-            if drill_root != track_path && drill_root.exists() {
-                subdirs = fs::read_dir(drill_root)
-                    .into_iter()
-                    .flatten()
-                    .filter_map(|e| e.ok())
-                    .filter(|e| e.path().is_dir())
-                    .collect();
-            }
-
-            subdirs.sort_by_key(|a| a.file_name());
-
-            for dir in subdirs {
-                let p = dir.path();
-                let dir_name = p.file_name().unwrap_or_default().to_string_lossy();
-                if dir_name.starts_with('.') || dir_name == "target" || dir_name == "src" {
-                    continue;
-                }
+        // Walk the drills the manifest DECLARES rather than whatever happens to
+        // be on disk. A directory scan reports a track whose path is wrong as
+        // "0 drills, N/A" and still calls the curriculum 100% healthy.
+        {
+            for drill in &track.drills {
+                let p = drill_root.join(&drill.id);
 
                 track_drill_count += 1;
                 total_drills += 1;
+
+                if !p.is_dir() {
+                    total_checks += 5;
+                    issues.push(format!(
+                        "Missing drill directory declared in lings.toml: {}",
+                        p.display()
+                    ));
+                    continue;
+                }
 
                 let ext = &track.extension;
                 let (ex_name, sol_name) = (track.exercise_file(), track.solution_file());
@@ -928,10 +920,24 @@ fn run_curriculum_audit() {
                                     || content.contains("import pytest")
                             }
                             ".java" => content.contains("import") || content.contains("@Test"),
-                            ".jmx" => content.contains("<HTTPSamplerProxy") || content.contains("<TestPlan"),
-                            ".js" => content.contains("import") || content.contains("export") || content.contains("http.get"),
-                            ".yaml" => content.contains("launchApp") || content.contains("openLink") || content.contains("tapOn"),
-                            ".yml" => content.contains("jobs:") && (content.contains("runs-on") || content.contains("uses:")),
+                            ".jmx" => {
+                                content.contains("<HTTPSamplerProxy")
+                                    || content.contains("<TestPlan")
+                            }
+                            ".js" => {
+                                content.contains("import")
+                                    || content.contains("export")
+                                    || content.contains("http.get")
+                            }
+                            ".yaml" => {
+                                content.contains("launchApp")
+                                    || content.contains("openLink")
+                                    || content.contains("tapOn")
+                            }
+                            ".yml" => {
+                                content.contains("jobs:")
+                                    && (content.contains("runs-on") || content.contains("uses:"))
+                            }
                             _ => !content.trim().is_empty(),
                         };
                         if has_content {
@@ -952,6 +958,29 @@ fn run_curriculum_audit() {
                     track_complete_count += 1;
                     complete_drills += 1;
                 }
+            }
+        }
+
+        // The mirror check: anything on disk the manifest never declared.
+        if drill_root.exists() {
+            let declared: std::collections::HashSet<&str> =
+                track.drills.iter().map(|d| d.id.as_str()).collect();
+            let mut found: Vec<String> = fs::read_dir(drill_root)
+                .into_iter()
+                .flatten()
+                .filter_map(|e| e.ok())
+                .filter(|e| e.path().is_dir())
+                .map(|e| e.file_name().to_string_lossy().into_owned())
+                .filter(|n| !n.starts_with('.') && n != "target" && n != "src")
+                .filter(|n| !declared.contains(n.as_str()))
+                .collect();
+            found.sort();
+            for name in found {
+                issues.push(format!(
+                    "Drill '{}' exists under {} but is not declared in lings.toml",
+                    name,
+                    drill_root.display()
+                ));
             }
         }
 
@@ -1024,6 +1053,8 @@ fn run_curriculum_audit() {
         "════════════════════════════════════════════════════════════════════════════════════════"
             .bright_cyan()
     );
+
+    issues.is_empty()
 }
 
 fn run_new_drill(track_id: &str, drill_name: &str, title: Option<&str>) {

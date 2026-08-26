@@ -9,5 +9,5 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["node", "@playwright/test"]
   },
-  "include": ["exercises/**/*.ts", "workers/**/*.ts"]
+  "include": ["exercises/**/*.ts", "workers/**/*.ts", "crucible/frontend/e2e/**/*.ts"]
 }

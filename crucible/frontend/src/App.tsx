@@ -16,6 +16,40 @@ import { PipelineBuilderPage } from './pages/PipelineBuilderPage';
 import { AllureTriagePage } from './pages/AllureTriagePage';
 import { LearnApp } from './learn/LearnApp';
 
+/**
+ * An unknown path used to fall through to the Learn environment wrapped in the
+ * sandbox chrome, which showed two apps at once and hid the typo.
+ */
+const NotFoundPage: React.FC<{ path: string; onNavigate: (p: string) => void }> = ({
+  path,
+  onNavigate,
+}) => (
+  <section className="not-found" data-testid="not-found">
+    <h1>No page at {path}</h1>
+    <p>That route does not exist in the Crucible sandbox.</p>
+    <div className="not-found-actions">
+      <a
+        href="/sandbox"
+        onClick={(e) => {
+          e.preventDefault();
+          onNavigate('/sandbox');
+        }}
+      >
+        Sandbox overview
+      </a>
+      <a
+        href="/learn"
+        onClick={(e) => {
+          e.preventDefault();
+          onNavigate('/learn');
+        }}
+      >
+        Learn
+      </a>
+    </div>
+  </section>
+);
+
 export const App: React.FC = () => {
   const [currentPath, setCurrentPath] = useState<string>(() => {
     return window.location.pathname || '/';
@@ -67,7 +101,7 @@ export const App: React.FC = () => {
       case '/sandbox':
         return <HomePage onNavigate={handleNavigate} />;
       default:
-        return <LearnApp onExit={() => handleNavigate('/sandbox')} />;
+        return <NotFoundPage path={currentPath} onNavigate={handleNavigate} />;
     }
   };
 

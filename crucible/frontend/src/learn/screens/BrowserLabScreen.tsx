@@ -18,9 +18,15 @@ interface BrowserLabScreenProps {
    */
   run: 'pass' | 'fail';
   onRunChange: (run: 'pass' | 'fail') => void;
+  /** Opens the module's read step — the two controls here that are navigation. */
+  onOpenRead: () => void;
 }
 
-export const BrowserLabScreen: React.FC<BrowserLabScreenProps> = ({ run, onRunChange }) => {
+export const BrowserLabScreen: React.FC<BrowserLabScreenProps> = ({
+  run,
+  onRunChange,
+  onOpenRead,
+}) => {
   const record: RunRecord = run === 'pass' ? PASSING_RUN : FAILING_RUN;
   const settled = record.iterations.filter((it) => it.settled).length;
   const pct = Math.round((settled / record.iterations.length) * 100);
@@ -118,12 +124,19 @@ export const BrowserLabScreen: React.FC<BrowserLabScreenProps> = ({ run, onRunCh
         </div>
       </section>
 
-      {run === 'pass' ? <PassingVerdict record={record} /> : <FailingVerdict record={record} />}
+      {run === 'pass' ? (
+        <PassingVerdict record={record} onOpenRead={onOpenRead} />
+      ) : (
+        <FailingVerdict record={record} />
+      )}
     </div>
   );
 };
 
-const PassingVerdict: React.FC<{ record: RunRecord }> = ({ record }) => (
+const PassingVerdict: React.FC<{ record: RunRecord; onOpenRead: () => void }> = ({
+  record,
+  onOpenRead,
+}) => (
   <section className="l-verdict">
     <div className="l-verdict-pass">
       <div className="l-verdict-head">
@@ -150,7 +163,7 @@ const PassingVerdict: React.FC<{ record: RunRecord }> = ({ record }) => (
 
       <div className="l-verdict-foot">
         <span>{VERDICT_COPY.passFoot}</span>
-        <button type="button" className="l-btn l-btn-moss">
+        <button type="button" className="l-btn l-btn-moss" onClick={onOpenRead}>
           {VERDICT_COPY.passNext}
         </button>
       </div>
@@ -159,7 +172,14 @@ const PassingVerdict: React.FC<{ record: RunRecord }> = ({ record }) => (
     <div className="l-card l-card-sm l-card-pad" style={{ gap: 12 }}>
       <span className="l-label">What changed</span>
       <span className="l-aside-text">{VERDICT_COPY.whatChanged}</span>
-      <a href="#read" style={{ fontSize: 13 }}>
+      <a
+        href="#read"
+        style={{ fontSize: 13 }}
+        onClick={(e) => {
+          e.preventDefault();
+          onOpenRead();
+        }}
+      >
         Read: auto-waiting, in depth
       </a>
     </div>

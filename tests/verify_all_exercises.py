@@ -23,8 +23,8 @@ import shutil
 import subprocess
 import time
 import json
-import math
 import argparse
+from decimal import Decimal, ROUND_HALF_UP
 import atexit
 import signal
 import threading
@@ -102,6 +102,57 @@ class DrillResult:
     xp_awarded: int
     error_message: str | None = None
     ast_findings: list[str] = field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# XP / tier scoring.
+#
+# Mirrors src/gamification.rs (`BASE_XP`, `get_tier_multiplier`,
+# `calculate_xp`, `tier_for_track_or_drill`) so this verifier reports the same
+# numbers the engine awards. Keep the two in step if the Rust side changes.
+# ---------------------------------------------------------------------------
+
+BASE_XP = 100.0
+
+_TIER_MULTIPLIERS = {1: 1.0, 2: 1.5, 3: 2.0}
+
+
+def _tier_multiplier(tier: int) -> float:
+    return _TIER_MULTIPLIERS.get(tier, 1.0)
+
+
+def _calculate_xp(total_score: float, tier: int) -> int:
+    clamped = max(0.0, min(100.0, total_score))
+    raw = BASE_XP * (clamped / 100.0) * _tier_multiplier(tier)
+    # Rust's f64::round is half-away-from-zero; Python's round() is banker's.
+    return int(Decimal(raw).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+
+
+def _tier_for_track_or_drill(track_id: str, drill_id: str) -> int:
+    track = track_id.lower()
+    drill = drill_id.lower()
+
+    if (
+        track in ("devsecops-python", "genai-qa")
+        or "09_" in drill
+        or "10_" in drill
+        or "drill07_" in drill
+        or "05_grafana" in drill
+        or "07_" in drill
+        or "08_" in drill
+    ):
+        return 3
+    if (
+        track in ("maestro-mobile", "k6-js", "jmeter", "tool-decisions")
+        or "06_" in drill
+        or "07_" in drill
+        or "08_" in drill
+        or "drill04_" in drill
+        or "drill05_" in drill
+        or "drill06_" in drill
+    ):
+        return 2
+    return 1
 
 
 def _should_ignore_path(p: Path) -> bool:

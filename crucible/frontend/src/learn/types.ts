@@ -40,6 +40,12 @@ export interface ModuleStep {
 export interface CurriculumModule {
   id: string;
   title: string;
+  /**
+   * Repository path of the drill, for GET /api/drill/theory. Present on modules
+   * projected from the manifest; absent on the hand-written prototype modules,
+   * which have no drill behind them.
+   */
+  path?: string;
   /** Names the situation it teaches, never the API. The most important content rule. */
   situation: string;
   duration: string;
@@ -57,6 +63,14 @@ export interface Track {
   state: 'in progress' | 'finished' | 'not started';
   skills: string[];
   modules: CurriculumModule[];
+}
+
+/** The drill a learner opened from the catalog. */
+export interface SelectedDrill {
+  trackId: string;
+  trackName: string;
+  title: string;
+  path: string;
 }
 
 export interface ScheduleBlock {
