@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { StreamViewer } from '../components/StreamViewer';
 
 export interface AstViolation {
   id: string;
@@ -165,6 +166,7 @@ export const CodeReviewPage: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [expandedSocraticId, setExpandedSocraticId] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<'Embedded' | 'Native'>('Embedded');
 
   const activeTemplate = useMemo(() => {
     return CODE_TEMPLATES.find((t) => t.id === selectedTemplateId) || CODE_TEMPLATES[0];
@@ -431,6 +433,13 @@ export const CodeReviewPage: React.FC = () => {
         </div>
 
         <div className="header-actions">
+          <button
+            className="secondary-btn"
+            onClick={() => setViewMode(viewMode === 'Embedded' ? 'Native' : 'Embedded')}
+          >
+            <span className="btn-icon">📺</span>
+            <span>View Mode: {viewMode}</span>
+          </button>
           <button className="secondary-btn" onClick={handleRunASTReview} disabled={isAnalyzing}>
             <span className="btn-icon">⚡</span>
             <span>{isAnalyzing ? 'Analyzing AST...' : 'Re-Run AST Review'}</span>
@@ -470,6 +479,13 @@ export const CodeReviewPage: React.FC = () => {
       <div className="review-workspace-grid">
         {/* Left Column: Code Editor / Diff View */}
         <div className="code-editor-column">
+          {viewMode === 'Embedded' ? (
+            <StreamViewer />
+          ) : (
+            <div className="native-mode-message" style={{ padding: '20px', backgroundColor: '#f0f4f8', border: '1px solid #cce0ff', borderRadius: '4px', marginBottom: '20px', color: '#0056b3' }}>
+              Tests are running in external native windows.
+            </div>
+          )}
           <div className="editor-card">
             <div className="editor-topbar">
               <div className="file-info">

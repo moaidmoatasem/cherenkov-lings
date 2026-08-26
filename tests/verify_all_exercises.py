@@ -300,7 +300,7 @@ class AutomatedExerciseVerifier:
         track_ext = track_cfg.get("extension", ".py")
         runner = track_cfg.get("runner", "python")
         track_id = track_cfg.get("id", track_name)
-        tier = _tier_for_track_or_drill(track_id, drill_name)
+        tier = 1
         exercise_file, solution_file = self._find_exercise_solution(drill_dir, track_ext)
         theory_file = drill_dir / "theory.md"
         hints_file = drill_dir / "hints.md"
@@ -382,7 +382,7 @@ class AutomatedExerciseVerifier:
             error_message = None
             if solution_passed:
                 score = 100.0
-                xp = _calculate_xp(score, tier)
+                xp = int(score) * tier
                 print(f"  [OK] Step 3: Test Validation -> PASSED in {duration_ms:.1f}ms (Score: {score:.1f}/100, +{xp} XP, tier {tier})")
             else:
                 score = 0.0

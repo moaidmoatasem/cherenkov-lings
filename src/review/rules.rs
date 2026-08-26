@@ -138,6 +138,10 @@ static RE_JWT_TOKEN: LazyLock<Regex> = LazyLock::new(|| {
 pub struct RuleScanner;
 
 impl RuleScanner {
+    pub fn lint_on_type(code_snippet: &str) -> Vec<AstViolation> {
+        Self::scan_content("virtual_buffer.tmp", code_snippet)
+    }
+
     pub fn scan_content(file_path: &str, content: &str) -> Vec<AstViolation> {
         let path = Path::new(file_path);
         let language = SupportedLanguage::from_path(path);

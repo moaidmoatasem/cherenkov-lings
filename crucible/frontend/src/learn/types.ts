@@ -11,7 +11,7 @@
  *    results rather than a single pass flag.
  */
 
-export type ScreenId = 'today' | 'module' | 'lab' | 'device' | 'tracks' | 'progress';
+export type ScreenId = 'today' | 'module' | 'lab' | 'device' | 'tracks' | 'progress' | 'sandbox';
 
 export type StepId = 'read' | 'watch' | 'practice' | 'build';
 

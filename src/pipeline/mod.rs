@@ -1,6 +1,7 @@
 pub mod parser;
 pub mod runner;
 pub mod validator;
+pub mod provisioning;
 
 pub use parser::{
     ConcurrencyConfig, JobDefinition, MatrixDefinition, NeedsConfig, ParseError, RunsOnConfig,

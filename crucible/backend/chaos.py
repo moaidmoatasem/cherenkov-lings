@@ -51,7 +51,7 @@ def parse_chaos_header(header_val: str | None) -> dict[str, Any]:
                     directives[k] = parse_duration_ms(v)
                 except ValueError:
                     directives[k] = 0.0
-            elif k in ("stale_dom", "idempotency_conflict", "drop_partial"):
+            elif k in ("stale_dom", "idempotency_conflict", "drop_partial", "db_timeout", "dast_xss"):
                 directives[k] = v.lower() in ("true", "1", "yes")
             elif k == "drop_after":
                 try:

@@ -57,6 +57,7 @@ from crucible.backend.pipeline import simulate_pipeline_run, validate_workflow_y
 from crucible.backend.reports import generate_chaos_dataset, render_html_report_string, summarize_dataset
 from crucible.backend.review import apply_review_fix, run_code_review
 from crucible.backend.triage import evaluate_triage_submission
+from crucible.backend.ai_generator import generate_pytest_from_openapi
 
 # JWT configuration
 import os as _os
@@ -409,8 +410,12 @@ async def post_reset() -> ResetResponse:
 
 
 @app.get("/search", response_model=SearchResponse)
-async def get_search(q: str = "") -> SearchResponse:
+async def get_search(request: Request, q: str = "") -> Any:
     """Debounced search autocomplete with out-of-order latency simulation."""
+    chaos = getattr(request.state, "chaos", {})
+    if chaos.get("db_timeout"):
+        return JSONResponse(status_code=504, content={"error": "Database query timeout", "status": "error"})
+
     query = q.strip()
     if not query:
         return SearchResponse(query=q, results=[], count=0)
@@ -427,6 +432,11 @@ async def get_search(q: str = "") -> SearchResponse:
         matches = [
             item for item in SEARCH_CATALOG if query.lower() in item.lower()
         ]
+
+    if chaos.get("dast_xss"):
+        # Inject reflected XSS payload
+        matches.insert(0, f"<script>alert('xss:{q}')</script>")
+
     return SearchResponse(query=q, results=matches, count=len(matches))
 
 
@@ -749,6 +759,12 @@ async def get_events_stream(request: Request) -> StreamingResponse:
         },
     )
 
+
+@app.post("/api/generate-tests")
+async def generate_tests() -> JSONResponse:
+    """Auto-generates basic Pytest endpoint validation tests."""
+    code = generate_pytest_from_openapi("http://localhost:8081/openapi.json")
+    return JSONResponse(content={"status": "success", "code": code})
 
 @app.post("/graphql")
 async def post_graphql(req: GraphQLRequest) -> JSONResponse:
