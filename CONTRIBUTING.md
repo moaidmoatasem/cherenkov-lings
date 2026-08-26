@@ -48,6 +48,32 @@ This ensures your directory has the mandatory 4 files:
    - Hint 3: Code Diff
 4. `theory.md`: The real-world production incident story (must be = 150 words) and an ASCII failure diagram.
 
+### Register the drill in the curriculum manifest
+
+`lings.toml` is the **single source of truth** for the curriculum. It is read by
+the Rust engine (at runtime, and as a compile-time fallback via `include_str!`)
+and by the FastAPI backend (`crucible/backend/curriculum.py`, which serves
+`GET /api/curriculum`). Add your drill to its track:
+
+```toml
+  [[tracks.drills]]
+  id = "04_new_concept"          # must match the directory name
+  name = "Human-Readable Drill Title"
+```
+
+Do not hardcode curriculum data anywhere else. `tests/curriculum_manifest_tests.rs`
+fails the build if the manifest and the repository diverge in either direction:
+a drill on disk that is missing from the manifest, or a manifest entry with no
+directory behind it.
+
+Adding a whole track means one `[[tracks]]` block. Two optional keys cover
+non-standard layouts:
+
+* `drill_root` - where the drill directories actually live, when that is not
+  `exercise_dir` (the Maven-structured Java track uses this).
+* `exercise_file` / `solution_file` - when the starter and solution filenames
+  are not `exercise{extension}` / `solution{extension}`.
+
 Verify your drill with:
 ```bash
 cherenkov-lings audit

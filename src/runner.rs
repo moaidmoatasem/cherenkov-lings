@@ -1982,7 +1982,149 @@ impl Runner for PytestRunner {
     }
 }
 
-/// Unified Runner enum supporting NodeRunner, JvmRunner, K6Runner, MaestroRunner, PytestRunner, and JMeterRunner
+/// SDET policy score a workflow must reach for the drill to count as solved.
+///
+/// 100 means zero policy errors *and* zero warnings: the validator deducts 25
+/// per error and 10 per warning, so anything less leaves a real finding on the
+/// table.
+pub const PIPELINE_PASS_SCORE: u32 = 100;
+
+/// Runs CI/CD workflow drills against the in-process pipeline simulator.
+///
+/// Unlike the other runners this one spawns no subprocess — `src/pipeline`
+/// parses the workflow, applies the enterprise SDET policy set, and simulates
+/// matrix execution entirely in memory. That keeps the track fully offline: no
+/// Docker-in-Docker, no `act`, no network.
+pub struct PipelineRunner {
+    pass_score: u32,
+}
+
+impl Default for PipelineRunner {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl PipelineRunner {
+    pub fn new() -> Self {
+        Self {
+            pass_score: PIPELINE_PASS_SCORE,
+        }
+    }
+
+    pub fn with_pass_score(pass_score: u32) -> Self {
+        Self { pass_score }
+    }
+
+    pub fn pass_score(&self) -> u32 {
+        self.pass_score
+    }
+
+    /// Validates and simulates a workflow file once, returning the policy score
+    /// and the first blocking finding (if any).
+    fn evaluate(&self, file: &str) -> Result<(u32, bool, Option<String>), RunnerError> {
+        let path = Path::new(file);
+        let result = crate::pipeline::run_pipeline(
+            path,
+            &crate::pipeline::PipelineRunOptions {
+                parallel: false,
+                fail_fast: false,
+                animated: false,
+                max_parallel: None,
+                verbose: false,
+                // Simulate even when policy fails so the learner still sees the
+                // job graph execute; the score, not the simulation, gates pass.
+                strict_validation: false,
+            },
+        )
+        .map_err(|e| RunnerError::WorkerError(format!("{}: {}", path.display(), e)))?;
+
+        let validation = result.validation.ok_or_else(|| {
+            RunnerError::ProtocolError("pipeline run returned no validation".into())
+        })?;
+
+        // Surface the highest-severity finding first: errors before warnings.
+        let finding = validation
+            .errors
+            .first()
+            .map(|e| format!("[{}] {}", e.code, e.message))
+            .or_else(|| {
+                validation
+                    .warnings
+                    .first()
+                    .map(|w| format!("[{}] {}", w.code, w.message))
+            });
+
+        Ok((validation.sdet_score, result.success, finding))
+    }
+}
+
+impl PipelineRunner {
+    pub async fn run_drill(
+        &self,
+        file: &str,
+        _chaos: &str,
+        iterations: u32,
+        _timeout_ms: u64,
+    ) -> Result<DrillResponse, RunnerError> {
+        let iterations = iterations.max(1);
+        let mut runs = Vec::with_capacity(iterations as usize);
+        let mut total_duration_ms = 0u64;
+        let mut passed_iterations = 0u32;
+
+        for iteration in 1..=iterations {
+            let started = std::time::Instant::now();
+            let outcome = self.evaluate(file);
+            let duration_ms = started.elapsed().as_millis() as u64;
+            total_duration_ms += duration_ms;
+
+            let (passed, error) = match outcome {
+                Ok((score, simulated_ok, finding)) => {
+                    let passed = score >= self.pass_score && simulated_ok;
+                    if passed {
+                        passed_iterations += 1;
+                        (true, None)
+                    } else {
+                        let detail = finding.unwrap_or_else(|| {
+                            "workflow simulation reported a failing job".to_string()
+                        });
+                        (
+                            false,
+                            Some(format!(
+                                "SDET policy score {}/{} — {}",
+                                score, self.pass_score, detail
+                            )),
+                        )
+                    }
+                }
+                Err(e) => (false, Some(e.to_string())),
+            };
+
+            runs.push(RunResult {
+                iteration,
+                passed,
+                duration_ms,
+                error,
+            });
+        }
+
+        let first_error = runs.iter().find_map(|r| r.error.clone());
+
+        Ok(DrillResponse {
+            id: format!("pipeline-{}", file),
+            ok: true,
+            passed: passed_iterations == iterations,
+            iterations,
+            passed_iterations,
+            failed_iterations: iterations - passed_iterations,
+            total_duration_ms,
+            runs,
+            error: first_error,
+        })
+    }
+}
+
+/// Unified Runner enum supporting NodeRunner, JvmRunner, K6Runner, MaestroRunner, PytestRunner, JMeterRunner, and PipelineRunner
 pub enum AnyRunner {
     Node(Arc<NodeRunner>),
     Jvm(Arc<JvmRunner>),
@@ -1990,6 +2132,7 @@ pub enum AnyRunner {
     Maestro(Arc<MaestroRunner>),
     Pytest(Arc<PytestRunner>),
     Jmeter(Arc<JMeterRunner>),
+    Pipeline(Arc<PipelineRunner>),
 }
 
 impl AnyRunner {
@@ -2007,6 +2150,7 @@ impl AnyRunner {
             Self::Maestro(runner) => runner.run_drill(file, chaos, iterations, timeout_ms).await,
             Self::Pytest(runner) => runner.run_drill(file, chaos, iterations, timeout_ms).await,
             Self::Jmeter(runner) => runner.run_drill(file, chaos, iterations, timeout_ms).await,
+            Self::Pipeline(runner) => runner.run_drill(file, chaos, iterations, timeout_ms).await,
         }
     }
 }
@@ -2070,6 +2214,18 @@ impl Runner for MaestroRunner {
 }
 
 impl Runner for JMeterRunner {
+    async fn run_drill(
+        &self,
+        file: &str,
+        chaos: &str,
+        iterations: u32,
+        timeout_ms: u64,
+    ) -> Result<DrillResponse, RunnerError> {
+        self.run_drill(file, chaos, iterations, timeout_ms).await
+    }
+}
+
+impl Runner for PipelineRunner {
     async fn run_drill(
         &self,
         file: &str,

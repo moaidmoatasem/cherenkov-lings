@@ -1,3 +1,17 @@
+# -----------------------------------------------------------------------------
+#  cherenkov-lings - CURRICULUM MANIFEST (single source of truth)
+#
+#  This file is the ONE authoritative definition of every track and every drill.
+#  It is consumed by:
+#    * the Rust engine     - src/config.rs at runtime, and src/gamification.rs
+#                            as a compile-time fallback via include_str!
+#    * the FastAPI backend - crucible/backend/curriculum.py -> GET /api/curriculum
+#
+#  Adding a track or a drill means editing THIS FILE ONLY. Curriculum data must
+#  not be hardcoded anywhere else; tests/curriculum_manifest_tests.rs enforces
+#  that this manifest stays in sync with what is actually on disk.
+# -----------------------------------------------------------------------------
+
 [platform]
 name = "cherenkov-lings"
 version = "1.0.0"
@@ -18,91 +32,445 @@ show_hints_on_failure = true
 enable_audio_bell = false
 language = "en"
 
-[[tracks]]
-id = "playwright-ts"
-name = "Modern Web Automation (Playwright TypeScript)"
-runner = "node"
-exercise_dir = "exercises/01_web_playwright_ts"
-extension = ".ts"
-command = "npx playwright test {file} --reporter=json"
-
-[[tracks]]
-id = "restassured-java"
-name = "API Resilience & Security (REST Assured Java)"
-runner = "jvm"
-exercise_dir = "exercises/02_api_restassured_java"
-extension = ".java"
-command = "mvn test -Dtest={class}"
-
-[[tracks]]
-id = "k6-js"
-name = "High-Concurrency Load Testing (k6 JS)"
-runner = "k6"
-exercise_dir = "exercises/04_perf_k6_js"
-extension = ".js"
-command = "k6 run {file} --summary-export=summary.json"
-
-[[tracks]]
-id = "maestro-mobile"
-name = "Mobile UI Automation (Maestro YAML)"
-runner = "maestro"
-exercise_dir = "exercises/03_mobile_maestro"
-extension = ".yaml"
-command = "maestro test {file}"
-
-[[tracks]]
-id = "genai-qa"
-name = "GenAI QA Testing (Playwright TypeScript)"
-runner = "node"
-exercise_dir = "exercises/06_genai_qa"
-extension = ".ts"
-command = "npx playwright test {file} --reporter=json"
-
-[[tracks]]
-id = "devsecops-python"
-name = "Cloud-Native & DevSecOps (Python / Pytest)"
-runner = "python"
-exercise_dir = "exercises/07_cloud_devsecops"
-extension = ".py"
-command = "python -m pytest {file} --json-report --json-report-file=report.json"
-
+# -----------------------------------------------------------------------------
+#  Automation Foundations (Manual QA On-Ramp) - Python / Pytest
+# -----------------------------------------------------------------------------
 [[tracks]]
 id = "foundations"
 name = "Automation Foundations — Manual QA On-Ramp (Python / Pytest)"
+display_name = "Automation Foundations (Manual QA On-Ramp)"
 runner = "python"
 exercise_dir = "exercises/00_foundations"
 extension = ".py"
 command = "python -m pytest {file} --json-report --json-report-file=report.json"
+stack = "Python / Pytest"
+tier = "Tier 1 — Beginner"
+description = "Core mental model: AAA pattern, assertions, test naming, and avoiding mock traps."
 
+  [[tracks.drills]]
+  id = "01_what_is_a_test"
+  name = "What is an Automated Test?"
+
+  [[tracks.drills]]
+  id = "02_test_naming_matters"
+  name = "Test Naming as Living Documentation"
+
+  [[tracks.drills]]
+  id = "03_arrange_act_assert"
+  name = "The Universal AAA Pattern"
+
+  [[tracks.drills]]
+  id = "04_dont_test_the_mock"
+  name = "Do Not Test the Mock"
+
+  [[tracks.drills]]
+  id = "05_one_thing_per_test"
+  name = "Single Responsibility in Test Cases"
+
+# -----------------------------------------------------------------------------
+#  Modern Web Automation - Playwright TypeScript
+# -----------------------------------------------------------------------------
+[[tracks]]
+id = "playwright-ts"
+name = "Modern Web Automation (Playwright TypeScript)"
+display_name = "Modern Web Automation"
+runner = "node"
+exercise_dir = "exercises/01_web_playwright_ts"
+extension = ".ts"
+command = "npx playwright test {file} --reporter=json"
+stack = "Playwright TypeScript"
+tier = "Tier 1 to 3 — Beginner to Advanced"
+description = "Master resilient UI automation: hydration race conditions, closed Shadow DOM, Page Object Model, frameLocator, and storageState."
+
+  [[tracks.drills]]
+  id = "01_hydration_timing"
+  name = "React Hydration Click Drops"
+
+  [[tracks.drills]]
+  id = "02_shadow_dom_v2"
+  name = "Piercing Closed Shadow DOM Roots"
+
+  [[tracks.drills]]
+  id = "03_debounce_race_condition"
+  name = "Handling Out-of-Order Autocomplete Search"
+
+  [[tracks.drills]]
+  id = "04_first_playwright_test"
+  name = "First Browser Test Navigation & Assertions"
+
+  [[tracks.drills]]
+  id = "05_locator_hierarchy"
+  name = "Semantic Locators (getByRole vs CSS)"
+
+  [[tracks.drills]]
+  id = "06_page_object_intro"
+  name = "Page Object Model (POM) Refactoring"
+
+  [[tracks.drills]]
+  id = "07_iframe_cross_origin"
+  name = "Cross-Origin Payment iframe Handling"
+
+  [[tracks.drills]]
+  id = "08_network_intercept"
+  name = "Network Request Mocking & Interception"
+
+  [[tracks.drills]]
+  id = "09_visual_regression_trap"
+  name = "Visual Regression Snapshot Tolerances"
+
+  [[tracks.drills]]
+  id = "10_parallel_state_pollution"
+  name = "Worker Isolation via StorageState"
+
+# -----------------------------------------------------------------------------
+#  API Resilience & Security - REST Assured Java
+# -----------------------------------------------------------------------------
+[[tracks]]
+id = "restassured-java"
+name = "API Resilience & Security (REST Assured Java)"
+display_name = "API Resilience & Security"
+runner = "jvm"
+exercise_dir = "exercises/02_api_restassured_java"
+drill_root = "exercises/02_api_restassured_java/src/test/java/com/cherenkov"
+extension = ".java"
+exercise_file = "Exercise.java"
+solution_file = "Solution.java"
+command = "mvn test -Dtest={class}"
+stack = "REST Assured Java"
+tier = "Tier 2 to 3 — Intermediate to Advanced"
+description = "Enterprise API testing: idempotency collisions, JWT refresh interceptors, Kafka lag polling, and JSON schema assertions."
+
+  [[tracks.drills]]
+  id = "drill01_idempotency"
+  name = "HTTP 409 Conflict Retry Strategies"
+
+  [[tracks.drills]]
+  id = "drill02_jwt_auth"
+  name = "Transparent JWT Refresh Interceptors"
+
+  [[tracks.drills]]
+  id = "drill03_kafka_lag"
+  name = "Eventual Consistency & Kafka Lag Polling"
+
+  [[tracks.drills]]
+  id = "drill04_pagination_boundary"
+  name = "Multi-Page Boundary Pagination Loops"
+
+  [[tracks.drills]]
+  id = "drill05_json_schema_validation"
+  name = "JSON Schema Contract Verification"
+
+  [[tracks.drills]]
+  id = "drill06_graphql_assertions"
+  name = "GraphQL Aliased Query Assertions"
+
+  [[tracks.drills]]
+  id = "drill07_request_spec_reuse"
+  name = "RequestSpecBuilder Authentication Reuse"
+
+# -----------------------------------------------------------------------------
+#  Mobile UI Automation - Maestro YAML
+# -----------------------------------------------------------------------------
+[[tracks]]
+id = "maestro-mobile"
+name = "Mobile UI Automation (Maestro YAML)"
+display_name = "Mobile UI Automation"
+runner = "maestro"
+exercise_dir = "exercises/03_mobile_maestro"
+extension = ".yaml"
+command = "maestro test {file}"
+stack = "Maestro YAML"
+tier = "Tier 2 to 3 — Intermediate to Advanced"
+description = "Black-box mobile automation: biometric fallback conditional flows, cold start deep links, screen rotation recreation."
+
+  [[tracks.drills]]
+  id = "01_biometric_fallback"
+  name = "Biometric Auth Failure Conditional PIN Flow"
+
+  [[tracks.drills]]
+  id = "02_deep_link_cold_start"
+  name = "Deep Link Cold Start App Navigation"
+
+  [[tracks.drills]]
+  id = "03_activity_recreation"
+  name = "Activity Recreation & Screen Rotation UI State"
+
+  [[tracks.drills]]
+  id = "04_scroll_to_element"
+  name = "Dynamic List Scrolling via scrollUntilVisible"
+
+  [[tracks.drills]]
+  id = "05_push_notification_handling"
+  name = "Handling OS Permission & Push Dialogs"
+
+# -----------------------------------------------------------------------------
+#  High-Concurrency Load Testing - k6 JavaScript
+# -----------------------------------------------------------------------------
+[[tracks]]
+id = "k6-js"
+name = "High-Concurrency Load Testing (k6 JS)"
+display_name = "High-Concurrency Load Testing"
+runner = "k6"
+exercise_dir = "exercises/04_perf_k6_js"
+extension = ".js"
+command = "k6 run {file} --summary-export=summary.json"
+stack = "k6 JavaScript"
+tier = "Tier 2 to 3 — Intermediate to Advanced"
+description = "Code-first load testing: connection pool starvation, 10x spike p99 profiling, chaos SLA assertion thresholds, and SSE streams."
+
+  [[tracks.drills]]
+  id = "01_database_pool_starvation"
+  name = "Gradual VU Ramp vs Connection Starvation"
+
+  [[tracks.drills]]
+  id = "02_spike_profile_p99"
+  name = "p99 Tail Latency Spikes with Custom Trends"
+
+  [[tracks.drills]]
+  id = "03_chaos_sla_assertion"
+  name = "Chaos Fault Injection SLA Thresholds"
+
+  [[tracks.drills]]
+  id = "04_streaming_sse_test"
+  name = "Server-Sent Events Continuous Stream Load"
+
+  [[tracks.drills]]
+  id = "05_grafana_output"
+  name = "Exporting Metrics to InfluxDB & Grafana"
+
+# -----------------------------------------------------------------------------
+#  GenAI QA & LLM Red-Teaming - Playwright TypeScript
+# -----------------------------------------------------------------------------
+[[tracks]]
+id = "genai-qa"
+name = "GenAI QA Testing (Playwright TypeScript)"
+display_name = "GenAI QA & LLM Red-Teaming"
+runner = "node"
+exercise_dir = "exercises/06_genai_qa"
+extension = ".ts"
+command = "npx playwright test {file} --reporter=json"
+stack = "Playwright TypeScript"
+tier = "Tier 3 — Advanced"
+description = "Testing non-deterministic LLM applications: RAG context faithfulness, prompt injection red-teaming, and token streaming TTFT."
+
+  [[tracks.drills]]
+  id = "01_rag_context_faithfulness"
+  name = "RAG Answer Faithfulness Verification"
+
+  [[tracks.drills]]
+  id = "02_llm_assertion_flakiness"
+  name = "Structured Intent Assertions for LLM Output"
+
+  [[tracks.drills]]
+  id = "03_llm_hallucination_eval"
+  name = "G-Eval Grounding & Citation Fact-Checking"
+
+  [[tracks.drills]]
+  id = "04_prompt_injection_red_teaming"
+  name = "Direct Prompt Injection Defense Guardrails"
+
+  [[tracks.drills]]
+  id = "05_latency_streaming_ttft"
+  name = "Time-To-First-Token (TTFT) Streaming Latency"
+
+# -----------------------------------------------------------------------------
+#  Enterprise Performance Testing - Apache JMeter JMX
+# -----------------------------------------------------------------------------
 [[tracks]]
 id = "jmeter"
 name = "Enterprise Performance Testing (JMeter)"
+display_name = "Enterprise Performance Testing"
 runner = "jmeter"
 exercise_dir = "exercises/05_perf_jmeter"
 extension = ".jmx"
 command = "jmeter -n -t {file} -l results.jtl"
+stack = "Apache JMeter JMX"
+tier = "Tier 1 to 3 — Beginner to Enterprise"
+description = "Enterprise performance engineering: non-GUI CI execution, response assertions, random timers, memory listener avoidance, CSRF correlation."
 
+  [[tracks.drills]]
+  id = "01_gui_mode_antipattern"
+  name = "Non-GUI Headless Mode for CI Pipelines"
+
+  [[tracks.drills]]
+  id = "02_missing_assertion"
+  name = "Response Code & Body Assertions"
+
+  [[tracks.drills]]
+  id = "03_constant_think_time"
+  name = "Gaussian Random Timers & Human Think Time"
+
+  [[tracks.drills]]
+  id = "04_listener_in_production"
+  name = "Memory Optimization & Listener Elimination"
+
+  [[tracks.drills]]
+  id = "05_hardcoded_token"
+  name = "Dynamic Session & CSRF Token Correlation"
+
+  [[tracks.drills]]
+  id = "06_throughput_vs_concurrency"
+  name = "Throughput Shaping vs Virtual User Math"
+
+  [[tracks.drills]]
+  id = "07_distributed_load"
+  name = "Distributed Load Testing with Master-Agent Clusters"
+
+  [[tracks.drills]]
+  id = "08_jtl_dashboard"
+  name = "Automated HTML Dashboard Generation from JTL"
+
+# -----------------------------------------------------------------------------
+#  Cloud-Native & DevSecOps - Python / Pytest
+# -----------------------------------------------------------------------------
+[[tracks]]
+id = "devsecops-python"
+name = "Cloud-Native & DevSecOps (Python / Pytest)"
+display_name = "Cloud-Native & DevSecOps"
+runner = "python"
+exercise_dir = "exercises/06_cloud_devsecops"
+extension = ".py"
+command = "python -m pytest {file} --json-report --json-report-file=report.json"
+stack = "Python / Pytest"
+tier = "Tier 3 — Advanced"
+description = "Security testing in CI/CD pipelines: container socket mounts, JWT signature bypass, SQL injection, SSRF, and CORS origins."
+
+  [[tracks.drills]]
+  id = "01_insecure_docker_mount"
+  name = "Docker Socket Mount Privilege Escalation"
+
+  [[tracks.drills]]
+  id = "02_jwt_weak_signing_key"
+  name = "JWT Algorithm None Signature Bypass"
+
+  [[tracks.drills]]
+  id = "03_sql_injection_blind_timing"
+  name = "SQL Injection Parameterized Prepared Statements"
+
+  [[tracks.drills]]
+  id = "04_ssrf_metadata_service"
+  name = "SSRF Cloud Metadata (169.254.169.254) Interception"
+
+  [[tracks.drills]]
+  id = "05_cors_misconfiguration_exploit"
+  name = "CORS Origin Whitelisting & Credential Isolation"
+
+# -----------------------------------------------------------------------------
+#  Cross-Tool Decision Framework - Python / Pytest
+# -----------------------------------------------------------------------------
 [[tracks]]
 id = "tool-decisions"
 name = "Cross-Tool Decision Framework (Python / Pytest)"
+display_name = "Cross-Tool Decision Framework"
 runner = "python"
 exercise_dir = "exercises/08_tool_decisions"
 extension = ".py"
 command = "python -m pytest {file} --json-report --json-report-file=report.json"
+stack = "Python / Pytest"
+tier = "Tier 3 — QA Architect"
+description = "Architectural decision making: when to choose UI vs API, k6 vs JMeter, Appium vs Maestro, and Contract vs E2E."
 
+  [[tracks.drills]]
+  id = "01_ui_vs_api_test"
+  name = "UI vs API Test Layer Decision Matrix"
+
+  [[tracks.drills]]
+  id = "02_k6_vs_jmeter"
+  name = "k6 vs JMeter Framework Evaluation"
+
+  [[tracks.drills]]
+  id = "03_appium_vs_maestro"
+  name = "Appium vs Maestro Mobile Strategy"
+
+  [[tracks.drills]]
+  id = "04_contract_vs_e2e"
+  name = "Pact Contract Testing vs Microservice E2E"
+
+# -----------------------------------------------------------------------------
+#  Consumer-Driven Contract Testing - Python / Pact
+# -----------------------------------------------------------------------------
 [[tracks]]
 id = "contract-pact"
 name = "Consumer-Driven Contract Testing (Python / Pact)"
+display_name = "Consumer-Driven Contract Testing"
 runner = "python"
 exercise_dir = "exercises/09_contract_pact"
 extension = ".py"
 command = "python -m pytest {file} --json-report --json-report-file=report.json"
+stack = "Python / Pact"
+tier = "Tier 2 to 3 — Intermediate to Advanced"
+description = "Independent microservice deployment safety: consumer contract definitions, provider verification, and schema evolution."
 
+  [[tracks.drills]]
+  id = "01_pact_consumer_definition"
+  name = "Consumer Contract Schema Definition"
+
+  [[tracks.drills]]
+  id = "02_pact_provider_verification"
+  name = "Automated Provider Verification CI Gates"
+
+  [[tracks.drills]]
+  id = "03_breaking_schema_evolution"
+  name = "Detecting Destructive vs Additive Schema Changes"
+
+# -----------------------------------------------------------------------------
+#  Accessibility & Visual Testing - Playwright TypeScript / Axe
+# -----------------------------------------------------------------------------
 [[tracks]]
 id = "a11y-axe"
 name = "Accessibility & Visual Testing (Playwright TypeScript)"
+display_name = "Accessibility & Visual Testing"
 runner = "node"
 exercise_dir = "exercises/10_a11y_axe"
 extension = ".ts"
 command = "npx playwright test {file} --reporter=json"
+stack = "Playwright TypeScript / Axe"
+tier = "Tier 1 to 2 — Beginner to Intermediate"
+description = "Inclusive quality engineering: WCAG 2.1 AA accessibility trees, keyboard Tab focus traps, and ARIA live regions."
 
+  [[tracks.drills]]
+  id = "01_wcag_color_contrast_axe"
+  name = "WCAG Semantic Accessibility Tree & Roles"
+
+  [[tracks.drills]]
+  id = "02_keyboard_focus_trap_aria"
+  name = "Sequential Keyboard Tab Navigation & Focus Traps"
+
+  [[tracks.drills]]
+  id = "03_screen_reader_live_regions"
+  name = "Dynamic UI Announcements via ARIA Live Regions"
+
+# -----------------------------------------------------------------------------
+#  CI/CD Pipeline Engineering - GitHub Actions YAML
+# -----------------------------------------------------------------------------
+[[tracks]]
+id = "ci-pipeline"
+name = "CI/CD Pipeline Engineering (GitHub Actions YAML)"
+display_name = "CI/CD Pipeline Engineering"
+runner = "pipeline"
+exercise_dir = "exercises/09_ci_pipeline"
+extension = ".yml"
+command = "cherenkov-lings pipeline validate {file}"
+stack = "GitHub Actions YAML"
+tier = "Tier 2 to 3 — Intermediate to Advanced"
+description = "Fix broken, wasteful, and insecure delivery pipelines: leaked credentials, single-runner coverage gaps, evidence lost with the runner, unbounded jobs, and superseded runs starving the queue. Scored in-process by the pipeline simulator — no Docker-in-Docker, no network."
+
+  [[tracks.drills]]
+  id = "01_leaked_secret_in_workflow"
+  name = "Plaintext Credentials in Workflow Definitions"
+
+  [[tracks.drills]]
+  id = "02_missing_matrix_strategy"
+  name = "Single-Runner Suites and the Illusion of Coverage"
+
+  [[tracks.drills]]
+  id = "03_lost_failure_artifacts"
+  name = "Failure Evidence That Dies With the Runner"
+
+  [[tracks.drills]]
+  id = "04_runaway_job_timeout"
+  name = "Unbounded Jobs and Hung Runner Cost"
+
+  [[tracks.drills]]
+  id = "05_redundant_concurrent_runs"
+  name = "Queue Starvation from Superseded Runs"

@@ -19,6 +19,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 import jwt
 
 from crucible.backend.chaos import ChaosMiddleware
+from crucible.backend.curriculum import ManifestError, build_curriculum
 from crucible.backend.models import (
     AllureSummaryResponse,
     BalanceResponse,
@@ -915,168 +916,19 @@ async def get_progress() -> JSONResponse:
 
 @app.get("/api/curriculum")
 async def get_curriculum() -> JSONResponse:
-    """Retrieve all available tracks, drills, metadata, and theoretical summaries."""
-    tracks_data = [
-        {
-            "id": "foundations",
-            "name": "Automation Foundations (Manual QA On-Ramp)",
-            "stack": "Python / Pytest",
-            "tier": "Tier 1 — Beginner",
-            "description": "Core mental model: AAA pattern, assertions, test naming, and avoiding mock traps.",
-            "drills": [
-                {"id": "01_what_is_a_test", "name": "What is an Automated Test?", "path": "exercises/00_foundations/01_what_is_a_test"},
-                {"id": "02_test_naming_matters", "name": "Test Naming as Living Documentation", "path": "exercises/00_foundations/02_test_naming_matters"},
-                {"id": "03_arrange_act_assert", "name": "The Universal AAA Pattern", "path": "exercises/00_foundations/03_arrange_act_assert"},
-                {"id": "04_dont_test_the_mock", "name": "Do Not Test the Mock", "path": "exercises/00_foundations/04_dont_test_the_mock"},
-                {"id": "05_one_thing_per_test", "name": "Single Responsibility in Test Cases", "path": "exercises/00_foundations/05_one_thing_per_test"},
-            ],
-        },
-        {
-            "id": "playwright-ts",
-            "name": "Modern Web Automation",
-            "stack": "Playwright TypeScript",
-            "tier": "Tier 1 to 3 — Beginner to Advanced",
-            "description": "Master resilient UI automation: hydration race conditions, closed Shadow DOM, Page Object Model, frameLocator, and storageState.",
-            "drills": [
-                {"id": "01_hydration_timing", "name": "React Hydration Click Drops", "path": "exercises/01_web_playwright_ts/01_hydration_timing"},
-                {"id": "02_shadow_dom_v2", "name": "Piercing Closed Shadow DOM Roots", "path": "exercises/01_web_playwright_ts/02_shadow_dom_v2"},
-                {"id": "03_debounce_race_condition", "name": "Handling Out-of-Order Autocomplete Search", "path": "exercises/01_web_playwright_ts/03_debounce_race_condition"},
-                {"id": "04_first_playwright_test", "name": "First Browser Test Navigation & Assertions", "path": "exercises/01_web_playwright_ts/04_first_playwright_test"},
-                {"id": "05_locator_hierarchy", "name": "Semantic Locators (getByRole vs CSS)", "path": "exercises/01_web_playwright_ts/05_locator_hierarchy"},
-                {"id": "06_page_object_intro", "name": "Page Object Model (POM) Refactoring", "path": "exercises/01_web_playwright_ts/06_page_object_intro"},
-                {"id": "07_iframe_cross_origin", "name": "Cross-Origin Payment iframe Handling", "path": "exercises/01_web_playwright_ts/07_iframe_cross_origin"},
-                {"id": "08_network_intercept", "name": "Network Request Mocking & Interception", "path": "exercises/01_web_playwright_ts/08_network_intercept"},
-                {"id": "09_visual_regression_trap", "name": "Visual Regression Snapshot Tolerances", "path": "exercises/01_web_playwright_ts/09_visual_regression_trap"},
-                {"id": "10_parallel_state_pollution", "name": "Worker Isolation via StorageState", "path": "exercises/01_web_playwright_ts/10_parallel_state_pollution"},
-            ],
-        },
-        {
-            "id": "restassured-java",
-            "name": "API Resilience & Security",
-            "stack": "REST Assured Java",
-            "tier": "Tier 2 to 3 — Intermediate to Advanced",
-            "description": "Enterprise API testing: idempotency collisions, JWT refresh interceptors, Kafka lag polling, and JSON schema assertions.",
-            "drills": [
-                {"id": "drill01_idempotency", "name": "HTTP 409 Conflict Retry Strategies", "path": "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill01_idempotency"},
-                {"id": "drill02_jwt_auth", "name": "Transparent JWT Refresh Interceptors", "path": "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill02_jwt_auth"},
-                {"id": "drill03_kafka_lag", "name": "Eventual Consistency & Kafka Lag Polling", "path": "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill03_kafka_lag"},
-                {"id": "drill04_pagination_boundary", "name": "Multi-Page Boundary Pagination Loops", "path": "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill04_pagination_boundary"},
-                {"id": "drill05_json_schema_validation", "name": "JSON Schema Contract Verification", "path": "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill05_json_schema_validation"},
-                {"id": "drill06_graphql_assertions", "name": "GraphQL Aliased Query Assertions", "path": "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill06_graphql_assertions"},
-                {"id": "drill07_request_spec_reuse", "name": "RequestSpecBuilder Authentication Reuse", "path": "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill07_request_spec_reuse"},
-            ],
-        },
-        {
-            "id": "maestro-mobile",
-            "name": "Mobile UI Automation",
-            "stack": "Maestro YAML",
-            "tier": "Tier 2 to 3 — Intermediate to Advanced",
-            "description": "Black-box mobile automation: biometric fallback conditional flows, cold start deep links, screen rotation recreation.",
-            "drills": [
-                {"id": "01_biometric_fallback", "name": "Biometric Auth Failure Conditional PIN Flow", "path": "exercises/03_mobile_maestro/01_biometric_fallback"},
-                {"id": "02_deep_link_cold_start", "name": "Deep Link Cold Start App Navigation", "path": "exercises/03_mobile_maestro/02_deep_link_cold_start"},
-                {"id": "03_activity_recreation", "name": "Activity Recreation & Screen Rotation UI State", "path": "exercises/03_mobile_maestro/03_activity_recreation"},
-                {"id": "04_scroll_to_element", "name": "Dynamic List Scrolling via scrollUntilVisible", "path": "exercises/03_mobile_maestro/04_scroll_to_element"},
-                {"id": "05_push_notification_handling", "name": "Handling OS Permission & Push Dialogs", "path": "exercises/03_mobile_maestro/05_push_notification_handling"},
-            ],
-        },
-        {
-            "id": "k6-js",
-            "name": "High-Concurrency Load Testing",
-            "stack": "k6 JavaScript",
-            "tier": "Tier 2 to 3 — Intermediate to Advanced",
-            "description": "Code-first load testing: connection pool starvation, 10x spike p99 profiling, chaos SLA assertion thresholds, and SSE streams.",
-            "drills": [
-                {"id": "01_database_pool_starvation", "name": "Gradual VU Ramp vs Connection Starvation", "path": "exercises/04_perf_k6_js/01_database_pool_starvation"},
-                {"id": "02_spike_profile_p99", "name": "p99 Tail Latency Spikes with Custom Trends", "path": "exercises/04_perf_k6_js/02_spike_profile_p99"},
-                {"id": "03_chaos_sla_assertion", "name": "Chaos Fault Injection SLA Thresholds", "path": "exercises/04_perf_k6_js/03_chaos_sla_assertion"},
-                {"id": "04_streaming_sse_test", "name": "Server-Sent Events Continuous Stream Load", "path": "exercises/04_perf_k6_js/04_streaming_sse_test"},
-                {"id": "05_grafana_output", "name": "Exporting Metrics to InfluxDB & Grafana", "path": "exercises/04_perf_k6_js/05_grafana_output"},
-            ],
-        },
-        {
-            "id": "jmeter",
-            "name": "Enterprise Performance Testing",
-            "stack": "Apache JMeter JMX",
-            "tier": "Tier 1 to 3 — Beginner to Enterprise",
-            "description": "Enterprise performance engineering: non-GUI CI execution, response assertions, random timers, memory listener avoidance, CSRF correlation.",
-            "drills": [
-                {"id": "01_gui_mode_antipattern", "name": "Non-GUI Headless Mode for CI Pipelines", "path": "exercises/05_perf_jmeter/01_gui_mode_antipattern"},
-                {"id": "02_missing_assertion", "name": "Response Code & Body Assertions", "path": "exercises/05_perf_jmeter/02_missing_assertion"},
-                {"id": "03_constant_think_time", "name": "Gaussian Random Timers & Human Think Time", "path": "exercises/05_perf_jmeter/03_constant_think_time"},
-                {"id": "04_listener_in_production", "name": "Memory Optimization & Listener Elimination", "path": "exercises/05_perf_jmeter/04_listener_in_production"},
-                {"id": "05_hardcoded_token", "name": "Dynamic Session & CSRF Token Correlation", "path": "exercises/05_perf_jmeter/05_hardcoded_token"},
-                {"id": "06_throughput_vs_concurrency", "name": "Throughput Shaping vs Virtual User Math", "path": "exercises/05_perf_jmeter/06_throughput_vs_concurrency"},
-                {"id": "07_distributed_load", "name": "Distributed Load Testing with Master-Agent Clusters", "path": "exercises/05_perf_jmeter/07_distributed_load"},
-                {"id": "08_jtl_dashboard", "name": "Automated HTML Dashboard Generation from JTL", "path": "exercises/05_perf_jmeter/08_jtl_dashboard"},
-            ],
-        },
-        {
-            "id": "genai-qa",
-            "name": "GenAI QA & LLM Red-Teaming",
-            "stack": "Playwright TypeScript",
-            "tier": "Tier 3 — Advanced",
-            "description": "Testing non-deterministic LLM applications: RAG context faithfulness, prompt injection red-teaming, and token streaming TTFT.",
-            "drills": [
-                {"id": "01_rag_context_faithfulness", "name": "RAG Answer Faithfulness Verification", "path": "exercises/06_genai_qa/01_rag_context_faithfulness"},
-                {"id": "02_llm_assertion_flakiness", "name": "Structured Intent Assertions for LLM Output", "path": "exercises/06_genai_qa/02_llm_assertion_flakiness"},
-                {"id": "03_llm_hallucination_eval", "name": "G-Eval Grounding & Citation Fact-Checking", "path": "exercises/06_genai_qa/03_llm_hallucination_eval"},
-                {"id": "04_prompt_injection_red_teaming", "name": "Direct Prompt Injection Defense Guardrails", "path": "exercises/06_genai_qa/04_prompt_injection_red_teaming"},
-                {"id": "05_latency_streaming_ttft", "name": "Time-To-First-Token (TTFT) Streaming Latency", "path": "exercises/06_genai_qa/05_latency_streaming_ttft"},
-            ],
-        },
-        {
-            "id": "devsecops-python",
-            "name": "Cloud-Native & DevSecOps",
-            "stack": "Python / Pytest",
-            "tier": "Tier 3 — Advanced",
-            "description": "Security testing in CI/CD pipelines: container socket mounts, JWT signature bypass, SQL injection, SSRF, and CORS origins.",
-            "drills": [
-                {"id": "01_insecure_docker_mount", "name": "Docker Socket Mount Privilege Escalation", "path": "exercises/07_cloud_devsecops/01_insecure_docker_mount"},
-                {"id": "02_jwt_weak_signing_key", "name": "JWT Algorithm None Signature Bypass", "path": "exercises/07_cloud_devsecops/02_jwt_weak_signing_key"},
-                {"id": "03_sql_injection_blind_timing", "name": "SQL Injection Parameterized Prepared Statements", "path": "exercises/07_cloud_devsecops/03_sql_injection_blind_timing"},
-                {"id": "04_ssrf_metadata_service", "name": "SSRF Cloud Metadata (169.254.169.254) Interception", "path": "exercises/07_cloud_devsecops/04_ssrf_metadata_service"},
-                {"id": "05_cors_misconfiguration_exploit", "name": "CORS Origin Whitelisting & Credential Isolation", "path": "exercises/07_cloud_devsecops/05_cors_misconfiguration_exploit"},
-            ],
-        },
-        {
-            "id": "tool-decisions",
-            "name": "Cross-Tool Decision Framework",
-            "stack": "Python / Pytest",
-            "tier": "Tier 3 — QA Architect",
-            "description": "Architectural decision making: when to choose UI vs API, k6 vs JMeter, Appium vs Maestro, and Contract vs E2E.",
-            "drills": [
-                {"id": "01_ui_vs_api_test", "name": "UI vs API Test Layer Decision Matrix", "path": "exercises/08_tool_decisions/01_ui_vs_api_test"},
-                {"id": "02_k6_vs_jmeter", "name": "k6 vs JMeter Framework Evaluation", "path": "exercises/08_tool_decisions/02_k6_vs_jmeter"},
-                {"id": "03_appium_vs_maestro", "name": "Appium vs Maestro Mobile Strategy", "path": "exercises/08_tool_decisions/03_appium_vs_maestro"},
-                {"id": "04_contract_vs_e2e", "name": "Pact Contract Testing vs Microservice E2E", "path": "exercises/08_tool_decisions/04_contract_vs_e2e"},
-            ],
-        },
-        {
-            "id": "contract-pact",
-            "name": "Consumer-Driven Contract Testing",
-            "stack": "Python / Pact",
-            "tier": "Tier 2 to 3 — Intermediate to Advanced",
-            "description": "Independent microservice deployment safety: consumer contract definitions, provider verification, and schema evolution.",
-            "drills": [
-                {"id": "01_pact_consumer_definition", "name": "Consumer Contract Schema Definition", "path": "exercises/09_contract_pact/01_pact_consumer_definition"},
-                {"id": "02_pact_provider_verification", "name": "Automated Provider Verification CI Gates", "path": "exercises/09_contract_pact/02_pact_provider_verification"},
-                {"id": "03_breaking_schema_evolution", "name": "Detecting Destructive vs Additive Schema Changes", "path": "exercises/09_contract_pact/03_breaking_schema_evolution"},
-            ],
-        },
-        {
-            "id": "a11y-axe",
-            "name": "Accessibility & Visual Testing",
-            "stack": "Playwright TypeScript / Axe",
-            "tier": "Tier 1 to 2 — Beginner to Intermediate",
-            "description": "Inclusive quality engineering: WCAG 2.1 AA accessibility trees, keyboard Tab focus traps, and ARIA live regions.",
-            "drills": [
-                {"id": "01_wcag_color_contrast_axe", "name": "WCAG Semantic Accessibility Tree & Roles", "path": "exercises/10_a11y_axe/01_wcag_color_contrast_axe"},
-                {"id": "02_keyboard_focus_trap_aria", "name": "Sequential Keyboard Tab Navigation & Focus Traps", "path": "exercises/10_a11y_axe/02_keyboard_focus_trap_aria"},
-                {"id": "03_screen_reader_live_regions", "name": "Dynamic UI Announcements via ARIA Live Regions", "path": "exercises/10_a11y_axe/03_screen_reader_live_regions"},
-            ],
-        },
-    ]
+    """Retrieve all available tracks, drills, metadata, and theoretical summaries.
+
+    Sourced from the lings.toml curriculum manifest, which is the single source
+    of truth shared with the Rust engine.
+    """
+    try:
+        tracks_data = build_curriculum()
+    except ManifestError as exc:
+        return JSONResponse(
+            status_code=500,
+            content={"error": "MANIFEST_UNAVAILABLE", "message": str(exc)},
+        )
+
     total = sum(len(t["drills"]) for t in tracks_data)
     return JSONResponse(status_code=200, content={"tracks": tracks_data, "total_drills": total})
 

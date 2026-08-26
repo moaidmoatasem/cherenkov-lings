@@ -431,6 +431,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let runner = runner::JMeterRunner::new();
                     println!("{} JMeter Runner initialized.", "✓".green());
                     Some(Arc::new(runner::AnyRunner::Jmeter(Arc::new(runner))))
+                } else if track_config.runner == "pipeline" {
+                    println!("{} Initializing CI/CD Pipeline Simulator...", "⚡".yellow());
+                    let runner = runner::PipelineRunner::new();
+                    println!(
+                        "{} CI/CD Pipeline Simulator initialized (in-process, pass score {}/100).",
+                        "✓".green(),
+                        runner.pass_score().to_string().bright_yellow()
+                    );
+                    Some(Arc::new(runner::AnyRunner::Pipeline(Arc::new(runner))))
                 } else {
                     None
                 };
@@ -707,29 +716,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             mcp::run_mcp_server();
         }
         Commands::Dashboard => {
-            let cfg = config::load_config("lings.toml").unwrap_or_else(|_| config::Config {
-                platform: config::PlatformConfig {
-                    name: "cherenkov-lings".to_string(),
-                    version: "1.0.0".to_string(),
-                    sandbox_port: 8080,
-                    chaos_proxy_port: 8086,
-                    telemetry: false,
-                },
-                evaluation: config::EvaluationConfig {
-                    pass_threshold: 85.0,
-                    flakiness_iterations: 5,
-                    flakiness_timeout_ms: 5000,
-                    chaos_latency_ms: 200,
-                    chaos_jitter_ms: 75,
-                },
-                ui: config::UiConfig {
-                    theme: "cherenkov-blue".to_string(),
-                    show_hints_on_failure: true,
-                    enable_audio_bell: false,
-                    language: "en".to_string(),
-                },
-                tracks: gamification::default_curriculum_tracks(),
-            });
+            let cfg = config::load_config("lings.toml")
+                .unwrap_or_else(|_| gamification::embedded_config());
 
             let state = match gamification::load_progress(None::<&Path>) {
                 Ok(s) => s,
@@ -823,29 +811,7 @@ fn run_curriculum_audit() {
     );
     println!();
 
-    let cfg = config::load_config("lings.toml").unwrap_or_else(|_| config::Config {
-        platform: config::PlatformConfig {
-            name: "cherenkov-lings".to_string(),
-            version: "1.0.0".to_string(),
-            sandbox_port: 8080,
-            chaos_proxy_port: 8086,
-            telemetry: false,
-        },
-        evaluation: config::EvaluationConfig {
-            pass_threshold: 85.0,
-            flakiness_iterations: 5,
-            flakiness_timeout_ms: 5000,
-            chaos_latency_ms: 200,
-            chaos_jitter_ms: 75,
-        },
-        ui: config::UiConfig {
-            theme: "cherenkov-blue".to_string(),
-            show_hints_on_failure: true,
-            enable_audio_bell: false,
-            language: "en".to_string(),
-        },
-        tracks: gamification::default_curriculum_tracks(),
-    });
+    let cfg = config::load_config("lings.toml").unwrap_or_else(|_| gamification::embedded_config());
 
     let mut total_drills = 0;
     let mut complete_drills = 0;
@@ -875,17 +841,16 @@ fn run_curriculum_audit() {
                 .filter(|e| e.path().is_dir())
                 .collect();
 
-            // Special handling for java directory layout (src/test/java/com/cherenkov)
-            if track.id == "restassured-java" {
-                let java_base = track_path.join("src/test/java/com/cherenkov");
-                if java_base.exists() {
-                    subdirs = fs::read_dir(java_base)
-                        .into_iter()
-                        .flatten()
-                        .filter_map(|e| e.ok())
-                        .filter(|e| e.path().is_dir())
-                        .collect();
-                }
+            // Tracks whose drills do not sit directly under exercise_dir (the
+            // Maven-structured Java track) declare a drill_root in lings.toml.
+            let drill_root = Path::new(track.drill_root());
+            if drill_root != track_path && drill_root.exists() {
+                subdirs = fs::read_dir(drill_root)
+                    .into_iter()
+                    .flatten()
+                    .filter_map(|e| e.ok())
+                    .filter(|e| e.path().is_dir())
+                    .collect();
             }
 
             subdirs.sort_by_key(|a| a.file_name());
@@ -901,11 +866,7 @@ fn run_curriculum_audit() {
                 total_drills += 1;
 
                 let ext = &track.extension;
-                let (ex_name, sol_name) = if track.id == "restassured-java" {
-                    ("Exercise.java".to_string(), "Solution.java".to_string())
-                } else {
-                    (format!("exercise{}", ext), format!("solution{}", ext))
-                };
+                let (ex_name, sol_name) = (track.exercise_file(), track.solution_file());
 
                 let has_exercise = p.join(&ex_name).exists();
                 let has_solution =
@@ -967,20 +928,10 @@ fn run_curriculum_audit() {
                                     || content.contains("import pytest")
                             }
                             ".java" => content.contains("import") || content.contains("@Test"),
-                            ".jmx" => {
-                                content.contains("<HTTPSamplerProxy")
-                                    || content.contains("<TestPlan")
-                            }
-                            ".js" => {
-                                content.contains("import")
-                                    || content.contains("export")
-                                    || content.contains("http.get")
-                            }
-                            ".yaml" => {
-                                content.contains("launchApp")
-                                    || content.contains("openLink")
-                                    || content.contains("tapOn")
-                            }
+                            ".jmx" => content.contains("<HTTPSamplerProxy") || content.contains("<TestPlan"),
+                            ".js" => content.contains("import") || content.contains("export") || content.contains("http.get"),
+                            ".yaml" => content.contains("launchApp") || content.contains("openLink") || content.contains("tapOn"),
+                            ".yml" => content.contains("jobs:") && (content.contains("runs-on") || content.contains("uses:")),
                             _ => !content.trim().is_empty(),
                         };
                         if has_content {
@@ -1078,29 +1029,7 @@ fn run_curriculum_audit() {
 fn run_new_drill(track_id: &str, drill_name: &str, title: Option<&str>) {
     use std::fs;
 
-    let cfg = config::load_config("lings.toml").unwrap_or_else(|_| config::Config {
-        platform: config::PlatformConfig {
-            name: "cherenkov-lings".to_string(),
-            version: "1.0.0".to_string(),
-            sandbox_port: 8080,
-            chaos_proxy_port: 8086,
-            telemetry: false,
-        },
-        evaluation: config::EvaluationConfig {
-            pass_threshold: 85.0,
-            flakiness_iterations: 5,
-            flakiness_timeout_ms: 5000,
-            chaos_latency_ms: 200,
-            chaos_jitter_ms: 75,
-        },
-        ui: config::UiConfig {
-            theme: "cherenkov-blue".to_string(),
-            show_hints_on_failure: true,
-            enable_audio_bell: false,
-            language: "en".to_string(),
-        },
-        tracks: gamification::default_curriculum_tracks(),
-    });
+    let cfg = config::load_config("lings.toml").unwrap_or_else(|_| gamification::embedded_config());
 
     let track = match cfg.tracks.iter().find(|t| t.id == track_id) {
         Some(t) => t,
