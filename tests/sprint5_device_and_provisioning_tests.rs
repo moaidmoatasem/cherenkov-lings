@@ -96,7 +96,9 @@ fn empty_avd_name_fails_before_any_process_is_spawned() {
 #[test]
 fn browser_node_command_targets_a_standalone_selenium_image() {
     let dm = DeviceManager::new();
-    let argv = dm.browser_node_command("chromium").expect("chromium is supported");
+    let argv = dm
+        .browser_node_command("chromium")
+        .expect("chromium is supported");
 
     assert_eq!(argv[0], "docker");
     assert_eq!(argv[1], "run");
@@ -117,7 +119,10 @@ fn browser_names_are_case_and_whitespace_insensitive() {
     let padded = dm.browser_node_command("  ChRoMiUm  ").expect("normalized");
     let plain = dm.browser_node_command("chromium").expect("plain");
 
-    assert_eq!(padded, plain, "casing and padding must not change the image");
+    assert_eq!(
+        padded, plain,
+        "casing and padding must not change the image"
+    );
 }
 
 #[test]
@@ -165,7 +170,9 @@ fn start_browser_node_returns_a_named_node_without_touching_docker() {
     let dm = DeviceManager::new();
     // This is a mock by design: the browser tracks run a local Playwright
     // install, so the CLI must work on a machine with no Docker daemon.
-    let node = dm.start_browser_node("chromium").expect("mock start succeeds");
+    let node = dm
+        .start_browser_node("chromium")
+        .expect("mock start succeeds");
     assert_eq!(node, "crucible-node-chromium");
 }
 

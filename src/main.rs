@@ -1,4 +1,5 @@
 mod config;
+pub mod device_manager;
 pub mod feedback;
 pub mod gamification;
 pub mod mcp;
@@ -9,7 +10,6 @@ pub mod review;
 pub mod runner;
 pub mod triage;
 mod watcher;
-pub mod device_manager;
 
 use clap::{Parser, Subcommand};
 use colored::Colorize;
@@ -325,7 +325,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         Ok(avd) if !avd.trim().is_empty() => {
                             if let Err(e) = device_manager.start_android_emulator(&avd) {
                                 println!("{} Emulator unavailable: {e}", "!".yellow());
-                                println!("  Continuing without a device — Maestro drills are graded on flow source.");
+                                println!(
+                                    "  Continuing without a device — Maestro drills are graded on flow source."
+                                );
                             }
                         }
                         _ => {

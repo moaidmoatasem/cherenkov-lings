@@ -77,7 +77,11 @@ fn lint_on_type_tolerates_empty_and_partial_input() {
     assert!(RuleScanner::lint_on_type("").is_empty());
     assert!(RuleScanner::lint_on_type("   \n\t\n").is_empty());
 
-    for partial in ["await page.", "await page.waitFor", "await page.waitForTimeout("] {
+    for partial in [
+        "await page.",
+        "await page.waitFor",
+        "await page.waitForTimeout(",
+    ] {
         // The contract is "does not panic and does not fabricate", not a
         // specific verdict on an incomplete expression.
         let _ = RuleScanner::lint_on_type(partial);
@@ -190,6 +194,12 @@ fn ingest_trace_file_output_is_a_single_prompt_line() {
     let summary = mentor().ingest_trace_file(Path::new("trace.zip"));
 
     assert!(!summary.contains('\n'), "trace summary must stay one line");
-    assert!(summary.starts_with('['), "summary should be bracketed: {summary}");
-    assert!(summary.ends_with(']'), "summary should be bracketed: {summary}");
+    assert!(
+        summary.starts_with('['),
+        "summary should be bracketed: {summary}"
+    );
+    assert!(
+        summary.ends_with(']'),
+        "summary should be bracketed: {summary}"
+    );
 }

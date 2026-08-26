@@ -77,7 +77,9 @@ jobs:
 
     - uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        # Playwright 1.62 refuses to run on Node 18 ("requires Node.js 20 or
+        # higher"), which failed this workflow's e2e job on every run.
+        node-version: '20'
 
     - name: Install & Build Frontend
       run: |
@@ -101,7 +103,9 @@ jobs:
 
     - uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        # Playwright 1.62 refuses to run on Node 18 ("requires Node.js 20 or
+        # higher"), which failed this workflow's e2e job on every run.
+        node-version: '20'
 
     - uses: actions/setup-python@v5
       with:
@@ -137,7 +141,7 @@ jobs:
         npx playwright test crucible/frontend/e2e
 
   python_exercise_validation:
-    name: Python Exercise Validation (4 tracks, 17 drills)
+    name: Python Exercise Validation (5 tracks, 18 drills)
     runs-on: ubuntu-latest
 
     steps:
@@ -203,6 +207,15 @@ jobs:
     - name: Validate Contract Pact Track (3 drills)
       run: |
         for dir in exercises/09_contract_pact/*/; do
+          if [ -f "$dir/solution.py" ]; then
+            echo "Testing: $dir"
+            python -m pytest "$dir/solution.py" -v --tb=short || exit 1
+          fi
+        done
+
+    - name: Validate API Validation Fundamentals Track (1 drill)
+      run: |
+        for dir in exercises/02_api_pytest/*/; do
           if [ -f "$dir/solution.py" ]; then
             echo "Testing: $dir"
             python -m pytest "$dir/solution.py" -v --tb=short || exit 1
