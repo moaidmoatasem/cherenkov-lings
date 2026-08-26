@@ -308,7 +308,7 @@ fn test_extract_drill_id_from_path_robustness() {
         "04_scroll_to_element"
     );
     assert_eq!(
-        extract_drill_id_from_path("exercises/06_tool_decisions/03_appium_vs_maestro/exercise.py"),
+        extract_drill_id_from_path("exercises/08_tool_decisions/03_appium_vs_maestro/exercise.py"),
         "03_appium_vs_maestro"
     );
 }

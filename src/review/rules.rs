@@ -607,7 +607,7 @@ impl RuleScanner {
     }
 }
 
-/// Applies automated AST rule fixes to the source code
+/// Applies automated lint rule fixes to the source code
 pub fn apply_automated_fixes(content: &str, violations: &[AstViolation]) -> String {
     let mut lines: Vec<String> = content.lines().map(|s| s.to_string()).collect();
     if lines.is_empty() {

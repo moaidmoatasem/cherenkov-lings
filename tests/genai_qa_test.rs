@@ -1,4 +1,4 @@
-use cherenkov_lings::feedback::{AstReport, analyze_file, evaluate_feedback};
+use cherenkov_lings::feedback::{StaticAnalysisReport, analyze_file, evaluate_feedback};
 use cherenkov_lings::runner::{DrillResponse, RunResult};
 use std::fs;
 use std::path::Path;
@@ -6,11 +6,11 @@ use std::path::Path;
 #[test]
 fn test_genai_qa_drill_files_exist_and_hints_contracts() {
     let drill_dirs = [
-        "exercises/05_genai_qa/01_rag_context_faithfulness",
-        "exercises/05_genai_qa/02_llm_assertion_flakiness",
-        "exercises/05_genai_qa/03_llm_hallucination_eval",
-        "exercises/05_genai_qa/04_prompt_injection_red_teaming",
-        "exercises/05_genai_qa/05_latency_streaming_ttft",
+        "exercises/06_genai_qa/01_rag_context_faithfulness",
+        "exercises/06_genai_qa/02_llm_assertion_flakiness",
+        "exercises/06_genai_qa/03_llm_hallucination_eval",
+        "exercises/06_genai_qa/04_prompt_injection_red_teaming",
+        "exercises/06_genai_qa/05_latency_streaming_ttft",
     ];
 
     for dir in drill_dirs {
@@ -65,8 +65,8 @@ fn test_genai_qa_drill_files_exist_and_hints_contracts() {
 
 #[test]
 fn test_genai_qa_drill01_rag_faithfulness_contract() {
-    let ex_path = "exercises/05_genai_qa/01_rag_context_faithfulness/exercise.ts";
-    let sol_path = "exercises/05_genai_qa/01_rag_context_faithfulness/solution.ts";
+    let ex_path = "exercises/06_genai_qa/01_rag_context_faithfulness/exercise.ts";
+    let sol_path = "exercises/06_genai_qa/01_rag_context_faithfulness/solution.ts";
 
     let ex_content = fs::read_to_string(ex_path).expect("read drill 01 exercise.ts");
     let sol_content = fs::read_to_string(sol_path).expect("read drill 01 solution.ts");
@@ -96,8 +96,8 @@ fn test_genai_qa_drill01_rag_faithfulness_contract() {
 
 #[test]
 fn test_genai_qa_drill02_llm_flakiness_contract() {
-    let ex_path = "exercises/05_genai_qa/02_llm_assertion_flakiness/exercise.ts";
-    let sol_path = "exercises/05_genai_qa/02_llm_assertion_flakiness/solution.ts";
+    let ex_path = "exercises/06_genai_qa/02_llm_assertion_flakiness/exercise.ts";
+    let sol_path = "exercises/06_genai_qa/02_llm_assertion_flakiness/solution.ts";
 
     let ex_content = fs::read_to_string(ex_path).expect("read drill 02 exercise.ts");
     let sol_content = fs::read_to_string(sol_path).expect("read drill 02 solution.ts");
@@ -123,8 +123,8 @@ fn test_genai_qa_drill02_llm_flakiness_contract() {
 
 #[test]
 fn test_genai_qa_drill03_hallucination_eval_contract() {
-    let ex_path = "exercises/05_genai_qa/03_llm_hallucination_eval/exercise.ts";
-    let sol_path = "exercises/05_genai_qa/03_llm_hallucination_eval/solution.ts";
+    let ex_path = "exercises/06_genai_qa/03_llm_hallucination_eval/exercise.ts";
+    let sol_path = "exercises/06_genai_qa/03_llm_hallucination_eval/solution.ts";
 
     let ex_content = fs::read_to_string(ex_path).expect("read drill 03 exercise.ts");
     let sol_content = fs::read_to_string(sol_path).expect("read drill 03 solution.ts");
@@ -146,8 +146,8 @@ fn test_genai_qa_drill03_hallucination_eval_contract() {
 
 #[test]
 fn test_genai_qa_drill04_prompt_injection_contract() {
-    let ex_path = "exercises/05_genai_qa/04_prompt_injection_red_teaming/exercise.ts";
-    let sol_path = "exercises/05_genai_qa/04_prompt_injection_red_teaming/solution.ts";
+    let ex_path = "exercises/06_genai_qa/04_prompt_injection_red_teaming/exercise.ts";
+    let sol_path = "exercises/06_genai_qa/04_prompt_injection_red_teaming/solution.ts";
 
     let ex_content = fs::read_to_string(ex_path).expect("read drill 04 exercise.ts");
     let sol_content = fs::read_to_string(sol_path).expect("read drill 04 solution.ts");
@@ -169,8 +169,8 @@ fn test_genai_qa_drill04_prompt_injection_contract() {
 
 #[test]
 fn test_genai_qa_drill05_ttft_streaming_contract() {
-    let ex_path = "exercises/05_genai_qa/05_latency_streaming_ttft/exercise.ts";
-    let sol_path = "exercises/05_genai_qa/05_latency_streaming_ttft/solution.ts";
+    let ex_path = "exercises/06_genai_qa/05_latency_streaming_ttft/exercise.ts";
+    let sol_path = "exercises/06_genai_qa/05_latency_streaming_ttft/solution.ts";
 
     let ex_content = fs::read_to_string(ex_path).expect("read drill 05 exercise.ts");
     let sol_content = fs::read_to_string(sol_path).expect("read drill 05 solution.ts");
@@ -210,16 +210,16 @@ fn test_playwright_config_discovers_genai_drills() {
         "playwright.config.ts must match TypeScript test files"
     );
 
-    let d1_ex = Path::new("exercises/05_genai_qa/01_rag_context_faithfulness/exercise.ts");
-    let d2_ex = Path::new("exercises/05_genai_qa/02_llm_assertion_flakiness/exercise.ts");
+    let d1_ex = Path::new("exercises/06_genai_qa/01_rag_context_faithfulness/exercise.ts");
+    let d2_ex = Path::new("exercises/06_genai_qa/02_llm_assertion_flakiness/exercise.ts");
     assert!(d1_ex.exists() && d1_ex.extension().unwrap() == "ts");
     assert!(d2_ex.exists() && d2_ex.extension().unwrap() == "ts");
 }
 
 #[test]
 fn test_genai_qa_ast_analysis_clean_locators() {
-    let d1_sol = "exercises/05_genai_qa/01_rag_context_faithfulness/solution.ts";
-    let d2_sol = "exercises/05_genai_qa/02_llm_assertion_flakiness/solution.ts";
+    let d1_sol = "exercises/06_genai_qa/01_rag_context_faithfulness/solution.ts";
+    let d2_sol = "exercises/06_genai_qa/02_llm_assertion_flakiness/solution.ts";
 
     let rep1 = analyze_file(d1_sol).expect("analyze drill 01 solution");
     assert!(!rep1.has_wait_for_timeout);
@@ -232,8 +232,8 @@ fn test_genai_qa_ast_analysis_clean_locators() {
 
 #[test]
 fn test_genai_qa_feedback_matrix_scorecard_evaluation() {
-    let ast = AstReport {
-        file_path: "exercises/05_genai_qa/01_rag_context_faithfulness/solution.ts".to_string(),
+    let ast = StaticAnalysisReport {
+        file_path: "exercises/06_genai_qa/01_rag_context_faithfulness/solution.ts".to_string(),
         locator_quality_score: 100.0,
         ..Default::default()
     };
@@ -367,13 +367,13 @@ fn test_polyglot_5_tracks_manifest_and_config() {
         ),
         ("k6-js", "exercises/04_perf_k6_js", ".js"),
         ("maestro-mobile", "exercises/03_mobile_maestro", ".yaml"),
-        ("genai-qa", "exercises/05_genai_qa", ".ts"),
-        ("devsecops-python", "exercises/06_cloud_devsecops", ".py"),
+        ("genai-qa", "exercises/06_genai_qa", ".ts"),
+        ("devsecops-python", "exercises/07_cloud_devsecops", ".py"),
         ("foundations", "exercises/00_foundations", ".py"),
         ("jmeter", "exercises/05_perf_jmeter", ".jmx"),
-        ("tool-decisions", "exercises/06_tool_decisions", ".py"),
-        ("contract-pact", "exercises/07_contract_pact", ".py"),
-        ("a11y-axe", "exercises/08_a11y_axe", ".ts"),
+        ("tool-decisions", "exercises/08_tool_decisions", ".py"),
+        ("contract-pact", "exercises/09_contract_pact", ".py"),
+        ("a11y-axe", "exercises/10_a11y_axe", ".ts"),
     ];
 
     for (track_id, dir, ext) in expected_tracks {
@@ -459,12 +459,12 @@ fn test_polyglot_all_14_drills_exist_with_complete_artifacts() {
             "solution.js",
         ),
         (
-            "exercises/05_genai_qa/01_rag_context_faithfulness",
+            "exercises/06_genai_qa/01_rag_context_faithfulness",
             "exercise.ts",
             "solution.ts",
         ),
         (
-            "exercises/05_genai_qa/02_llm_assertion_flakiness",
+            "exercises/06_genai_qa/02_llm_assertion_flakiness",
             "exercise.ts",
             "solution.ts",
         ),

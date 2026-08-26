@@ -14,7 +14,7 @@ Interactive "-lings" style learning platforms—originating with **Rustlings** a
 
 Traditional software training relies heavily on passive video tutorials, cloud-hosted sandboxes with high latency, or vendor-locked SaaS playgrounds. In contrast, the "-lings" methodology drops the student directly into their own local IDE with:
 1. **Authentic Broken Starter Code**: Real code containing realistic anti-patterns or bugs.
-2. **Ultra-Low Latency Feedback Loop (<500ms)**: Reactive file-system watchers that instantly execute compilers or test runners on save (`Ctrl+S`).
+2. **Zero-Friction Feedback Loop**: Reactive file-system watchers dispatch the compiler or test runner on save (`Ctrl+S`) after a 50ms debounce, so the only wait is the runner itself — no manual re-run, no CI queue.
 3. **Compiler / Runner as Socratic Mentor**: Clear, sanitized error diagnostics and progressive hint scaffolds rather than outright spoilers.
 4. **Zero-Cloud & Zero-GPU Resilience**: Complete offline operation on localhost without external API keys, database servers, or GPU clusters.
 5. **Intentional Progression Gates**: Deliberate sentinel markers (`// I AM NOT DONE`) ensuring learners actively engage before moving forward.
@@ -32,8 +32,8 @@ Below is an architectural comparison of major "-lings" implementations alongside
 | **Domain** | Rust language syntax, borrow checker, lifetimes, generics | Zig language syntax, manual memory management, C interop | Python syntax, data structures, OOP idioms | **Quality Engineering, SDET, UI/API/Perf/Security/GenAI Automation** |
 | **Execution Engine** | `rustc` compiler / `cargo test` | `zig test` / `zig build` | `python -m pytest` | **Polyglot Runner Pool** (Node.js IPC, Pytest JSON, JVM/Maven, k6, JMeter, Maestro) |
 | **Manifest / Discovery** | `info.toml` with strict ordered sequence | Numbered directory scan (`001_xxx.zig`) | `exercises.json` or directory scan | `lings.toml` (11 track definitions, evaluation thresholds, chaos proxy parameters) |
-| **Exercise Sentinel** | `// I AM NOT DONE` | `// "I AM NOT DONE"` or inline markers | `# I AM NOT DONE` or `TODO` tags | `// I AM NOT DONE` / `# I AM NOT DONE` + AST anti-pattern scanner |
-| **Evaluation Dimensions** | 1D: Boolean compile/test pass | 1D: Boolean compilation pass | 1D: Boolean pytest assertion pass | **4D Matrix**: Correctness (35%), Chaos Flakiness (35%), Locator AST (15%), Speed (15%) |
+| **Exercise Sentinel** | `// I AM NOT DONE` | `// "I AM NOT DONE"` or inline markers | `# I AM NOT DONE` or `TODO` tags | `// I AM NOT DONE` / `# I AM NOT DONE` + static anti-pattern scanner |
+| **Evaluation Dimensions** | 1D: Boolean compile/test pass | 1D: Boolean compilation pass | 1D: Boolean pytest assertion pass | **4D Matrix**: Correctness (35%), Chaos Flakiness (35%), Locator Quality (15%), Speed (15%) |
 | **Target Application** | Self-contained standard library calls | Self-contained Zig standard library | In-memory functions / mocks | **Micro-Crucible Live Sandbox** (FastAPI backend + Vite/React frontend + Chaos Proxy) |
 | **Gamification** | Simple completion bar | Sequential index counter | Percentage counter | **7 SDET Career Ranks, Level Formulas, 8 Badges, Daily Streaks, ANSI Dashboard** |
 | **Hint System** | Single `rustlings hint <name>` | Inline comment hints / patch diffs | Markdown hint files | **3-Tier Progressive Scaffolding** (`hints.md`: Tier 1 Concept, Tier 2 API, Tier 3 Snippet) |
@@ -74,7 +74,7 @@ Below is an architectural comparison of major "-lings" implementations alongside
 │                                     │ Multi-Iteration Execution        │
 │                                     ▼                                  │
 │  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │                   4D Evaluation & AST Feedback                   │  │
+│  │                4D Evaluation & Static Analysis Feedback         │  │
 │  │  - Correctness (35%)      - Flakiness against Chaos (35%)        │  │
 │  │  - Locator Quality (15%)  - Execution Speed (15%)                │  │
 │  └──────────────────────────────────┬───────────────────────────────┘  │
@@ -176,7 +176,7 @@ exercises/00_foundations/01_what_is_a_test/
 
 ---
 
-### 3.6 4D Feedback Matrix & AST Static Analysis
+### 3.6 4D Feedback Matrix & Static Source Analysis
 
 Evaluation goes beyond binary pass/fail to evaluate code quality, resilience, and speed:
 
@@ -184,7 +184,7 @@ $$\text{Composite Score} = (0.35 \times \text{Correctness}) + (0.35 \times \text
 
 - **Correctness (35%)**: Complete assertion verification against the system under test.
 - **Flakiness Guard (35%)**: 5 consecutive test iterations executed against network chaos and jitter.
-- **Locator / AST Quality (15%)**: Static AST analysis penalizing anti-patterns:
+- **Locator Quality (15%)**: Static source analysis (regex rules over comment-stripped source, not a parsed syntax tree) penalizing anti-patterns:
   - Hardcoded sleeps (`page.waitForTimeout`, `time.sleep`) $\to -40\text{ pts}$
   - Absolute XPath (`/html/body/div[2]/span`) $\to -50\text{ pts}$
   - Semantic Roles (`getByRole`, `getByTestId`) $\to +100\text{ pts}$

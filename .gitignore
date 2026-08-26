@@ -37,3 +37,6 @@ trace.zip
 jmeter.log
 
 .opencode/
+
+# Learner progress state (local, per-user)
+.cherenkov-progress.json
