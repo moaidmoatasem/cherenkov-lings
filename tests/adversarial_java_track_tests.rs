@@ -284,7 +284,7 @@ fn test_flakiness_matrix_permutations() {
         };
 
         // Clean AST (no Thread.sleep)
-        let ast_clean = AstReport {
+        let ast_clean = StaticAnalysisReport {
             file_path: "Solution.java".to_string(),
             has_wait_for_timeout: false,
             locator_quality_score: 100.0,
@@ -319,7 +319,7 @@ fn test_flakiness_matrix_permutations() {
         }
 
         // Flaky AST (with Thread.sleep) -> flakiness capped at 40.0
-        let ast_with_sleep = AstReport {
+        let ast_with_sleep = StaticAnalysisReport {
             file_path: "Exercise.java".to_string(),
             has_wait_for_timeout: true,
             locator_quality_score: 100.0,

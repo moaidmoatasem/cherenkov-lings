@@ -1,5 +1,5 @@
 use crate::pipeline::parser::{JobDefinition, StepDefinition, WorkflowDefinition};
-use crate::pipeline::validator::{validate_definition, PipelineValidation, ValidationConfig};
+use crate::pipeline::validator::{PipelineValidation, ValidationConfig, validate_definition};
 use colored::Colorize;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -142,7 +142,10 @@ pub fn run_workflow(workflow: &WorkflowDefinition, opts: &PipelineRunOptions) ->
                 runner: "Validator".to_string(),
                 step: "Policy Check".to_string(),
                 level: LogLevel::Error,
-                message: format!("Strict SDET policy validation failed: {} error(s)", validation.errors.len()),
+                message: format!(
+                    "Strict SDET policy validation failed: {} error(s)",
+                    validation.errors.len()
+                ),
             }],
             validation: Some(validation),
         };
@@ -194,31 +197,31 @@ struct RunnerInstance {
 }
 
 fn expand_job_instances(job_id: &str, job: &JobDefinition) -> Vec<RunnerInstance> {
-    if let Some(ref strategy) = job.strategy {
-        if let Some(ref matrix) = strategy.matrix {
-            let combinations = matrix.expand_combinations();
-            if !combinations.is_empty() {
-                return combinations
-                    .into_iter()
-                    .map(|combo| {
-                        let mut desc_parts = Vec::new();
-                        for (k, v) in &combo {
-                            desc_parts.push(format!("{}: {}", k, v));
-                        }
-                        desc_parts.sort();
-                        let desc = if desc_parts.is_empty() {
-                            String::new()
-                        } else {
-                            format!(" ({})", desc_parts.join(", "))
-                        };
-                        let runner_name = format!("{}{}", job.name.as_deref().unwrap_or(job_id), desc);
-                        RunnerInstance {
-                            runner_name,
-                            matrix_combination: combo,
-                        }
-                    })
-                    .collect();
-            }
+    if let Some(ref strategy) = job.strategy
+        && let Some(ref matrix) = strategy.matrix
+    {
+        let combinations = matrix.expand_combinations();
+        if !combinations.is_empty() {
+            return combinations
+                .into_iter()
+                .map(|combo| {
+                    let mut desc_parts = Vec::new();
+                    for (k, v) in &combo {
+                        desc_parts.push(format!("{}: {}", k, v));
+                    }
+                    desc_parts.sort();
+                    let desc = if desc_parts.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" ({})", desc_parts.join(", "))
+                    };
+                    let runner_name = format!("{}{}", job.name.as_deref().unwrap_or(job_id), desc);
+                    RunnerInstance {
+                        runner_name,
+                        matrix_combination: combo,
+                    }
+                })
+                .collect();
         }
     }
 
@@ -268,7 +271,8 @@ fn execute_runner_instance(
         }
 
         // Simulate step execution
-        let (exit_code, output, step_logs) = simulate_step_execution(step, matrix, &env, runner_name);
+        let (exit_code, output, step_logs) =
+            simulate_step_execution(step, matrix, &env, runner_name);
         logs.extend(step_logs);
 
         let step_duration = step_start.elapsed().as_millis() as u64;
@@ -334,8 +338,16 @@ fn simulate_step_execution(
     // 1. Action Uses Simulation
     if let Some(ref uses) = step.uses {
         if uses.starts_with("actions/checkout") {
-            push_log(&mut logs, LogLevel::Info, "Syncing repository at ref refs/heads/main...");
-            push_log(&mut logs, LogLevel::Info, "Checked out commit c4f81a2 (HEAD -> main)");
+            push_log(
+                &mut logs,
+                LogLevel::Info,
+                "Syncing repository at ref refs/heads/main...",
+            );
+            push_log(
+                &mut logs,
+                LogLevel::Info,
+                "Checked out commit c4f81a2 (HEAD -> main)",
+            );
             output_lines.push("Git repository successfully cloned (depth: 1).".to_string());
             return (0, output_lines.join("\n"), logs);
         }
@@ -346,8 +358,16 @@ fn simulate_step_execution(
                 .or_else(|| matrix.get("node"))
                 .cloned()
                 .unwrap_or_else(|| "20.x".to_string());
-            push_log(&mut logs, LogLevel::Info, &format!("Setting up Node.js environment version '{}'...", version));
-            push_log(&mut logs, LogLevel::Info, "Node.js v20.11.0 installed, npm v10.2.4 configured, PATH updated.");
+            push_log(
+                &mut logs,
+                LogLevel::Info,
+                &format!("Setting up Node.js environment version '{}'...", version),
+            );
+            push_log(
+                &mut logs,
+                LogLevel::Info,
+                "Node.js v20.11.0 installed, npm v10.2.4 configured, PATH updated.",
+            );
             output_lines.push(format!("Resolved node version {}", version));
             return (0, output_lines.join("\n"), logs);
         }
@@ -358,30 +378,68 @@ fn simulate_step_execution(
                 .or_else(|| matrix.get("python"))
                 .cloned()
                 .unwrap_or_else(|| "3.11".to_string());
-            push_log(&mut logs, LogLevel::Info, &format!("Setting up Python environment version '{}'...", version));
-            push_log(&mut logs, LogLevel::Info, "Python 3.11.8 installed, pip 24.0 initialized.");
+            push_log(
+                &mut logs,
+                LogLevel::Info,
+                &format!("Setting up Python environment version '{}'...", version),
+            );
+            push_log(
+                &mut logs,
+                LogLevel::Info,
+                "Python 3.11.8 installed, pip 24.0 initialized.",
+            );
             output_lines.push(format!("Python {} ready in virtualenv", version));
             return (0, output_lines.join("\n"), logs);
         }
 
         if uses.starts_with("dtolnay/rust-toolchain") || uses.starts_with("actions-rs/toolchain") {
-            let toolchain = matrix.get("rust").cloned().unwrap_or_else(|| "stable".to_string());
-            push_log(&mut logs, LogLevel::Info, &format!("Setting up Rust toolchain '{}' with components: clippy, rustfmt...", toolchain));
-            push_log(&mut logs, LogLevel::Info, "rustc 1.96.0 (30a34c682 2026-05-25), cargo 1.96.0 active.");
+            let toolchain = matrix
+                .get("rust")
+                .cloned()
+                .unwrap_or_else(|| "stable".to_string());
+            push_log(
+                &mut logs,
+                LogLevel::Info,
+                &format!(
+                    "Setting up Rust toolchain '{}' with components: clippy, rustfmt...",
+                    toolchain
+                ),
+            );
+            push_log(
+                &mut logs,
+                LogLevel::Info,
+                "rustc 1.96.0 (30a34c682 2026-05-25), cargo 1.96.0 active.",
+            );
             output_lines.push("Rust toolchain configured.".to_string());
             return (0, output_lines.join("\n"), logs);
         }
 
         if uses.starts_with("actions/upload-artifact") {
-            let path_param = step.with.get("path").map(|v| format!("{:?}", v)).unwrap_or_else(|| "test-results/".to_string());
-            push_log(&mut logs, LogLevel::Info, &format!("Compressing test artifacts from: {}", path_param));
-            push_log(&mut logs, LogLevel::Info, "Uploaded artifact archive (7.4 MB) -> Artifact ID #4829103");
+            let path_param = step
+                .with
+                .get("path")
+                .map(|v| format!("{:?}", v))
+                .unwrap_or_else(|| "test-results/".to_string());
+            push_log(
+                &mut logs,
+                LogLevel::Info,
+                &format!("Compressing test artifacts from: {}", path_param),
+            );
+            push_log(
+                &mut logs,
+                LogLevel::Info,
+                "Uploaded artifact archive (7.4 MB) -> Artifact ID #4829103",
+            );
             output_lines.push(format!("Artifact uploaded successfully: {}", path_param));
             return (0, output_lines.join("\n"), logs);
         }
 
         // Generic action fallback
-        push_log(&mut logs, LogLevel::Info, &format!("Executing GitHub Action: {}", uses));
+        push_log(
+            &mut logs,
+            LogLevel::Info,
+            &format!("Executing GitHub Action: {}", uses),
+        );
         output_lines.push(format!("Action {} completed successfully.", uses));
         return (0, output_lines.join("\n"), logs);
     }
@@ -389,7 +447,11 @@ fn simulate_step_execution(
     // 2. Shell Command Simulation
     if let Some(ref raw_run) = step.run {
         let run_cmd = interpolate_variables(raw_run, matrix, env);
-        push_log(&mut logs, LogLevel::Info, &format!("$ {}", run_cmd.lines().next().unwrap_or(&run_cmd)));
+        push_log(
+            &mut logs,
+            LogLevel::Info,
+            &format!("$ {}", run_cmd.lines().next().unwrap_or(&run_cmd)),
+        );
 
         let lower_cmd = run_cmd.to_lowercase();
 
@@ -404,7 +466,11 @@ fn simulate_step_execution(
             || lower_cmd.contains("simulate_error");
 
         if is_simulated_failure {
-            push_log(&mut logs, LogLevel::Error, "Process exited with non-zero status code: 1");
+            push_log(
+                &mut logs,
+                LogLevel::Error,
+                "Process exited with non-zero status code: 1",
+            );
             output_lines.push("Error: command failed with exit code 1".to_string());
             return (1, output_lines.join("\n"), logs);
         }
@@ -414,30 +480,55 @@ fn simulate_step_execution(
             output_lines.push("running 42 tests".to_string());
             output_lines.push("test e2e_suite ... ok".to_string());
             output_lines.push("test unit_rules ... ok".to_string());
-            output_lines.push("test result: ok. 42 passed; 0 failed; 0 ignored; finished in 0.24s".to_string());
+            output_lines.push(
+                "test result: ok. 42 passed; 0 failed; 0 ignored; finished in 0.24s".to_string(),
+            );
             return (0, output_lines.join("\n"), logs);
         }
 
         if lower_cmd.contains("pytest") {
-            push_log(&mut logs, LogLevel::Info, "Executing pytest runner with json-report...");
-            output_lines.push("============================= test session starts ==============================".to_string());
+            push_log(
+                &mut logs,
+                LogLevel::Info,
+                "Executing pytest runner with json-report...",
+            );
+            output_lines.push(
+                "============================= test session starts =============================="
+                    .to_string(),
+            );
             output_lines.push("collected 18 items".to_string());
             output_lines.push("tests/test_api.py .................. [100%]".to_string());
-            output_lines.push("============================== 18 passed in 0.45s ===============================".to_string());
+            output_lines.push(
+                "============================== 18 passed in 0.45s ==============================="
+                    .to_string(),
+            );
             return (0, output_lines.join("\n"), logs);
         }
 
         if lower_cmd.contains("playwright") || lower_cmd.contains("npm test") {
-            push_log(&mut logs, LogLevel::Info, "Executing browser automation test runner...");
+            push_log(
+                &mut logs,
+                LogLevel::Info,
+                "Executing browser automation test runner...",
+            );
             output_lines.push("Running 12 tests across 3 workers".to_string());
-            output_lines.push("  ✓ [chromium] › checkout.spec.ts:14:1 › hydrations trap handled (420ms)".to_string());
-            output_lines.push("  ✓ [firefox]  › search.spec.ts:22:1   › debounced query resolved (310ms)".to_string());
+            output_lines.push(
+                "  ✓ [chromium] › checkout.spec.ts:14:1 › hydrations trap handled (420ms)"
+                    .to_string(),
+            );
+            output_lines.push(
+                "  ✓ [firefox]  › search.spec.ts:22:1   › debounced query resolved (310ms)"
+                    .to_string(),
+            );
             output_lines.push("  12 passed (1.4s)".to_string());
             return (0, output_lines.join("\n"), logs);
         }
 
         // Generic shell command
-        output_lines.push(format!("Executed: {}", run_cmd.lines().next().unwrap_or("command")));
+        output_lines.push(format!(
+            "Executed: {}",
+            run_cmd.lines().next().unwrap_or("command")
+        ));
         return (0, output_lines.join("\n"), logs);
     }
 
@@ -492,30 +583,64 @@ fn interpolate_variables(
 
 /// Renders rich terminal output for pipeline run results.
 pub fn render_pipeline_summary(result: &PipelineRunResult) {
-    println!("{}", "========================================================================================".cyan());
+    println!(
+        "{}",
+        "========================================================================================"
+            .cyan()
+    );
     println!(
         " {} v1.0.0  |  {}",
         "CHERENKOV-LINGS".bold().bright_cyan(),
         "CI/CD Pipeline Simulator".bright_yellow()
     );
-    println!("{}", "========================================================================================".cyan());
+    println!(
+        "{}",
+        "========================================================================================"
+            .cyan()
+    );
     println!();
-    println!("{} Workflow: {}", "▶".bright_blue(), result.workflow_name.bold().bright_white());
+    println!(
+        "{} Workflow: {}",
+        "▶".bright_blue(),
+        result.workflow_name.bold().bright_white()
+    );
     println!("{} Duration: {}ms", "⏱".cyan(), result.duration_ms);
     println!();
 
     if let Some(ref val) = result.validation {
-        println!("{}", "─── SDET Policy Validation ──────────────────────────────────────────────────────────".dimmed());
-        println!("  Score: {}/100 | Status: {}", val.sdet_score, if val.valid { "VALID".green().bold() } else { "POLICY VIOLATION".red().bold() });
+        println!(
+            "{}",
+            "─── SDET Policy Validation ──────────────────────────────────────────────────────────"
+                .dimmed()
+        );
+        println!(
+            "  Score: {}/100 | Status: {}",
+            val.sdet_score,
+            if val.valid {
+                "VALID".green().bold()
+            } else {
+                "POLICY VIOLATION".red().bold()
+            }
+        );
         println!("  {}", val.summary);
         for err in &val.errors {
-            println!("  {} [{}] {}", "✗".red().bold(), err.code.bright_red(), err.message);
+            println!(
+                "  {} [{}] {}",
+                "✗".red().bold(),
+                err.code.bright_red(),
+                err.message
+            );
             if let Some(ref sug) = err.suggestion {
                 println!("    {} {}", "💡 Fix:".yellow(), sug.italic());
             }
         }
         for warn in &val.warnings {
-            println!("  {} [{}] {}", "⚠".yellow(), warn.code.bright_yellow(), warn.message);
+            println!(
+                "  {} [{}] {}",
+                "⚠".yellow(),
+                warn.code.bright_yellow(),
+                warn.message
+            );
             if let Some(ref sug) = warn.suggestion {
                 println!("    {} {}", "💡 Suggestion:".yellow(), sug.italic());
             }
@@ -523,9 +648,18 @@ pub fn render_pipeline_summary(result: &PipelineRunResult) {
         println!();
     }
 
-    println!("{}", "─── Virtual Parallel Runners ────────────────────────────────────────────────────────".dimmed());
+    println!(
+        "{}",
+        "─── Virtual Parallel Runners ────────────────────────────────────────────────────────"
+            .dimmed()
+    );
     for job in &result.jobs {
-        println!("  {} {} ({}ms)", job.status.badge(), job.runner_name.bright_white().bold(), job.duration_ms);
+        println!(
+            "  {} {} ({}ms)",
+            job.status.badge(),
+            job.runner_name.bright_white().bold(),
+            job.duration_ms
+        );
         for step in &job.steps {
             println!(
                 "     {} {} {}",
@@ -537,12 +671,26 @@ pub fn render_pipeline_summary(result: &PipelineRunResult) {
     }
 
     println!();
-    println!("{}", "========================================================================================".cyan());
+    println!(
+        "{}",
+        "========================================================================================"
+            .cyan()
+    );
     if result.success {
-        println!(" {} All matrix runner jobs executed successfully!", "✔ WORKFLOW PASSED:".green().bold());
+        println!(
+            " {} All matrix runner jobs executed successfully!",
+            "✔ WORKFLOW PASSED:".green().bold()
+        );
     } else {
-        println!(" {} One or more virtual runner jobs or validation checks failed.", "✖ WORKFLOW FAILED:".red().bold());
+        println!(
+            " {} One or more virtual runner jobs or validation checks failed.",
+            "✖ WORKFLOW FAILED:".red().bold()
+        );
     }
-    println!("{}", "========================================================================================".cyan());
+    println!(
+        "{}",
+        "========================================================================================"
+            .cyan()
+    );
     println!();
 }

@@ -7,7 +7,7 @@ This script programmatically verifies the platform's learning engine by:
 2. Verifying baseline failure: ensures broken starter code fails out-of-the-box or requires fixes.
 3. Injecting reference solutions: replaces exercise code with solution code.
 4. Executing test validation: runs the test runner (pytest) to confirm 100% pass rate.
-5. Computing 4D evaluation metrics: correctness, flakiness resilience, AST quality, and speed.
+5. Computing 4D evaluation metrics: correctness, flakiness resilience, locator quality, and speed.
 6. Restoring starter code cleanly with zero disk or environment side-effects.
 
 Usage:
@@ -19,11 +19,11 @@ Usage:
 
 import sys
 import os
-import re
 import shutil
 import subprocess
 import time
 import json
+import math
 import argparse
 import atexit
 import signal
@@ -31,7 +31,7 @@ import threading
 import concurrent.futures
 from pathlib import Path
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional, Set, Tuple
+from typing import Any
 
 # Ensure UTF-8 output even on Windows consoles with cp1252
 if sys.stdout and hasattr(sys.stdout, "reconfigure"):
@@ -47,7 +47,7 @@ if sys.stderr and hasattr(sys.stderr, "reconfigure"):
         pass
 
 # Global active backups registry for crash recovery
-_ACTIVE_BACKUPS: Set[Tuple[Path, Path]] = set()
+_ACTIVE_BACKUPS: set[tuple[Path, Path]] = set()
 _ACTIVE_BACKUPS_LOCK = threading.Lock()
 _IGNORE_DIR_NAMES = {"target", "__pycache__", ".pytest_cache", ".pytest_cache_tmp", "node_modules", ".git"}
 _IGNORE_FILE_SUBSTR = {"-snapshots"}
@@ -100,8 +100,8 @@ class DrillResult:
     duration_ms: float
     score: float
     xp_awarded: int
-    error_message: Optional[str] = None
-    ast_findings: List[str] = field(default_factory=list)
+    error_message: str | None = None
+    ast_findings: list[str] = field(default_factory=list)
 
 
 def _should_ignore_path(p: Path) -> bool:
@@ -115,14 +115,14 @@ def _should_ignore_path(p: Path) -> bool:
     return False
 
 
-def _load_tracks_config(workspace_root: Path) -> Dict[str, Dict[str, str]]:
+def _load_tracks_config(workspace_root: Path) -> dict[str, dict[str, str]]:
     toml_path = workspace_root / "lings.toml"
-    tracks: Dict[str, Dict[str, str]] = {}
+    tracks: dict[str, dict[str, str]] = {}
     if not toml_path.exists():
         return tracks
     try:
         text = toml_path.read_text(encoding="utf-8", errors="replace")
-        current: Optional[Dict[str, str]] = None
+        current: dict[str, str] | None = None
         for raw_line in text.splitlines():
             line = raw_line.strip()
             if line == "[[tracks]]":
@@ -174,7 +174,7 @@ class AutomatedExerciseVerifier:
         self.workspace_root = workspace_root.resolve()
         self.exercises_dir = self.workspace_root / "exercises"
         self.verbose = verbose
-        self.results: List[DrillResult] = []
+        self.results: list[DrillResult] = []
         self._tracks_config = _load_tracks_config(self.workspace_root)
         self._results_lock = threading.Lock()
         self.recover_lingering_backups()
@@ -198,7 +198,7 @@ class AutomatedExerciseVerifier:
             except Exception as e:
                 print(f"[RECOVERY ERROR] Failed to restore {backup_path}: {e}")
 
-    def run_pytest(self, test_file: Path, timeout: float = 30.0) -> Dict[str, Any]:
+    def run_pytest(self, test_file: Path, timeout: float = 30.0) -> dict[str, Any]:
         """Runs pytest on the specified test file and returns summary metrics."""
         start_time = time.perf_counter()
         cache_dir = self.workspace_root / ".pytest_cache_tmp"
@@ -230,7 +230,7 @@ class AutomatedExerciseVerifier:
             err = (e.stderr.decode("utf-8", errors="replace") if isinstance(e.stderr, bytes) else str(e.stderr or ""))
             return {"passed": False, "returncode": 124, "stdout": out, "stderr": err + f"\n[Timeout after {timeout}s]", "duration_ms": elapsed_ms}
 
-    def _find_exercise_solution(self, drill_dir: Path, track_ext: str) -> Tuple[Optional[Path], Optional[Path]]:
+    def _find_exercise_solution(self, drill_dir: Path, track_ext: str) -> tuple[Path | None, Path | None]:
         ext_lower = track_ext.lower()
         cands = list(drill_dir.iterdir()) if drill_dir.exists() else []
         ex = None
@@ -263,21 +263,25 @@ class AutomatedExerciseVerifier:
         track_cfg = self._tracks_config.get(track_name, {})
         track_ext = track_cfg.get("extension", ".py")
         runner = track_cfg.get("runner", "python")
+        track_id = track_cfg.get("id", track_name)
+        tier = _tier_for_track_or_drill(track_id, drill_name)
         exercise_file, solution_file = self._find_exercise_solution(drill_dir, track_ext)
         theory_file = drill_dir / "theory.md"
         hints_file = drill_dir / "hints.md"
 
-        print(f"\n  --------------------------------------------------------")
+        print("\n  --------------------------------------------------------")
         print(f"  [DRILL] [{drill_name}] in [{track_name}] ({runner}:{track_ext})")
-        print(f"  --------------------------------------------------------")
+        print("  --------------------------------------------------------")
 
         missing_files = []
         if exercise_file is None or not exercise_file.exists():
             missing_files.append(f"exercise{track_ext}")
         if solution_file is None or not solution_file.exists():
             missing_files.append(f"solution{track_ext}")
-        if not theory_file.exists(): missing_files.append("theory.md")
-        if not hints_file.exists(): missing_files.append("hints.md")
+        if not theory_file.exists():
+            missing_files.append("theory.md")
+        if not hints_file.exists():
+            missing_files.append("hints.md")
 
         if missing_files:
             error_msg = f"Missing contract files: {', '.join(missing_files)}"
@@ -321,7 +325,7 @@ class AutomatedExerciseVerifier:
                 err = f"Solution file appears empty/invalid for {track_ext}"
                 print(f"  [FAIL] Step 3: Solution content check -> FAILED: {err}")
                 return DrillResult(drill_name=drill_name, track_name=track_name, baseline_failed=baseline_failed, solution_passed=False, duration_ms=0.0, score=0.0, xp_awarded=0, error_message=err)
-            print(f"  [OK] Step 3: Structural Validation -> PASSED (Score: 100.0/100, +150 XP)")
+            print("  [OK] Step 3: Structural Validation -> PASSED (Score: 100.0/100, +150 XP)")
             return DrillResult(drill_name=drill_name, track_name=track_name, baseline_failed=baseline_failed, solution_passed=True, duration_ms=5.0, score=100.0, xp_awarded=150)
 
         backup_file = drill_dir / f"{exercise_file.name}.backup_verifier"
@@ -342,8 +346,8 @@ class AutomatedExerciseVerifier:
             error_message = None
             if solution_passed:
                 score = 100.0
-                xp = 150
-                print(f"  [OK] Step 3: Test Validation -> PASSED in {duration_ms:.1f}ms (Score: 100.0/100, +{xp} XP)")
+                xp = _calculate_xp(score, tier)
+                print(f"  [OK] Step 3: Test Validation -> PASSED in {duration_ms:.1f}ms (Score: {score:.1f}/100, +{xp} XP, tier {tier})")
             else:
                 score = 0.0
                 xp = 0
@@ -363,7 +367,7 @@ class AutomatedExerciseVerifier:
             with _ACTIVE_BACKUPS_LOCK:
                 _ACTIVE_BACKUPS.discard((backup_file, exercise_file))
 
-    def _discover_drills(self, track_name: str) -> List[Path]:
+    def _discover_drills(self, track_name: str) -> list[Path]:
         track_cfg = self._tracks_config.get(track_name, {})
         exercise_dir = track_cfg.get("exercise_dir", f"exercises/{track_name}")
         track_dir = (self.workspace_root / exercise_dir).resolve()
@@ -371,7 +375,7 @@ class AutomatedExerciseVerifier:
             track_dir = self.exercises_dir / track_name
         if not track_dir.exists():
             return []
-        drills: List[Path] = []
+        drills: list[Path] = []
         for p in track_dir.rglob("*"):
             if not p.is_dir():
                 continue
@@ -391,7 +395,7 @@ class AutomatedExerciseVerifier:
         drills = sorted(set(drills))
         return drills
 
-    def verify_track(self, track_name: str) -> List[DrillResult]:
+    def verify_track(self, track_name: str) -> list[DrillResult]:
         """Verifies all drills within a specific track directory (parallel where safe)."""
         track_cfg = self._tracks_config.get(track_name, {})
         if not track_cfg:
@@ -408,7 +412,7 @@ class AutomatedExerciseVerifier:
             print(f"  [WARN] No drills discovered for {track_name}")
             return []
         is_python = track_cfg.get("runner", "") == "python"
-        track_results: List[DrillResult] = []
+        track_results: list[DrillResult] = []
         if is_python:
             with concurrent.futures.ThreadPoolExecutor(max_workers=min(4, len(drills))) as ex:
                 futures = {ex.submit(self.verify_drill, d, track_name): d for d in drills}
@@ -430,14 +434,14 @@ class AutomatedExerciseVerifier:
         track_results.sort(key=lambda r: r.drill_name)
         return track_results
 
-    def verify_all_tracks(self) -> List[DrillResult]:
+    def verify_all_tracks(self) -> list[DrillResult]:
         """Verifies all tracks defined in lings.toml (or all under exercises)."""
         if not self.exercises_dir.exists():
             return []
         if self._tracks_config:
             # deduplicate by exercise_dir
             seen_dirs = set()
-            ordered: List[str] = []
+            ordered: list[str] = []
             for cfg in self._tracks_config.values():
                 ed = cfg.get("exercise_dir")
                 if ed and ed not in seen_dirs:
@@ -451,7 +455,7 @@ class AutomatedExerciseVerifier:
             track_names = ordered
         else:
             track_names = sorted([d.name for d in self.exercises_dir.iterdir() if d.is_dir() and not d.name.startswith(".")])
-        all_results: List[DrillResult] = []
+        all_results: list[DrillResult] = []
         for tn in track_names:
             # tn may be id like "playwright-ts"; need exercise_dir existence check
             cfg = self._tracks_config.get(tn)
@@ -462,7 +466,7 @@ class AutomatedExerciseVerifier:
             all_results.extend(res)
         return all_results
 
-    def generate_summary(self) -> Dict[str, Any]:
+    def generate_summary(self) -> dict[str, Any]:
         """Generates a comprehensive summary of all verified drills."""
         total = len(self.results)
         passed = sum(1 for r in self.results if r.solution_passed)

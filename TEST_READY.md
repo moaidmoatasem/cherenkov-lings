@@ -5,7 +5,7 @@
 - `cargo clippy --all-targets -- -D warnings` (0 warnings)
 - `python -m pytest tests/test_micro_crucible_chaos.py` (33/33 passing)
 - `python -m ruff check crucible/ tests/` (0 errors)
-- `npx playwright test exercises/05_genai_qa/` (all solution tests passing)
+- `npx playwright test exercises/06_genai_qa/` (all solution tests passing)
 - `cargo run -- dashboard` (renders ANSI dashboard and exits with code 0)
 
 ## Curriculum & Module Inventory
@@ -29,6 +29,6 @@
 - Gate 2 (`cargo clippy --all-targets -- -D warnings`): PASS (0 warnings)
 - Gate 3 (`pytest tests/test_micro_crucible_chaos.py`): PASS (33/33)
 - Gate 4 (`ruff check crucible/ tests/`): PASS (0 errors)
-- Gate 5 (`playwright test exercises/05_genai_qa/`): PASS (100% on solutions)
+- Gate 5 (`playwright test exercises/06_genai_qa/`): PASS (100% on solutions)
 - Gate 6 (`cargo run -- dashboard`): PASS (exit code 0, complete ANSI render)
 - Forensic Integrity Audit (`auditor_1`): CLEAN (0 integrity violations)

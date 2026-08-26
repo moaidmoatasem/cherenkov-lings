@@ -1,9 +1,7 @@
 use crate::gamification::{
-    current_utc_iso_timestamp, get_level_info, load_progress, save_progress, GamificationState,
+    GamificationState, current_utc_iso_timestamp, get_level_info, load_progress, save_progress,
 };
-use crate::reports::chaos_dataset::{
-    generate_chaos_dataset, ChaosTestResult, FailureCategory,
-};
+use crate::reports::chaos_dataset::{ChaosTestResult, FailureCategory, generate_chaos_dataset};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
@@ -93,11 +91,8 @@ pub fn evaluate_triage_against_dataset(
     let is_correct = submission.learner_category == actual_category;
 
     if !is_correct {
-        let failure_explanation = generate_contrastive_feedback(
-            submission.learner_category,
-            actual_category,
-            test,
-        );
+        let failure_explanation =
+            generate_contrastive_feedback(submission.learner_category, actual_category, test);
         return TriageResult {
             test_id: test.test_id.clone(),
             correct: false,
@@ -117,7 +112,9 @@ pub fn evaluate_triage_against_dataset(
                 ),
                 format!(
                     "Underlying mechanism: {}",
-                    test.root_cause_hint.as_deref().unwrap_or("See stack trace telemetry")
+                    test.root_cause_hint
+                        .as_deref()
+                        .unwrap_or("See stack trace telemetry")
                 ),
             ],
         };
@@ -125,8 +122,10 @@ pub fn evaluate_triage_against_dataset(
 
     // Hypothesis is correct! Compute detailed scoring & bonuses
     let base_score = 100u32;
-    let (exp_score, exp_reasons) = score_explanation(&submission.root_cause_explanation, actual_category, test);
-    let (fix_score, fix_reasons) = score_suggested_fix(&submission.suggested_fix, actual_category, test);
+    let (exp_score, exp_reasons) =
+        score_explanation(&submission.root_cause_explanation, actual_category, test);
+    let (fix_score, fix_reasons) =
+        score_suggested_fix(&submission.suggested_fix, actual_category, test);
     let total_score = base_score + exp_score + fix_score;
 
     let mut detailed_reasons = Vec::new();
@@ -138,7 +137,9 @@ pub fn evaluate_triage_against_dataset(
         "🎯 Outstanding diagnosis! You correctly identified '{}' as a {}.\n\nSenior SDET Breakdown:\n- Root Cause: {}\n- Telemetry Clue: {}\n\nXP Awarded: +{} XP (Base: 100, Explanation Bonus: +{}, Fix Bonus: +{})",
         test.name,
         actual_category.display_name(),
-        test.root_cause_hint.as_deref().unwrap_or("Verified defect mechanism"),
+        test.root_cause_hint
+            .as_deref()
+            .unwrap_or("Verified defect mechanism"),
         extract_telemetry_clue(test),
         total_score,
         exp_score,
@@ -198,8 +199,10 @@ pub fn calculate_triage_stats(
     submissions: &[TriageSubmission],
     dataset: &[ChaosTestResult],
 ) -> TriageStats {
-    let mut stats = TriageStats::default();
-    stats.total_attempts = submissions.len();
+    let mut stats = TriageStats {
+        total_attempts: submissions.len(),
+        ..Default::default()
+    };
 
     for sub in submissions {
         let res = evaluate_triage_against_dataset(sub, dataset);
@@ -279,25 +282,106 @@ fn score_explanation(
     // 2. Keyword relevance bonus
     let keywords = match category {
         FailureCategory::RealBug => vec![
-            "deadlock", "rbac", "foreign key", "null pointer", "nullpointer", "contract",
-            "integer overflow", "overflow", "jwt", "sql", "sqli", "double spend", "heap",
-            "oom", "hallucination", "prompt injection", "contrast", "wcag", "thread pool",
-            "biometric", "case sensitive", "idor", "stream", "500", "403", "defect", "logic",
-            "schema", "vulnerability", "permission", "authorization",
+            "deadlock",
+            "rbac",
+            "foreign key",
+            "null pointer",
+            "nullpointer",
+            "contract",
+            "integer overflow",
+            "overflow",
+            "jwt",
+            "sql",
+            "sqli",
+            "double spend",
+            "heap",
+            "oom",
+            "hallucination",
+            "prompt injection",
+            "contrast",
+            "wcag",
+            "thread pool",
+            "biometric",
+            "case sensitive",
+            "idor",
+            "stream",
+            "500",
+            "403",
+            "defect",
+            "logic",
+            "schema",
+            "vulnerability",
+            "permission",
+            "authorization",
         ],
         FailureCategory::FlakyInfra => vec![
-            "proxy", "chaos", "latency", "jitter", "tcp", "reset", "rst", "502", "504",
-            "bad gateway", "gateway timeout", "dns", "keepalive", "keep-alive", "socket",
-            "timeout", "port exhaustion", "time_wait", "cold start", "ttft", "stall",
-            "packet loss", "packet drop", "network", "failover", "redis", "429", "rate limit",
+            "proxy",
+            "chaos",
+            "latency",
+            "jitter",
+            "tcp",
+            "reset",
+            "rst",
+            "502",
+            "504",
+            "bad gateway",
+            "gateway timeout",
+            "dns",
+            "keepalive",
+            "keep-alive",
+            "socket",
+            "timeout",
+            "port exhaustion",
+            "time_wait",
+            "cold start",
+            "ttft",
+            "stall",
+            "packet loss",
+            "packet drop",
+            "network",
+            "failover",
+            "redis",
+            "429",
+            "rate limit",
         ],
         FailureCategory::AntiPattern => vec![
-            "sleep", "waitfortimeout", "stale", "element", "handle", "xpath", "locator",
-            "assertion", "no assertions", "unwrap", "keyerror", "dictionary", "threshold",
-            "sla", "exact match", "text match", "pollution", "leakage", "isolation",
-            "async", "await", "unhandled", "promise", "ambiguous", "secret", "hardcoded",
-            "seed", "temperature", "rampup", "hover", "animation", "opacity", "timestamp",
-            "suppress", "regex", "swallow", "except",
+            "sleep",
+            "waitfortimeout",
+            "stale",
+            "element",
+            "handle",
+            "xpath",
+            "locator",
+            "assertion",
+            "no assertions",
+            "unwrap",
+            "keyerror",
+            "dictionary",
+            "threshold",
+            "sla",
+            "exact match",
+            "text match",
+            "pollution",
+            "leakage",
+            "isolation",
+            "async",
+            "await",
+            "unhandled",
+            "promise",
+            "ambiguous",
+            "secret",
+            "hardcoded",
+            "seed",
+            "temperature",
+            "rampup",
+            "hover",
+            "animation",
+            "opacity",
+            "timestamp",
+            "suppress",
+            "regex",
+            "swallow",
+            "except",
         ],
         FailureCategory::None => vec!["pass", "healthy", "resilient"],
     };
@@ -311,7 +395,10 @@ fn score_explanation(
 
     if matched_kw_count >= 2 {
         score += 20;
-        reasons.push(format!("Key Domain Concept Precision ({} terms): +20 XP", matched_kw_count));
+        reasons.push(format!(
+            "Key Domain Concept Precision ({} terms): +20 XP",
+            matched_kw_count
+        ));
     } else if matched_kw_count == 1 {
         score += 10;
         reasons.push("Relevant Domain Term Identified: +10 XP".to_string());
@@ -338,9 +425,25 @@ fn score_suggested_fix(
     }
 
     let fix_patterns = [
-        "retry", "waitfor", "locator", "parameterize", "prepared statement", "select for update",
-        "lock", "jwt verify", "getbyrole", "exponential backoff", "clean", "teardown", "rollback",
-        "seed", "relative", "defensive", "rate limiter", "keepalive", "circuit breaker",
+        "retry",
+        "waitfor",
+        "locator",
+        "parameterize",
+        "prepared statement",
+        "select for update",
+        "lock",
+        "jwt verify",
+        "getbyrole",
+        "exponential backoff",
+        "clean",
+        "teardown",
+        "rollback",
+        "seed",
+        "relative",
+        "defensive",
+        "rate limiter",
+        "keepalive",
+        "circuit breaker",
     ];
 
     if fix_patterns.iter().any(|&p| lower_fix.contains(p)) {
@@ -357,7 +460,10 @@ fn extract_telemetry_clue(test: &ChaosTestResult) -> String {
             return log.clone();
         }
         if chaos.latency_ms > 0 {
-            return format!("Injected Latency {}ms (±{}ms) on layer {}", chaos.latency_ms, chaos.jitter_ms, chaos.layer);
+            return format!(
+                "Injected Latency {}ms (±{}ms) on layer {}",
+                chaos.latency_ms, chaos.jitter_ms, chaos.layer
+            );
         }
     }
     if let Some(ref err) = test.error_message {
@@ -371,7 +477,10 @@ fn generate_contrastive_feedback(
     actual_cat: FailureCategory,
     test: &ChaosTestResult,
 ) -> String {
-    let hint = test.root_cause_hint.as_deref().unwrap_or("Inspect stack trace");
+    let hint = test
+        .root_cause_hint
+        .as_deref()
+        .unwrap_or("Inspect stack trace");
     let telemetry = extract_telemetry_clue(test);
 
     match (learner_cat, actual_cat) {

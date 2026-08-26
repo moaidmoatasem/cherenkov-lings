@@ -1916,10 +1916,7 @@ impl Runner for PytestRunner {
                         failed_iterations: iterations,
                         total_duration_ms: start_time.elapsed().as_millis() as u64,
                         runs: vec![],
-                        error: Some(format!(
-                            "Pytest execution timed out after {}ms",
-                            timeout_ms
-                        )),
+                        error: Some(format!("Pytest execution timed out after {}ms", timeout_ms)),
                     });
                 }
             };
@@ -1931,11 +1928,12 @@ impl Runner for PytestRunner {
             // Attempt to parse structured DrillResponse JSON from worker stdout
             for line in stdout.lines().rev() {
                 let trimmed = line.trim();
-                if trimmed.starts_with('{') && trimmed.ends_with('}') {
-                    if let Ok(mut drill_resp) = serde_json::from_str::<DrillResponse>(trimmed) {
-                        drill_resp.id = req_id;
-                        return Ok(drill_resp);
-                    }
+                if trimmed.starts_with('{')
+                    && trimmed.ends_with('}')
+                    && let Ok(mut drill_resp) = serde_json::from_str::<DrillResponse>(trimmed)
+                {
+                    drill_resp.id = req_id;
+                    return Ok(drill_resp);
                 }
             }
 
@@ -1950,7 +1948,10 @@ impl Runner for PytestRunner {
                     if !out.is_empty() {
                         Some(out.to_string())
                     } else {
-                        Some(format!("Worker process exited with status {:?}", output.status))
+                        Some(format!(
+                            "Worker process exited with status {:?}",
+                            output.status
+                        ))
                     }
                 }
             } else {
@@ -2881,7 +2882,10 @@ Expected status code <200> but was <409>.
     fn test_pytest_runner_options_and_default() {
         let runner = PytestRunner::new();
         assert_eq!(runner.python_cmd(), "python");
-        assert_eq!(runner.worker_script(), Path::new("workers/pytest_worker.py"));
+        assert_eq!(
+            runner.worker_script(),
+            Path::new("workers/pytest_worker.py")
+        );
 
         let default_runner = PytestRunner::default();
         assert_eq!(default_runner.python_cmd(), "python");

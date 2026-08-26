@@ -1,15 +1,11 @@
 use cherenkov_lings::pipeline::{
-    parse_workflow_str, run_workflow, validate_definition, validate_workflow, JobStatus,
-    MatrixDefinition, PipelineRunOptions, StepStatus, ValidationConfig,
+    JobStatus, PipelineRunOptions, ValidationConfig, parse_workflow_str, run_workflow,
+    validate_definition, validate_workflow,
 };
 use cherenkov_lings::review::{
-    apply_all_fixes, apply_automated_fixes, apply_fix, calculate_score, generate_unified_diff,
-    run_review, run_review_on_content, AiMentorClient, AstViolation, ReviewConfig, RuleScanner,
-    Severity, SupportedLanguage,
+    RuleScanner, Severity, apply_automated_fixes, apply_fix, generate_unified_diff,
 };
-use std::collections::HashMap;
 use std::fs;
-use std::path::Path;
 
 // =============================================================================
 // SECTION 1: AST CODE REVIEW ENGINE ADVERSARIAL STRESS TESTS
@@ -24,7 +20,10 @@ fn test_adversarial_polyglot_sleep_detection_all_flavors() {
         ("locator.waitForTimeout(250);", 1),
         ("setTimeout(() => { doSomething(); }, 3000);", 1),
         ("window.setTimeout(fn, 2000);", 1),
-        ("await new Promise(resolve => setTimeout(resolve, 4000));", 1),
+        (
+            "await new Promise(resolve => setTimeout(resolve, 4000));",
+            1,
+        ),
         ("await new Promise(r => setTimeout(r, 1500));", 1),
         ("// await page.waitForTimeout(5000);", 0), // Comment should be ignored
         ("/* page.waitForTimeout(5000); */", 0),
@@ -45,7 +44,13 @@ fn test_adversarial_polyglot_sleep_detection_all_flavors() {
         );
         if expected_violations > 0 {
             assert_eq!(sleep_violations[0].severity, Severity::Error);
-            assert!(sleep_violations[0].suggested_fix.as_ref().unwrap().contains("expect"));
+            assert!(
+                sleep_violations[0]
+                    .suggested_fix
+                    .as_ref()
+                    .unwrap()
+                    .contains("expect")
+            );
         }
     }
 
@@ -73,7 +78,13 @@ fn test_adversarial_polyglot_sleep_detection_all_flavors() {
         );
         if expected_violations > 0 {
             assert_eq!(sleep_violations[0].severity, Severity::Error);
-            assert!(sleep_violations[0].suggested_fix.as_ref().unwrap().contains("get_by_role"));
+            assert!(
+                sleep_violations[0]
+                    .suggested_fix
+                    .as_ref()
+                    .unwrap()
+                    .contains("get_by_role")
+            );
         }
     }
 
@@ -100,13 +111,22 @@ fn test_adversarial_polyglot_sleep_detection_all_flavors() {
         );
         if expected_violations > 0 {
             assert_eq!(sleep_violations[0].severity, Severity::Error);
-            assert!(sleep_violations[0].suggested_fix.as_ref().unwrap().contains("Awaitility"));
+            assert!(
+                sleep_violations[0]
+                    .suggested_fix
+                    .as_ref()
+                    .unwrap()
+                    .contains("Awaitility")
+            );
         }
     }
 
     // 4. Rust sleep variations
     let rust_samples = vec![
-        ("std::thread::sleep(std::time::Duration::from_millis(500));", 1),
+        (
+            "std::thread::sleep(std::time::Duration::from_millis(500));",
+            1,
+        ),
         ("thread::sleep(Duration::from_secs(2));", 1),
         ("tokio::time::sleep(Duration::from_millis(100)).await;", 1),
         ("// thread::sleep(Duration::from_secs(1));", 0),
@@ -126,7 +146,13 @@ fn test_adversarial_polyglot_sleep_detection_all_flavors() {
         );
         if expected_violations > 0 {
             assert_eq!(sleep_violations[0].severity, Severity::Error);
-            assert!(sleep_violations[0].suggested_fix.as_ref().unwrap().contains("tokio::time::timeout"));
+            assert!(
+                sleep_violations[0]
+                    .suggested_fix
+                    .as_ref()
+                    .unwrap()
+                    .contains("tokio::time::timeout")
+            );
         }
     }
 }
@@ -176,9 +202,17 @@ fn test_adversarial_fragile_locator_detection_and_false_positive_resistance() {
         .filter(|v| v.rule_id == "ANTI_PATTERN_FRAGILE_LOCATOR_AUTO_ID")
         .collect();
 
-    assert_eq!(xpath_violations.len(), 2, "Expected 2 absolute XPath violations");
+    assert_eq!(
+        xpath_violations.len(),
+        2,
+        "Expected 2 absolute XPath violations"
+    );
     assert_eq!(css_violations.len(), 2, "Expected 2 deep CSS violations");
-    assert_eq!(dynamic_id_violations.len(), 5, "Expected 5 auto-generated ID violations");
+    assert_eq!(
+        dynamic_id_violations.len(),
+        5,
+        "Expected 5 auto-generated ID violations"
+    );
 
     // Verify resilient locators were not flagged
     for v in &violations {
@@ -219,7 +253,11 @@ fn test_adversarial_floating_promises_and_deep_block_actions() {
         .filter(|v| v.rule_id == "ANTI_PATTERN_FLOATING_PROMISE")
         .collect();
 
-    assert_eq!(floating_violations.len(), 4, "Should catch 4 unawaited promises in nested blocks");
+    assert_eq!(
+        floating_violations.len(),
+        4,
+        "Should catch 4 unawaited promises in nested blocks"
+    );
     for v in &floating_violations {
         assert_eq!(v.severity, Severity::Error);
         assert!(v.suggested_fix.as_ref().unwrap().starts_with("await "));
@@ -231,19 +269,40 @@ fn test_adversarial_vacuous_and_missing_assertions_polyglot() {
     // 1. Polyglot vacuous assertions
     let ts_tautology = "expect(true).toBe(true);\nexpect(1).toBe(1);";
     let ts_v = RuleScanner::scan_content("tautology.ts", ts_tautology);
-    assert_eq!(ts_v.iter().filter(|v| v.rule_id == "ANTI_PATTERN_VACUOUS_ASSERTION").count(), 2);
+    assert_eq!(
+        ts_v.iter()
+            .filter(|v| v.rule_id == "ANTI_PATTERN_VACUOUS_ASSERTION")
+            .count(),
+        2
+    );
 
     let py_tautology = "assert True\nassert 1 == 1";
     let py_v = RuleScanner::scan_content("tautology_test.py", py_tautology);
-    assert_eq!(py_v.iter().filter(|v| v.rule_id == "ANTI_PATTERN_VACUOUS_ASSERTION").count(), 2);
+    assert_eq!(
+        py_v.iter()
+            .filter(|v| v.rule_id == "ANTI_PATTERN_VACUOUS_ASSERTION")
+            .count(),
+        2
+    );
 
     let java_tautology = "assertTrue(true);";
     let java_v = RuleScanner::scan_content("TautologyTest.java", java_tautology);
-    assert_eq!(java_v.iter().filter(|v| v.rule_id == "ANTI_PATTERN_VACUOUS_ASSERTION").count(), 1);
+    assert_eq!(
+        java_v
+            .iter()
+            .filter(|v| v.rule_id == "ANTI_PATTERN_VACUOUS_ASSERTION")
+            .count(),
+        1
+    );
 
     let rs_tautology = "assert!(true);\nassert_eq!(true, true);\nassert_eq!(1, 1);";
     let rs_v = RuleScanner::scan_content("tautology_test.rs", rs_tautology);
-    assert_eq!(rs_v.iter().filter(|v| v.rule_id == "ANTI_PATTERN_VACUOUS_ASSERTION").count(), 3);
+    assert_eq!(
+        rs_v.iter()
+            .filter(|v| v.rule_id == "ANTI_PATTERN_VACUOUS_ASSERTION")
+            .count(),
+        3
+    );
 
     // 2. Test file with zero assertions
     let test_without_assertions = r#"
@@ -254,7 +313,11 @@ fn test_adversarial_vacuous_and_missing_assertions_polyglot() {
         });
     "#;
     let missing_v = RuleScanner::scan_content("test_checkout_spec.ts", test_without_assertions);
-    assert!(missing_v.iter().any(|v| v.rule_id == "ANTI_PATTERN_MISSING_ASSERTION"));
+    assert!(
+        missing_v
+            .iter()
+            .any(|v| v.rule_id == "ANTI_PATTERN_MISSING_ASSERTION")
+    );
 }
 
 #[test]
@@ -281,7 +344,10 @@ test('complex checkout flow', async ({ page }) => {
     // Verify indentation is preserved properly
     for line in patched.lines() {
         if line.contains("await page.click") || line.contains("expect(actualValue)") {
-            assert!(line.starts_with("    "), "Indentation of 4 spaces must be preserved");
+            assert!(
+                line.starts_with("    "),
+                "Indentation of 4 spaces must be preserved"
+            );
         }
     }
 
@@ -383,7 +449,11 @@ jobs:
     // Include 1: ubuntu-latest + node 22 + browser webkit (doesn't match existing tuple since browser was chromium/firefox) -> +1
     // Include 2: linux-arm64 + node 20 + browser chromium (new OS) -> +1
     // Total expected combinations = 13 + 2 = 15.
-    assert_eq!(combinations.len(), 15, "Matrix expansion should yield 15 combinations");
+    assert_eq!(
+        combinations.len(),
+        15,
+        "Matrix expansion should yield 15 combinations"
+    );
 
     // Verify exclusions worked
     for combo in &combinations {
@@ -396,9 +466,14 @@ jobs:
     }
 
     // Verify includes worked
-    let arm_combo = combinations.iter().find(|c| c.get("os").map(|s| s.as_str()) == Some("linux-arm64"));
+    let arm_combo = combinations
+        .iter()
+        .find(|c| c.get("os").map(|s| s.as_str()) == Some("linux-arm64"));
     assert!(arm_combo.is_some());
-    assert_eq!(arm_combo.unwrap().get("runner-label").map(|s| s.as_str()), Some("self-hosted-arm"));
+    assert_eq!(
+        arm_combo.unwrap().get("runner-label").map(|s| s.as_str()),
+        Some("self-hosted-arm")
+    );
 
     // Verify pipeline validation passes with score 100
     let validation = validate_definition(&workflow, &ValidationConfig::strict());
@@ -425,10 +500,22 @@ jobs:
           path: test-results/
 "#;
     let val1 = validate_workflow(missing_matrix_yaml);
-    assert!(!val1.valid, "Must fail strict validation when matrix is missing");
-    let err = val1.errors.iter().find(|e| e.code == "MISSING_MATRIX_STRATEGY");
+    assert!(
+        !val1.valid,
+        "Must fail strict validation when matrix is missing"
+    );
+    let err = val1
+        .errors
+        .iter()
+        .find(|e| e.code == "MISSING_MATRIX_STRATEGY");
     assert!(err.is_some());
-    assert!(err.unwrap().suggestion.as_ref().unwrap().contains("strategy: matrix:"));
+    assert!(
+        err.unwrap()
+            .suggestion
+            .as_ref()
+            .unwrap()
+            .contains("strategy: matrix:")
+    );
 
     // 2. Workflow missing actions/upload-artifact on test job
     let missing_artifacts_yaml = r#"
@@ -445,10 +532,22 @@ jobs:
       - run: pytest tests/
 "#;
     let val2 = validate_workflow(missing_artifacts_yaml);
-    assert!(!val2.valid, "Must fail strict validation when artifact upload is missing");
-    let err = val2.errors.iter().find(|e| e.code == "MISSING_ARTIFACT_UPLOAD");
+    assert!(
+        !val2.valid,
+        "Must fail strict validation when artifact upload is missing"
+    );
+    let err = val2
+        .errors
+        .iter()
+        .find(|e| e.code == "MISSING_ARTIFACT_UPLOAD");
     assert!(err.is_some());
-    assert!(err.unwrap().suggestion.as_ref().unwrap().contains("actions/upload-artifact"));
+    assert!(
+        err.unwrap()
+            .suggestion
+            .as_ref()
+            .unwrap()
+            .contains("actions/upload-artifact")
+    );
 
     // 3. Workflow with plaintext credentials and tokens
     let insecure_yaml = r#"
@@ -473,7 +572,11 @@ jobs:
 "#;
     let val3 = validate_workflow(insecure_yaml);
     assert!(!val3.valid);
-    let secret_errors: Vec<_> = val3.errors.iter().filter(|e| e.code == "HARDCODED_SECRET").collect();
+    let secret_errors: Vec<_> = val3
+        .errors
+        .iter()
+        .filter(|e| e.code == "HARDCODED_SECRET")
+        .collect();
     assert_eq!(secret_errors.len(), 2, "Should catch 2 hardcoded secrets");
 }
 
@@ -504,7 +607,12 @@ jobs:
           path: target/
 "#;
     let val_timeout = validate_workflow(extreme_timeout_yaml);
-    assert!(val_timeout.warnings.iter().any(|w| w.code == "EXCESSIVE_TIMEOUT"));
+    assert!(
+        val_timeout
+            .warnings
+            .iter()
+            .any(|w| w.code == "EXCESSIVE_TIMEOUT")
+    );
 }
 
 #[test]
@@ -543,8 +651,15 @@ jobs:
 
     let result = run_workflow(&workflow, &opts);
     assert_eq!(result.workflow_name, "Runner Test Pipeline");
-    assert_eq!(result.jobs.len(), 2, "Should spawn 2 runner instances for matrix shards");
-    assert!(result.duration_ms < 5000, "Simulation should complete rapidly");
+    assert_eq!(
+        result.jobs.len(),
+        2,
+        "Should spawn 2 runner instances for matrix shards"
+    );
+    assert!(
+        result.duration_ms < 5000,
+        "Simulation should complete rapidly"
+    );
     assert!(result.jobs.iter().all(|j| j.status == JobStatus::Passed));
     assert!(result.logs.len() > 5, "Should generate execution logs");
 }

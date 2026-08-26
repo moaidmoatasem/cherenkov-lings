@@ -365,7 +365,7 @@ fn test_flakiness_penalty_cap_at_40_on_wait_for_timeout() {
         error: None,
     };
 
-    let ast_with_wait = AstReport {
+    let ast_with_wait = StaticAnalysisReport {
         file_path: "flaky.ts".to_string(),
         has_wait_for_timeout: true,
         locator_quality_score: 100.0,
@@ -417,7 +417,7 @@ fn test_flakiness_penalty_when_raw_flakiness_is_below_cap() {
         error: None,
     };
 
-    let ast_with_wait = AstReport {
+    let ast_with_wait = StaticAnalysisReport {
         file_path: "flaky.ts".to_string(),
         has_wait_for_timeout: true,
         locator_quality_score: 40.0,
@@ -492,7 +492,7 @@ fn test_zero_and_overflow_safeguards_in_evaluator() {
         runs: vec![],
         error: None,
     };
-    let empty_ast = AstReport::default();
+    let empty_ast = StaticAnalysisReport::default();
     let card = evaluate_feedback(
         &zero_iter_resp,
         &empty_ast,
@@ -787,7 +787,7 @@ fn test_scorecard_and_diagnostic_formatting_safety() {
         runs: vec![],
         error: None,
     };
-    let dummy_ast = AstReport {
+    let dummy_ast = StaticAnalysisReport {
         file_path: "exercises/01_web_playwright_ts/01_hydration_timing/solution.ts".to_string(),
         locator_quality_score: 92.5,
         ..Default::default()

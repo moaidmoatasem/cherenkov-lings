@@ -1,8 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-  testDir: './exercises',
-  testMatch: /.*\.ts/,
+  testDir: '.',
+  testMatch: ['exercises/**/*.ts', 'crucible/frontend/e2e/**/*.ts'],
+  testIgnore: ['**/.claude/**', '**/node_modules/**', '**/dist/**', '**/.git/**'],
   timeout: 10000,
   retries: 0,
   use: {

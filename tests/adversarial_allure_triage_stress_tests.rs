@@ -19,32 +19,39 @@
 //!    - Streak calculation (consecutive days, same day, skipped days, past timestamps, malformed dates)
 //!    - Gamification persistence resilience (corrupted JSON, missing files, concurrent updates)
 
-use cherenkov_lings::gamification::{
-    current_utc_iso_timestamp, get_level_info, load_progress, save_progress, GamificationState,
-};
+use cherenkov_lings::gamification::{GamificationState, load_progress};
 use cherenkov_lings::reports::allure::{
-    generate_allure_report_for_dataset, generate_allure_results, generate_chaos_allure_report,
-    generate_interactive_html_report, render_html_report_string, summarize_dataset,
-    write_allure_metadata_files, AllureTestResultJson,
+    generate_allure_report_for_dataset, generate_chaos_allure_report, render_html_report_string,
+    summarize_dataset,
 };
 use cherenkov_lings::reports::chaos_dataset::{
-    generate_chaos_dataset, get_failing_tests, get_test_by_id, get_tests_by_category,
-    get_tests_by_track, ChaosEventTelemetry, ChaosTestResult, FailureCategory, FlakinessMetrics,
-    TestStatus, TestStepTelemetry,
+    ChaosEventTelemetry, ChaosTestResult, FailureCategory, TestStatus, TestStepTelemetry,
+    generate_chaos_dataset,
 };
 use cherenkov_lings::triage::evaluator::{
-    calculate_triage_stats, evaluate_and_record_progress, evaluate_triage,
-    evaluate_triage_against_dataset, TriageResult, TriageSubmission,
+    TriageSubmission, evaluate_and_record_progress, evaluate_triage,
 };
-use cherenkov_lings::triage::interactive::parse_category_from_str;
 use std::collections::HashMap;
 use std::fs;
-use std::path::Path;
+
+/// A scratch path unique to this test-binary run.
+///
+/// These tests previously shared fixed paths under the system temp directory and
+/// cleared them with `remove_dir_all` immediately before writing. On Windows that
+/// call can return before the directory is actually released, so a run could race
+/// the leftovers of the previous one and fail to create the report tree.
+fn unique_temp_path(label: &str) -> std::path::PathBuf {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    std::env::temp_dir().join(format!("{}_{}_{}", label, std::process::id(), nanos))
+}
 
 #[test]
 fn test_edge_case_empty_dataset_handling() {
     let empty_dataset: Vec<ChaosTestResult> = Vec::new();
-    let temp_dir = std::env::temp_dir().join("cherenkov_stress_empty_dataset");
+    let temp_dir = unique_temp_path("cherenkov_stress_empty_dataset");
     let _ = fs::remove_dir_all(&temp_dir);
 
     // 1. summarize_dataset on empty slice
@@ -62,7 +69,10 @@ fn test_edge_case_empty_dataset_handling() {
 
     // 2. generate_allure_report_for_dataset on empty slice
     let report_res = generate_allure_report_for_dataset(&empty_dataset, &temp_dir);
-    assert!(report_res.is_ok(), "Empty dataset report generation must not panic");
+    assert!(
+        report_res.is_ok(),
+        "Empty dataset report generation must not panic"
+    );
 
     // 3. render_html_report_string on empty slice
     let html = render_html_report_string(&empty_dataset, &summary);
@@ -75,9 +85,9 @@ fn test_edge_case_empty_dataset_handling() {
 
 #[test]
 fn test_edge_case_deep_nested_directory_creation() {
-    let dataset = generate_chaos_dataset();
-    let deep_dir = std::env::temp_dir()
-        .join("cherenkov_stress_deep_1")
+    let _dataset = generate_chaos_dataset();
+    let deep_root = unique_temp_path("cherenkov_stress_deep_1");
+    let deep_dir = deep_root
         .join("nested_level_2")
         .join("sub_level_3")
         .join("reports_output");
@@ -85,12 +95,15 @@ fn test_edge_case_deep_nested_directory_creation() {
     let _ = fs::remove_dir_all(&deep_dir);
 
     let summary_res = generate_chaos_allure_report(&deep_dir);
-    assert!(summary_res.is_ok(), "Must create deep nested parent paths automatically");
+    assert!(
+        summary_res.is_ok(),
+        "Must create deep nested parent paths automatically"
+    );
     assert!(deep_dir.join("allure-results").exists());
     assert!(deep_dir.join("allure-report").exists());
     assert!(deep_dir.join("index.html").exists());
 
-    let _ = fs::remove_dir_all(std::env::temp_dir().join("cherenkov_stress_deep_1"));
+    let _ = fs::remove_dir_all(&deep_root);
 }
 
 #[test]
@@ -99,37 +112,47 @@ fn test_edge_case_special_characters_xss_and_path_traversal() {
 
     adversarial_dataset.push(ChaosTestResult {
         test_id: "../../../traversal_id_<script>alert('xss')</script>".to_string(),
-        name: "<img src=x onerror=alert(document.cookie)> & \" ' / \\ \n\r\t \u{0000} \u{202E} RLO".to_string(),
+        name: "<img src=x onerror=alert(document.cookie)> & \" ' / \\ \n\r\t \u{0000} \u{202E} RLO"
+            .to_string(),
         suite: "<svg onload=alert(1)> Suite & SpecialChars".to_string(),
         track_id: "devsecops-python".to_string(),
         status: TestStatus::Failed,
         category: FailureCategory::RealBug,
         duration_ms: 1234,
-        error_message: Some("<script>console.log('injected error')</script> \n Trace: at line 42 & <> \"'".to_string()),
-        stack_trace: Some("Stack trace with quotes \" and brackets <tag> and emoji 🔥🚀💥 and \\n escape".to_string()),
+        error_message: Some(
+            "<script>console.log('injected error')</script> \n Trace: at line 42 & <> \"'"
+                .to_string(),
+        ),
+        stack_trace: Some(
+            "Stack trace with quotes \" and brackets <tag> and emoji 🔥🚀💥 and \\n escape"
+                .to_string(),
+        ),
         chaos_event: Some(ChaosEventTelemetry {
             layer: "<L7-XSS>".to_string(),
             event_type: "malicious_payload_<script>".to_string(),
             latency_ms: 500,
             jitter_ms: 50,
             packet_loss_rate: 0.12,
-            proxy_log: Some("WARN [Proxy] <script>alert('proxy log xss')</script> & raw chars".to_string()),
+            proxy_log: Some(
+                "WARN [Proxy] <script>alert('proxy log xss')</script> & raw chars".to_string(),
+            ),
             correlated_timestamp: "2026-08-24T18:00:00Z".to_string(),
             retry_attempts: 1,
             injection_target: "http://127.0.0.1:8086/<script>".to_string(),
         }),
         flakiness_metrics: None,
-        steps: vec![
-            TestStepTelemetry {
-                name: "Step with <script>alert(1)</script>".to_string(),
-                status: TestStatus::Failed,
-                duration_ms: 100,
-                error: Some("Error with <tag> & special chars".to_string()),
-            }
-        ],
+        steps: vec![TestStepTelemetry {
+            name: "Step with <script>alert(1)</script>".to_string(),
+            status: TestStatus::Failed,
+            duration_ms: 100,
+            error: Some("Error with <tag> & special chars".to_string()),
+        }],
         labels: {
             let mut map = HashMap::new();
-            map.insert("malicious_label".to_string(), "<script>bad()</script>".to_string());
+            map.insert(
+                "malicious_label".to_string(),
+                "<script>bad()</script>".to_string(),
+            );
             map.insert("suite".to_string(), "Adversarial Suite".to_string());
             map.insert("track".to_string(), "devsecops-python".to_string());
             map.insert("framework".to_string(), "cherenkov-matrix".to_string());
@@ -138,7 +161,7 @@ fn test_edge_case_special_characters_xss_and_path_traversal() {
         root_cause_hint: Some("Hint containing <script> and & \" ' quotes".to_string()),
     });
 
-    let temp_dir = std::env::temp_dir().join("cherenkov_stress_adversarial_chars");
+    let temp_dir = unique_temp_path("cherenkov_stress_adversarial_chars");
     let _ = fs::remove_dir_all(&temp_dir);
 
     let summary = generate_allure_report_for_dataset(&adversarial_dataset, &temp_dir)
@@ -148,7 +171,10 @@ fn test_edge_case_special_characters_xss_and_path_traversal() {
 
     // Verify HTML escaping and self-containment
     let html = fs::read_to_string(temp_dir.join("index.html")).expect("HTML report must exist");
-    assert!(html.contains("escapeHtml"), "HTML must include escapeHtml function");
+    assert!(
+        html.contains("escapeHtml"),
+        "HTML must include escapeHtml function"
+    );
     assert!(html.contains("const ALL_TESTS ="), "Must embed JSON safely");
 
     // Verify raw JSON results generated
@@ -161,10 +187,11 @@ fn test_edge_case_special_characters_xss_and_path_traversal() {
 #[test]
 fn test_html_report_zero_external_network_requests() {
     let dataset = generate_chaos_dataset();
-    let temp_dir = std::env::temp_dir().join("cherenkov_stress_zero_network");
+    let temp_dir = unique_temp_path("cherenkov_stress_zero_network");
     let _ = fs::remove_dir_all(&temp_dir);
 
-    generate_allure_report_for_dataset(&dataset, &temp_dir).expect("Report generation must succeed");
+    generate_allure_report_for_dataset(&dataset, &temp_dir)
+        .expect("Report generation must succeed");
     let html = fs::read_to_string(temp_dir.join("index.html")).expect("HTML must exist");
 
     // Check for any external CDN or remote resource URLs in scripts, styles, fonts, or images
@@ -193,7 +220,10 @@ fn test_html_report_zero_external_network_requests() {
 
     // Verify styles and scripts are completely inline
     assert!(html.contains("<style>"), "Must contain embedded style tags");
-    assert!(html.contains("<script>"), "Must contain embedded script tags");
+    assert!(
+        html.contains("<script>"),
+        "Must contain embedded script tags"
+    );
 
     let _ = fs::remove_dir_all(&temp_dir);
 }
@@ -229,7 +259,10 @@ fn test_giant_dataset_stress_1000_tests() {
                 None
             },
             stack_trace: if status != TestStatus::Passed {
-                Some(format!("Detailed stack trace line 1\n  at com.cherenkov.Item_{}.run\n  at main.rs:100", i))
+                Some(format!(
+                    "Detailed stack trace line 1\n  at com.cherenkov.Item_{}.run\n  at main.rs:100",
+                    i
+                ))
             } else {
                 None
             },
@@ -274,7 +307,7 @@ fn test_giant_dataset_stress_1000_tests() {
         });
     }
 
-    let temp_dir = std::env::temp_dir().join("cherenkov_stress_1000_tests");
+    let temp_dir = unique_temp_path("cherenkov_stress_1000_tests");
     let _ = fs::remove_dir_all(&temp_dir);
 
     let start = std::time::Instant::now();
@@ -287,7 +320,11 @@ fn test_giant_dataset_stress_1000_tests() {
     assert_eq!(summary.flaky_infra, 250);
     assert_eq!(summary.anti_patterns, 250);
     assert_eq!(summary.passed, 250);
-    assert!(elapsed.as_secs() < 10, "1000-test generation should complete under 10 seconds (took {:?})", elapsed);
+    assert!(
+        elapsed.as_secs() < 10,
+        "1000-test generation should complete under 10 seconds (took {:?})",
+        elapsed
+    );
 
     let _ = fs::remove_dir_all(&temp_dir);
 }
@@ -366,7 +403,8 @@ fn test_triage_scoring_boundary_matrix() {
     let sub_max_exp = TriageSubmission {
         test_id: test_id.to_string(),
         learner_category: FailureCategory::RealBug,
-        root_cause_explanation: "The rbac authorization middleware caused a deadlock and foreign key defect".to_string(), // >40 chars, 4 kw
+        root_cause_explanation:
+            "The rbac authorization middleware caused a deadlock and foreign key defect".to_string(), // >40 chars, 4 kw
         suggested_fix: "".to_string(),
     };
     let res_max_exp = evaluate_triage(&sub_max_exp);
@@ -418,7 +456,8 @@ fn test_triage_scoring_boundary_matrix() {
         test_id: test_id.to_string(),
         learner_category: FailureCategory::RealBug,
         root_cause_explanation: "".to_string(),
-        suggested_fix: "Apply exponential backoff retry and prepared statement locking on db".to_string(), // >30 chars, multiple patterns
+        suggested_fix: "Apply exponential backoff retry and prepared statement locking on db"
+            .to_string(), // >30 chars, multiple patterns
     };
     let res_fix_max = evaluate_triage(&sub_fix_max);
     assert_eq!(res_fix_max.fix_score, 15);
@@ -427,8 +466,10 @@ fn test_triage_scoring_boundary_matrix() {
     let sub_max_all = TriageSubmission {
         test_id: test_id.to_string(),
         learner_category: FailureCategory::RealBug,
-        root_cause_explanation: "The rbac authorization middleware caused a deadlock and foreign key defect".to_string(),
-        suggested_fix: "Apply exponential backoff retry and prepared statement locking on db".to_string(),
+        root_cause_explanation:
+            "The rbac authorization middleware caused a deadlock and foreign key defect".to_string(),
+        suggested_fix: "Apply exponential backoff retry and prepared statement locking on db"
+            .to_string(),
     };
     let res_max_all = evaluate_triage(&sub_max_all);
     assert_eq!(res_max_all.score_awarded, 150);
@@ -477,10 +518,11 @@ fn test_triage_streak_calculation_adversarial_timelines() {
 
 #[test]
 fn test_gamification_persistence_corruption_and_recovery() {
-    let temp_file = std::env::temp_dir().join("cherenkov_corrupted_progress.json");
+    let temp_file = unique_temp_path("cherenkov_corrupted_progress.json");
 
     // 1. Write corrupted/truncated JSON
-    fs::write(&temp_file, "{ \"total_xp\": 500, \"level_name\": ").expect("Failed to write test file");
+    fs::write(&temp_file, "{ \"total_xp\": 500, \"level_name\": ")
+        .expect("Failed to write test file");
 
     // load_progress should return default without panicking
     let loaded = load_progress(Some(&temp_file));

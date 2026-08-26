@@ -19,7 +19,7 @@ python -m pytest tests/test_micro_crucible_chaos.py
 python -m ruff check crucible/
 
 # Gate 5: Playwright TS E2E Tests in GenAI Track
-npx playwright test exercises/05_genai_qa/
+npx playwright test exercises/06_genai_qa/
 
 # Gate 6: Interactive Dashboard Subcommand
 cargo run -- dashboard

@@ -22,7 +22,6 @@ from crucible.backend.chaos import ChaosMiddleware
 from crucible.backend.curriculum import ManifestError, build_curriculum
 from crucible.backend.models import (
     AllureSummaryResponse,
-    AstViolation,
     BalanceResponse,
     ChaosTestResultItem,
     CheckoutRequest,

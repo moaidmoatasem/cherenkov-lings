@@ -1,4 +1,4 @@
-use cherenkov_lings::feedback::{self, AstReport};
+use cherenkov_lings::feedback::{self, StaticAnalysisReport};
 use cherenkov_lings::runner::{
     AnyRunner, DrillResponse, JMeterRunner, RunResult, parse_jmeter_jtl_csv,
 };
@@ -144,7 +144,7 @@ fn test_jmeter_feedback_matrix_evaluation() {
         error: Some("Sample 'POST /orders' failed (HTTP 500): Connection refused".to_string()),
     };
 
-    let ast = AstReport {
+    let ast = StaticAnalysisReport {
         file_path: "exercises/05_perf_jmeter/01_thread_group_concurrency/exercise.jmx".to_string(),
         locator_quality_score: 100.0,
         ..Default::default()

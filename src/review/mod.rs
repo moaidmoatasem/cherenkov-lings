@@ -8,7 +8,7 @@ use std::path::Path;
 
 pub use interactive::run_interactive_review;
 pub use llm::{AiMentorClient, MentorReview};
-pub use rules::{apply_automated_fixes, AstViolation, RuleScanner, Severity, SupportedLanguage};
+pub use rules::{AstViolation, RuleScanner, Severity, SupportedLanguage, apply_automated_fixes};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReviewConfig {
@@ -79,18 +79,11 @@ pub fn calculate_score(violations: &[AstViolation]) -> u32 {
         }
     }
 
-    if score < 0 {
-        0
-    } else {
-        score as u32
-    }
+    if score < 0 { 0 } else { score as u32 }
 }
 
 /// Runs a static AST review and AI mentor consultation on a target file
-pub fn run_review(
-    file_path: &Path,
-    config: &ReviewConfig,
-) -> Result<ReviewReport, ReviewError> {
+pub fn run_review(file_path: &Path, config: &ReviewConfig) -> Result<ReviewReport, ReviewError> {
     if !file_path.exists() {
         return Err(ReviewError::IoError(format!(
             "Target file '{}' does not exist",
@@ -103,7 +96,7 @@ pub fn run_review(
     run_review_on_content(&file_str, &content, config)
 }
 
-/// Runs a static AST review on raw code content
+/// Runs a static rule review on raw code content
 pub fn run_review_on_content(
     file_path: &str,
     content: &str,
@@ -131,17 +124,18 @@ pub fn run_review_on_content(
         config.offline_fallback,
     );
 
-    let mentor_review = mentor_client.generate_offline_mentor_review(
-        &exercise_name,
-        content,
-        &violations,
-    );
+    let mentor_review =
+        mentor_client.generate_offline_mentor_review(&exercise_name, content, &violations);
 
     // Generate proposed unified diff if violations have suggested fixes
     let suggested_diff = if !violations.is_empty() {
         let fixed_content = apply_automated_fixes(content, &violations);
         if fixed_content != content {
-            Some(generate_unified_diff(content, &fixed_content, &exercise_name))
+            Some(generate_unified_diff(
+                content,
+                &fixed_content,
+                &exercise_name,
+            ))
         } else {
             None
         }
@@ -191,7 +185,7 @@ pub fn apply_fix(file_path: &Path, fix_id: &str) -> Result<String, ReviewError> 
     Ok(modified)
 }
 
-/// Applies all automated AST fixes to a file on disk
+/// Applies all automated rule fixes to a file on disk
 pub fn apply_all_fixes(file_path: &Path) -> Result<String, ReviewError> {
     apply_fix(file_path, "all")
 }
@@ -219,10 +213,10 @@ pub fn generate_unified_diff(original: &str, modified: &str, file_name: &str) ->
                 in_hunk = true;
                 hunk_orig_start = i + 1;
                 // Add context line before if available
-                if i > 0 {
-                    if let Some(ctx) = orig_lines.get(i - 1) {
-                        hunk_lines.push(format!(" {}", ctx));
-                    }
+                if i > 0
+                    && let Some(ctx) = orig_lines.get(i - 1)
+                {
+                    hunk_lines.push(format!(" {}", ctx));
                 }
             }
             if let Some(o) = orig_line {
@@ -240,11 +234,17 @@ pub fn generate_unified_diff(original: &str, modified: &str, file_name: &str) ->
             diff.push(format!(
                 "@@ -{},{} +{},{} @@",
                 hunk_orig_start,
-                hunk_lines.iter().filter(|l| l.starts_with('-') || l.starts_with(' ')).count(),
+                hunk_lines
+                    .iter()
+                    .filter(|l| l.starts_with('-') || l.starts_with(' '))
+                    .count(),
                 hunk_orig_start,
-                hunk_lines.iter().filter(|l| l.starts_with('+') || l.starts_with(' ')).count()
+                hunk_lines
+                    .iter()
+                    .filter(|l| l.starts_with('+') || l.starts_with(' '))
+                    .count()
             ));
-            diff.extend(hunk_lines.drain(..));
+            diff.append(&mut hunk_lines);
             in_hunk = false;
         }
     }
@@ -253,9 +253,15 @@ pub fn generate_unified_diff(original: &str, modified: &str, file_name: &str) ->
         diff.push(format!(
             "@@ -{},{} +{},{} @@",
             hunk_orig_start,
-            hunk_lines.iter().filter(|l| l.starts_with('-') || l.starts_with(' ')).count(),
+            hunk_lines
+                .iter()
+                .filter(|l| l.starts_with('-') || l.starts_with(' '))
+                .count(),
             hunk_orig_start,
-            hunk_lines.iter().filter(|l| l.starts_with('+') || l.starts_with(' ')).count()
+            hunk_lines
+                .iter()
+                .filter(|l| l.starts_with('+') || l.starts_with(' '))
+                .count()
         ));
         diff.extend(hunk_lines);
     }

@@ -14,6 +14,7 @@ import { MobileTestPage } from './pages/MobileTestPage';
 import { CodeReviewPage } from './pages/CodeReviewPage';
 import { PipelineBuilderPage } from './pages/PipelineBuilderPage';
 import { AllureTriagePage } from './pages/AllureTriagePage';
+import { LearnApp } from './learn/LearnApp';
 
 export const App: React.FC = () => {
   const [currentPath, setCurrentPath] = useState<string>(() => {
@@ -63,11 +64,16 @@ export const App: React.FC = () => {
         return <PaymentPage />;
       case '/mobile-test':
         return <MobileTestPage />;
-      case '/':
-      default:
+      case '/sandbox':
         return <HomePage onNavigate={handleNavigate} />;
+      default:
+        return <LearnApp onExit={() => handleNavigate('/sandbox')} />;
     }
   };
+
+  if (currentPath === '/learn' || currentPath === '/') {
+    return <LearnApp onExit={() => handleNavigate('/sandbox')} />;
+  }
 
   return (
     <div className="app-layout">

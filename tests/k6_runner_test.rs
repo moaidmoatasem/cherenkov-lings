@@ -1,4 +1,4 @@
-use cherenkov_lings::feedback::{self, AstReport};
+use cherenkov_lings::feedback::{self, StaticAnalysisReport};
 use cherenkov_lings::runner::{
     AnyRunner, DrillResponse, K6Runner, RunResult, parse_k6_summary_json,
 };
@@ -199,7 +199,7 @@ fn test_k6_feedback_matrix_evaluation() {
         error: Some("http_req_failed: threshold 'rate<0.01' failed".to_string()),
     };
 
-    let ast = AstReport {
+    let ast = StaticAnalysisReport {
         file_path: "exercises/04_perf_k6_js/01_database_pool_starvation/exercise.js".to_string(),
         locator_quality_score: 100.0,
         ..Default::default()

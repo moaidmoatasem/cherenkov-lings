@@ -923,8 +923,8 @@ async fn test_tier4_high_volume_chaos_proxy_stress_scenario() {
 #[test]
 fn test_tier1_genai_qa_track_artifacts_and_playwright_config() {
     let genai_drills = [
-        "exercises/05_genai_qa/01_rag_context_faithfulness",
-        "exercises/05_genai_qa/02_llm_assertion_flakiness",
+        "exercises/06_genai_qa/01_rag_context_faithfulness",
+        "exercises/06_genai_qa/02_llm_assertion_flakiness",
     ];
 
     for dir in genai_drills {
@@ -1034,11 +1034,11 @@ fn test_tier1_polyglot_5_tracks_directory_layout_and_contracts() {
         "exercises/05_perf_jmeter/07_distributed_load",
         "exercises/05_perf_jmeter/08_jtl_dashboard",
         // Track 06: GenAI QA (5 drills)
-        "exercises/05_genai_qa/01_rag_context_faithfulness",
-        "exercises/05_genai_qa/02_llm_assertion_flakiness",
-        "exercises/05_genai_qa/03_llm_hallucination_eval",
-        "exercises/05_genai_qa/04_prompt_injection_red_teaming",
-        "exercises/05_genai_qa/05_latency_streaming_ttft",
+        "exercises/06_genai_qa/01_rag_context_faithfulness",
+        "exercises/06_genai_qa/02_llm_assertion_flakiness",
+        "exercises/06_genai_qa/03_llm_hallucination_eval",
+        "exercises/06_genai_qa/04_prompt_injection_red_teaming",
+        "exercises/06_genai_qa/05_latency_streaming_ttft",
         // Track 07: Foundations Python (5 drills)
         "exercises/00_foundations/01_what_is_a_test",
         "exercises/00_foundations/02_test_naming_matters",
@@ -1046,24 +1046,24 @@ fn test_tier1_polyglot_5_tracks_directory_layout_and_contracts() {
         "exercises/00_foundations/04_dont_test_the_mock",
         "exercises/00_foundations/05_one_thing_per_test",
         // Track 08: DevSecOps Python (5 drills)
-        "exercises/06_cloud_devsecops/01_insecure_docker_mount",
-        "exercises/06_cloud_devsecops/02_jwt_weak_signing_key",
-        "exercises/06_cloud_devsecops/03_sql_injection_blind_timing",
-        "exercises/06_cloud_devsecops/04_ssrf_metadata_service",
-        "exercises/06_cloud_devsecops/05_cors_misconfiguration_exploit",
+        "exercises/07_cloud_devsecops/01_insecure_docker_mount",
+        "exercises/07_cloud_devsecops/02_jwt_weak_signing_key",
+        "exercises/07_cloud_devsecops/03_sql_injection_blind_timing",
+        "exercises/07_cloud_devsecops/04_ssrf_metadata_service",
+        "exercises/07_cloud_devsecops/05_cors_misconfiguration_exploit",
         // Track 09: Tool Decisions Python (4 drills)
-        "exercises/06_tool_decisions/01_ui_vs_api_test",
-        "exercises/06_tool_decisions/02_k6_vs_jmeter",
-        "exercises/06_tool_decisions/03_appium_vs_maestro",
-        "exercises/06_tool_decisions/04_contract_vs_e2e",
+        "exercises/08_tool_decisions/01_ui_vs_api_test",
+        "exercises/08_tool_decisions/02_k6_vs_jmeter",
+        "exercises/08_tool_decisions/03_appium_vs_maestro",
+        "exercises/08_tool_decisions/04_contract_vs_e2e",
         // Track 10: Contract Pact Python (3 drills)
-        "exercises/07_contract_pact/01_pact_consumer_definition",
-        "exercises/07_contract_pact/02_pact_provider_verification",
-        "exercises/07_contract_pact/03_breaking_schema_evolution",
+        "exercises/09_contract_pact/01_pact_consumer_definition",
+        "exercises/09_contract_pact/02_pact_provider_verification",
+        "exercises/09_contract_pact/03_breaking_schema_evolution",
         // Track 11: A11y Axe TS (3 drills)
-        "exercises/08_a11y_axe/01_wcag_color_contrast_axe",
-        "exercises/08_a11y_axe/02_keyboard_focus_trap_aria",
-        "exercises/08_a11y_axe/03_screen_reader_live_regions",
+        "exercises/10_a11y_axe/01_wcag_color_contrast_axe",
+        "exercises/10_a11y_axe/02_keyboard_focus_trap_aria",
+        "exercises/10_a11y_axe/03_screen_reader_live_regions",
     ];
 
     assert_eq!(
@@ -1177,18 +1177,18 @@ fn test_tier3_genai_qa_and_polyglot_feedback_matrix_flow() {
 #[test]
 fn test_tier4_all_5_tracks_exercise_anti_patterns_vs_solutions() {
     // Check GenAI QA drill 01
-    let d1_ex = fs::read_to_string("exercises/05_genai_qa/01_rag_context_faithfulness/exercise.ts")
+    let d1_ex = fs::read_to_string("exercises/06_genai_qa/01_rag_context_faithfulness/exercise.ts")
         .expect("read d1 exercise");
     let d1_sol =
-        fs::read_to_string("exercises/05_genai_qa/01_rag_context_faithfulness/solution.ts")
+        fs::read_to_string("exercises/06_genai_qa/01_rag_context_faithfulness/solution.ts")
             .expect("read d1 solution");
     assert!(d1_ex.contains("body.answer") && d1_ex.contains(".toBe("));
     assert!(d1_sol.contains("body.grounded") && d1_sol.contains("body.source_facts"));
 
     // Check GenAI QA drill 02
-    let d2_ex = fs::read_to_string("exercises/05_genai_qa/02_llm_assertion_flakiness/exercise.ts")
+    let d2_ex = fs::read_to_string("exercises/06_genai_qa/02_llm_assertion_flakiness/exercise.ts")
         .expect("read d2 exercise");
-    let d2_sol = fs::read_to_string("exercises/05_genai_qa/02_llm_assertion_flakiness/solution.ts")
+    let d2_sol = fs::read_to_string("exercises/06_genai_qa/02_llm_assertion_flakiness/solution.ts")
         .expect("read d2 solution");
     assert!(d2_ex.contains("body.raw_text") && d2_ex.contains(".toBe("));
     assert!(d2_sol.contains("body.intent") && d2_sol.contains("body.confidence"));

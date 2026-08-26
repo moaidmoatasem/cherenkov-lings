@@ -56,13 +56,22 @@ impl ValidationConfig {
 
 // Regex patterns for secret detection
 static RE_GH_TOKEN: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"ghp_[A-Za-z0-9]{36}").unwrap());
-static RE_GL_TOKEN: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"glpat-[A-Za-z0-9\-]{20,}").unwrap());
+static RE_GL_TOKEN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"glpat-[A-Za-z0-9\-]{20,}").unwrap());
 static RE_AWS_KEY: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"AKIA[0-9A-Z]{16}").unwrap());
-static RE_AWS_SECRET: LazyLock<Regex> = LazyLock::new(|| Regex::new(r#"(?i)AWS_SECRET_ACCESS_KEY\s*[:=]\s*["']?[A-Za-z0-9/+=]{30,}["']?"#).unwrap());
-static RE_JWT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"Bearer\s+ey[A-Za-z0-9_\-\.]{20,}").unwrap());
-static RE_PRIVATE_KEY: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"-----BEGIN\s+(?:RSA|OPENSSH|EC|DSA|PGP)?\s*PRIVATE KEY-----").unwrap());
+static RE_AWS_SECRET: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"(?i)AWS_SECRET_ACCESS_KEY\s*[:=]\s*["']?[A-Za-z0-9/+=]{30,}["']?"#).unwrap()
+});
+static RE_JWT: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"Bearer\s+ey[A-Za-z0-9_\-\.]{20,}").unwrap());
+static RE_PRIVATE_KEY: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"-----BEGIN\s+(?:RSA|OPENSSH|EC|DSA|PGP)?\s*PRIVATE KEY-----").unwrap()
+});
 static RE_HARDCODED_CREDENTIAL: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"(?i)(?:password|passwd|api_key|secret_key|auth_token)\s*[:=]\s*["']([^"'\s]{8,})["']"#).unwrap()
+    Regex::new(
+        r#"(?i)(?:password|passwd|api_key|secret_key|auth_token)\s*[:=]\s*["']([^"'\s]{8,})["']"#,
+    )
+    .unwrap()
 });
 
 /// Validates raw workflow YAML content against enterprise SDET policies.
@@ -77,7 +86,10 @@ pub fn validate_workflow(yaml_content: &str) -> PipelineValidation {
                 job: None,
                 step: None,
                 line: None,
-                suggestion: Some("Ensure YAML indentation and syntax follow GitHub Actions specifications.".to_string()),
+                suggestion: Some(
+                    "Ensure YAML indentation and syntax follow GitHub Actions specifications."
+                        .to_string(),
+                ),
             }],
             warnings: Vec::new(),
             matrix_detected: false,
@@ -89,7 +101,10 @@ pub fn validate_workflow(yaml_content: &str) -> PipelineValidation {
 }
 
 /// Validates parsed WorkflowDefinition against SDET policies.
-pub fn validate_definition(workflow: &WorkflowDefinition, config: &ValidationConfig) -> PipelineValidation {
+pub fn validate_definition(
+    workflow: &WorkflowDefinition,
+    config: &ValidationConfig,
+) -> PipelineValidation {
     let mut errors = Vec::new();
     let mut warnings = Vec::new();
     let mut matrix_detected = false;
@@ -97,7 +112,8 @@ pub fn validate_definition(workflow: &WorkflowDefinition, config: &ValidationCon
 
     // 1. Concurrency Validation
     if config.enforce_concurrency {
-        let triggers_pr_or_push = workflow.on.has_trigger("push") || workflow.on.has_trigger("pull_request");
+        let triggers_pr_or_push =
+            workflow.on.has_trigger("push") || workflow.on.has_trigger("pull_request");
         if triggers_pr_or_push {
             if let Some(ref conc) = workflow.concurrency {
                 if !conc.cancels_in_progress() {
@@ -156,7 +172,9 @@ pub fn validate_definition(workflow: &WorkflowDefinition, config: &ValidationCon
             let matrix_def = job.strategy.as_ref().unwrap().matrix.as_ref().unwrap();
             let combos = matrix_def.expand_combinations();
 
-            if combos.is_empty() || (combos.len() == 1 && matrix_def.variable_dimensions().is_empty()) {
+            if combos.is_empty()
+                || (combos.len() == 1 && matrix_def.variable_dimensions().is_empty())
+            {
                 if is_test_job && config.require_matrix_for_tests {
                     errors.push(PipelineError {
                         code: "INSUFFICIENT_MATRIX_DIMENSIONS".to_string(),
@@ -256,11 +274,17 @@ pub fn validate_definition(workflow: &WorkflowDefinition, config: &ValidationCon
                 if let Some(finding) = check_plaintext_secret(k, v) {
                     errors.push(PipelineError {
                         code: "HARDCODED_SECRET".to_string(),
-                        message: format!("Job '{}' env variable '{}' contains plaintext secret: {}", job_id, k, finding),
+                        message: format!(
+                            "Job '{}' env variable '{}' contains plaintext secret: {}",
+                            job_id, k, finding
+                        ),
                         job: Some(job_id.clone()),
                         step: None,
                         line: None,
-                        suggestion: Some(format!("Reference via `${{{{ secrets.{} }}}}` instead of plaintext.", k.to_uppercase())),
+                        suggestion: Some(format!(
+                            "Reference via `${{{{ secrets.{} }}}}` instead of plaintext.",
+                            k.to_uppercase()
+                        )),
                     });
                 }
             }
@@ -273,19 +297,26 @@ pub fn validate_definition(workflow: &WorkflowDefinition, config: &ValidationCon
                     if let Some(finding) = check_plaintext_secret(k, v) {
                         errors.push(PipelineError {
                             code: "HARDCODED_SECRET".to_string(),
-                            message: format!("Step '{}' in job '{}' env '{}' contains secret: {}", step_name, job_id, k, finding),
+                            message: format!(
+                                "Step '{}' in job '{}' env '{}' contains secret: {}",
+                                step_name, job_id, k, finding
+                            ),
                             job: Some(job_id.clone()),
                             step: Some(step_name.clone()),
                             line: None,
-                            suggestion: Some("Replace plaintext value with `${{ secrets.SECRET_NAME }}`.".to_string()),
+                            suggestion: Some(
+                                "Replace plaintext value with `${{ secrets.SECRET_NAME }}`."
+                                    .to_string(),
+                            ),
                         });
                     }
                 }
 
                 // Check step run script
-                if let Some(ref script) = step.run {
-                    if let Some(finding) = scan_text_for_secrets(script) {
-                        errors.push(PipelineError {
+                if let Some(ref script) = step.run
+                    && let Some(finding) = scan_text_for_secrets(script)
+                {
+                    errors.push(PipelineError {
                             code: "HARDCODED_SECRET".to_string(),
                             message: format!("Step '{}' in job '{}' run command contains hardcoded secret: {}", step_name, job_id, finding),
                             job: Some(job_id.clone()),
@@ -293,7 +324,6 @@ pub fn validate_definition(workflow: &WorkflowDefinition, config: &ValidationCon
                             line: None,
                             suggestion: Some("Pass secrets via environment variables: `env: MY_KEY: ${{ secrets.MY_KEY }}`.".to_string()),
                         });
-                    }
                 }
 
                 // Check step `with` parameters
@@ -302,11 +332,17 @@ pub fn validate_definition(workflow: &WorkflowDefinition, config: &ValidationCon
                     if let Some(finding) = check_plaintext_secret(k, &val_str) {
                         errors.push(PipelineError {
                             code: "HARDCODED_SECRET".to_string(),
-                            message: format!("Step '{}' parameter '{}' contains plaintext secret: {}", step_name, k, finding),
+                            message: format!(
+                                "Step '{}' parameter '{}' contains plaintext secret: {}",
+                                step_name, k, finding
+                            ),
                             job: Some(job_id.clone()),
                             step: Some(step_name.clone()),
                             line: None,
-                            suggestion: Some("Pass secrets securely using `${{ secrets.SECRET_NAME }}`.".to_string()),
+                            suggestion: Some(
+                                "Pass secrets securely using `${{ secrets.SECRET_NAME }}`."
+                                    .to_string(),
+                            ),
                         });
                     }
                 }
@@ -316,7 +352,7 @@ pub fn validate_definition(workflow: &WorkflowDefinition, config: &ValidationCon
 
     // Compute SDET Quality Score (0 to 100)
     let penalty = (errors.len() as u32 * 25) + (warnings.len() as u32 * 10);
-    let sdet_score = if penalty >= 100 { 0 } else { 100 - penalty };
+    let sdet_score = 100_u32.saturating_sub(penalty);
     let valid = errors.is_empty();
 
     let summary = if valid && warnings.is_empty() {
@@ -351,12 +387,30 @@ fn is_testing_job(job_id: &str, job: &JobDefinition) -> bool {
     let lower_name = job.name.as_deref().unwrap_or("").to_lowercase();
 
     let test_keywords = [
-        "test", "spec", "qa", "e2e", "integration", "unit", "chaos",
-        "verify", "validation", "audit", "playwright", "cypress", "k6",
-        "jmeter", "pytest", "cargo test", "mvn test", "npm test",
+        "test",
+        "spec",
+        "qa",
+        "e2e",
+        "integration",
+        "unit",
+        "chaos",
+        "verify",
+        "validation",
+        "audit",
+        "playwright",
+        "cypress",
+        "k6",
+        "jmeter",
+        "pytest",
+        "cargo test",
+        "mvn test",
+        "npm test",
     ];
 
-    if test_keywords.iter().any(|k| lower_id.contains(k) || lower_name.contains(k)) {
+    if test_keywords
+        .iter()
+        .any(|k| lower_id.contains(k) || lower_name.contains(k))
+    {
         return true;
     }
 
@@ -399,15 +453,21 @@ fn check_plaintext_secret(key: &str, val: &str) -> Option<String> {
     }
 
     let lower_k = key.to_lowercase();
-    if lower_k.contains("password")
+    if (lower_k.contains("password")
         || lower_k.contains("secret")
         || lower_k.contains("token")
         || lower_k.contains("api_key")
-        || lower_k.contains("private_key")
+        || lower_k.contains("private_key"))
+        && val.len() >= 8
+        && !val.starts_with("test")
+        && !val.starts_with("mock")
+        && !val.starts_with("dummy")
     {
-        if val.len() >= 8 && !val.starts_with("test") && !val.starts_with("mock") && !val.starts_with("dummy") {
-            return Some(format!("Sensitive key '{}' has plaintext value '{}...'", key, &val[..val.len().min(4)]));
-        }
+        return Some(format!(
+            "Sensitive key '{}' has plaintext value '{}...'",
+            key,
+            &val[..val.len().min(4)]
+        ));
     }
 
     scan_text_for_secrets(val)
@@ -423,21 +483,24 @@ fn scan_text_for_secrets(text: &str) -> Option<String> {
     if let Some(m) = RE_AWS_KEY.find(text) {
         return Some(format!("AWS Access Key ID '{}...'", &m.as_str()[..8]));
     }
-    if let Some(_) = RE_AWS_SECRET.find(text) {
+    if RE_AWS_SECRET.find(text).is_some() {
         return Some("AWS Secret Access Key pattern".to_string());
     }
     if let Some(m) = RE_JWT.find(text) {
         return Some(format!("JWT Bearer token '{}...'", &m.as_str()[..15]));
     }
-    if let Some(_) = RE_PRIVATE_KEY.find(text) {
+    if RE_PRIVATE_KEY.find(text).is_some() {
         return Some("Private RSA/OpenSSH Key block".to_string());
     }
-    if let Some(caps) = RE_HARDCODED_CREDENTIAL.captures(text) {
-        if let Some(val) = caps.get(1) {
-            let s = val.as_str();
-            if !s.starts_with('$') && !s.starts_with('{') {
-                return Some(format!("Hardcoded credential value '{}...'", &s[..s.len().min(6)]));
-            }
+    if let Some(caps) = RE_HARDCODED_CREDENTIAL.captures(text)
+        && let Some(val) = caps.get(1)
+    {
+        let s = val.as_str();
+        if !s.starts_with('$') && !s.starts_with('{') {
+            return Some(format!(
+                "Hardcoded credential value '{}...'",
+                &s[..s.len().min(6)]
+            ));
         }
     }
     None
