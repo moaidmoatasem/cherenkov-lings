@@ -1629,20 +1629,54 @@ test('checkout hydration timing', async ({ page }) => {
             }
         }
 
-        let mut files = Vec::new();
-        collect(Path::new("exercises"), &mut files);
-        // Derived from lings.toml rather than hardcoded: a literal here silently
-        // goes stale every time a drill is added, which is the exact drift the
-        // manifest exists to prevent. Counted by scanning the manifest text
+        // Scoped to the drill directories lings.toml declares, which is what
+        // "every shipped drill" means. Walking all of `exercises/` also swept up
+        // scaffolding that no track declares, so an unreferenced directory could
+        // fail this test while telling you nothing about the curriculum. Stray
+        // directories are the audit's business; `cherenkov-lings audit` lists
+        // them under "not declared in lings.toml".
+        //
+        // The manifest is read as text rather than through `crate::config`
         // because several integration tests pull this module in by path, where
-        // `crate::config` is not in scope.
+        // that module is not in scope.
         let manifest = fs::read_to_string("lings.toml").expect("lings.toml must be readable");
-        let expected = manifest
-            .lines()
-            .filter(|l| l.trim() == "[[tracks.drills]]")
-            .count();
-        assert!(expected > 0, "lings.toml declares no drills");
-        assert_eq!(files.len(), expected, "expected one hints.md per drill");
+        let mut roots: Vec<String> = Vec::new();
+        let mut current_root: Option<String> = None;
+        let mut drill_dirs: Vec<std::path::PathBuf> = Vec::new();
+
+        for line in manifest.lines() {
+            let line = line.trim();
+            if let Some(value) = line.strip_prefix("exercise_dir = ") {
+                current_root = Some(value.trim_matches('"').to_string());
+            } else if let Some(value) = line.strip_prefix("drill_root = ") {
+                current_root = Some(value.trim_matches('"').to_string());
+            } else if line == "[[tracks.drills]]" {
+                roots.push(
+                    current_root
+                        .clone()
+                        .expect("drill declared before its track"),
+                );
+            } else if let Some(value) = line.strip_prefix("id = ") {
+                // Drill ids follow their `[[tracks.drills]]` marker, so a pending
+                // root means this id belongs to a drill rather than a track.
+                if roots.len() > drill_dirs.len() {
+                    let root = &roots[drill_dirs.len()];
+                    drill_dirs.push(Path::new(root).join(value.trim_matches('"')));
+                }
+            }
+        }
+
+        assert!(!drill_dirs.is_empty(), "lings.toml declares no drills");
+
+        let mut files = Vec::new();
+        for dir in &drill_dirs {
+            collect(dir, &mut files);
+        }
+        assert_eq!(
+            files.len(),
+            drill_dirs.len(),
+            "expected one hints.md per drill declared in lings.toml"
+        );
 
         for file in files {
             let dir = file.parent().expect("hints.md has a parent");

@@ -59,30 +59,31 @@ pub fn simulate_provisioning() {
         "─── Infrastructure Provisioning ────────────────────────────────────────────────────"
             .dimmed()
     );
+    println!(
+        "{} Initializing provider plugins...",
+        "terraform".bright_green()
+    );
+    println!(
+        "{} Plan: 3 to add, 0 to change, 0 to destroy.",
+        "terraform".bright_green()
+    );
+    println!(
+        "{} Apply complete! Resources: 3 added, 0 changed, 0 destroyed.",
+        "terraform".bright_green().bold()
+    );
+    println!();
 
-    let steps = provisioning_steps();
-    let last_index_for = |tool: &str| {
-        steps
-            .iter()
-            .rposition(|s| s.tool == tool)
-            .expect("every listed tool has at least one step")
-    };
-    let last_terraform = last_index_for("terraform");
-    let last_docker = last_index_for("docker");
-
-    for (idx, step) in steps.iter().enumerate() {
-        // The closing line of each tool's phase is bolded as its summary.
-        let is_phase_summary = idx == last_terraform || idx == last_docker;
-        let label = match (step.tool, is_phase_summary) {
-            ("terraform", true) => step.tool.bright_green().bold(),
-            ("terraform", false) => step.tool.bright_green(),
-            (_, true) => step.tool.bright_blue().bold(),
-            (_, false) => step.tool.bright_blue(),
-        };
-        println!("{} {}", label, step.message);
-
-        if is_phase_summary {
-            println!();
-        }
-    }
+    println!(
+        "{} Creating network crucible_default",
+        "docker".bright_blue()
+    );
+    println!(
+        "{} Container crucible-db-1  Started",
+        "docker".bright_blue()
+    );
+    println!(
+        "{} Container crucible-backend-1  Started",
+        "docker".bright_blue().bold()
+    );
+    println!();
 }

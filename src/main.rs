@@ -1062,6 +1062,57 @@ fn run_curriculum_audit() -> bool {
     println!("    Overall Curriculum Health: {:.1}%", health_pct);
     println!();
 
+    // Drill-shaped directories under exercises/ that belong to no declared track
+    // at all. Reported, not fatal: whether such a directory is a new track, or
+    // scaffolding to delete, is a curriculum decision this tool cannot make. It
+    // is named here so it cannot rot unseen, which is the failure mode this
+    // audit exists to prevent.
+    let declared_roots: std::collections::HashSet<String> = cfg
+        .tracks
+        .iter()
+        .flat_map(|t| [t.exercise_dir.clone(), t.drill_root().to_string()])
+        .collect();
+
+    let mut strays: Vec<String> = Vec::new();
+    if let Ok(entries) = fs::read_dir("exercises") {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_dir() {
+                continue;
+            }
+            let as_str = path.to_string_lossy().replace('\\', "/");
+            if declared_roots.iter().any(|root| as_str == *root) {
+                continue;
+            }
+            // A directory only counts as curriculum if it holds drill folders.
+            let looks_like_a_track = fs::read_dir(&path)
+                .into_iter()
+                .flatten()
+                .filter_map(|e| e.ok())
+                .any(|e| e.path().join("hints.md").exists());
+            if looks_like_a_track {
+                strays.push(as_str);
+            }
+        }
+    }
+    strays.sort();
+
+    if !strays.is_empty() {
+        println!(
+            " {} Not declared in lings.toml (advisory, not counted above):",
+            "!".yellow()
+        );
+        for stray in &strays {
+            println!("   - {}", stray.yellow());
+        }
+        println!(
+            "   {}",
+            "Add them to the manifest or remove them; they are invisible to the engine as-is."
+                .dimmed()
+        );
+        println!();
+    }
+
     if issues.is_empty() {
         println!(
             " {}",

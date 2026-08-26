@@ -250,15 +250,15 @@ test.describe('Learn environment — read, watch, practice, build', () => {
     await expect(page.getByRole('button', { name: 'Cherenkov — back to the sandbox' })).toBeVisible();
     await page.getByRole('button', { name: 'Cherenkov — back to the sandbox' }).click();
     await expect(page).toHaveURL('/sandbox');
-    // /sandbox is the sandbox home rendered on the Learn shell's own screen, so
-    // assert on the home page's content rather than the old app-chrome wordmark
-    // that routing no longer puts on this path.
+    // /sandbox renders the sandbox inside the Learn shell, so the assertion is
+    // the sandbox's own content rather than the standalone page's footer.
+    await expect(page.locator('.l-h1')).toContainText('Micro-Crucible Sandbox');
     await expect(page.getByText('Drill 01: Hydration Timing Gap')).toBeVisible();
   });
 
   test('Navbar learn entry routes correctly', async ({ page }) => {
-    // Entered from a sandbox app page: /sandbox itself now renders the Learn
-    // shell, which has a sidebar rather than the sandbox Navbar.
+    // Started from a page that carries the Navbar: /sandbox now renders inside
+    // the Learn shell, which has the sidebar rather than the sandbox header.
     await page.goto('/checkout');
     await expect(page.getByTestId('nav-learn')).toBeVisible();
     await page.getByTestId('nav-learn').click();

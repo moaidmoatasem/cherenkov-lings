@@ -103,7 +103,18 @@ export const App: React.FC = () => {
   };
 
   if (currentPath === '/learn' || currentPath === '/' || currentPath === '/sandbox') {
-    return <LearnApp initialScreen={currentPath === '/sandbox' ? 'sandbox' : 'today'} onExit={() => handleNavigate('/sandbox')} />;
+    const initialScreen = currentPath === '/sandbox' ? 'sandbox' : 'today';
+    return (
+      // Keyed on the screen the route asks for. `initialScreen` seeds state and
+      // is only read on mount, so without this React reuses the instance and
+      // navigating /learn -> /sandbox changed the URL while leaving the learner
+      // on the screen they were already looking at.
+      <LearnApp
+        key={initialScreen}
+        initialScreen={initialScreen}
+        onExit={() => handleNavigate('/sandbox')}
+      />
+    );
   }
 
   return (
