@@ -1,11 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { ProgressRing, Tick } from '../components/Primitives';
 import { FILTERS } from '../content';
-import { useCurriculumTracks } from '../useCurriculum';
 import type { CurriculumModule, Track } from '../types';
 
 interface AllModulesScreenProps {
-  tracks?: Track[];
+  /** Every track lings.toml declares, not just the four with curated copy.
+   *  Owned by LearnApp so the heading count above these rows and the rows
+   *  themselves are computed from one fetch rather than two that can disagree. */
+  tracks: Track[];
   /** The track is needed to name the drill's track on the drill screen. */
   onOpenModule: (module: CurriculumModule, track: Track) => void;
 }
@@ -27,9 +29,7 @@ export const AllModulesScreen: React.FC<AllModulesScreenProps> = ({
   tracks,
   onOpenModule,
 }) => {
-  // Every track lings.toml declares, not just the four with curated copy.
-  const catalog = useCurriculumTracks();
-  const source = tracks ?? catalog;
+  const source = tracks;
   const [query, setQuery] = useState<string>('');
   const [filter, setFilter] = useState<string>(FILTERS[0]);
 
