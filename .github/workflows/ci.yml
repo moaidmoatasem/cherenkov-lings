@@ -155,6 +155,24 @@ jobs:
         pip install -r crucible/backend/requirements.txt
         pip install pytest pytest-json-report requests httpx
 
+    # Several drills call the live Crucible on :8081 rather than a fake — that is
+    # the lesson in 00_foundations/04_dont_test_the_mock, and 05_one_thing_per_test,
+    # 07_cloud_devsecops and 08_tool_decisions do the same. Without the backend
+    # running these fail with ConnectionRefusedError, which is what broke this job.
+    - name: Start Micro-Crucible Backend
+      # NOTE: keep `exit 1` off the start of its own line. src/pipeline/runner.rs
+      # simulates a bare `exit 1` as a deliberately-failing step, and
+      # tests/pipeline_tests.rs runs this very file through that simulator and
+      # asserts it comes out green. `... && exit 1` is not matched by that heuristic.
+      run: |
+        nohup python -m uvicorn crucible.backend.app:app           --host 127.0.0.1 --port 8081 > /tmp/crucible-backend.log 2>&1 &
+        for i in $(seq 1 30); do
+          curl -sf http://127.0.0.1:8081/health > /dev/null && echo "Crucible backend healthy after ${i}s" && exit 0
+          sleep 1
+        done
+        cat /tmp/crucible-backend.log >&2
+        echo "Crucible backend did not become healthy within 30s" >&2 && exit 1
+
     - name: Validate Foundations Track (5 drills)
       run: |
         for dir in exercises/00_foundations/*/; do

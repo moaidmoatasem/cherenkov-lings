@@ -19,16 +19,11 @@ const HEADS: Record<ScreenId, [string, string, string]> = {
   device: ['Mobile UI · module 1 · build', 'The device lab', 'a real handset, in a bad mood'],
   tracks: ['Everything there is', '', ''],
   progress: ['Your record', 'What you can prove', 'evidence, not badges'],
+  sandbox: ['Sandbox Environment', 'Micro-Crucible Sandbox', 'broken apps for automation testing'],
 };
 
-/**
- * The learning environment: read → watch → practice → build.
- *
- * Navigation is client-side within this shell, matching the design — the app's
- * job is to make the next step obvious and get out of the way.
- */
-export const LearnApp: React.FC<{ onExit?: () => void }> = ({ onExit }) => {
-  const [screen, setScreen] = useState<ScreenId>('today');
+export const LearnApp: React.FC<{ initialScreen?: ScreenId; onExit?: () => void }> = ({ initialScreen = 'today', onExit }) => {
+  const [screen, setScreen] = useState<ScreenId>(initialScreen);
   const [step, setStep] = useState<StepId>('practice');
   const [run, setRun] = useState<'pass' | 'fail'>('pass');
   const [bigText, setBigText] = useState<boolean>(false);
@@ -134,6 +129,16 @@ export const LearnApp: React.FC<{ onExit?: () => void }> = ({ onExit }) => {
           )}
 
           {screen === 'progress' && <RecordScreen kpis={progress.kpis} />}
+
+          {screen === 'sandbox' && (
+            <div style={{ padding: '24px' }}>
+              <HomePage onNavigate={(path) => {
+                if (onExit) onExit();
+                window.history.pushState({}, '', path);
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }} />
+            </div>
+          )}
         </div>
       </main>
     </div>

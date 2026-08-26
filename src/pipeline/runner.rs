@@ -607,6 +607,8 @@ pub fn render_pipeline_summary(result: &PipelineRunResult) {
     println!("{} Duration: {}ms", "⏱".cyan(), result.duration_ms);
     println!();
 
+    crate::pipeline::provisioning::simulate_provisioning();
+
     if let Some(ref val) = result.validation {
         println!(
             "{}",

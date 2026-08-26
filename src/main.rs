@@ -9,6 +9,7 @@ pub mod review;
 pub mod runner;
 pub mod triage;
 mod watcher;
+pub mod device_manager;
 
 use clap::{Parser, Subcommand};
 use colored::Colorize;
@@ -315,6 +316,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             if let Some(track_config) = track_cfg {
                 println!("{} Track loaded: {}", "✓".green(), track_config.name.bold());
+
+                let device_manager = crate::device_manager::DeviceManager::new();
+                if track_config.runner == "maestro" {
+                    // device_manager.start_android_emulator("Pixel_6_Pro_API_33");
+                } else if track_config.runner == "node" {
+                    device_manager.start_browser_node("chromium");
+                }
 
                 // Auto-spawn background Chaos Proxy if configured in lings.toml
                 let _proxy_shutdown = if cfg.platform.chaos_proxy_port > 0 {

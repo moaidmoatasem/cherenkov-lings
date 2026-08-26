@@ -98,15 +98,13 @@ export const App: React.FC = () => {
         return <PaymentPage />;
       case '/mobile-test':
         return <MobileTestPage />;
-      case '/sandbox':
-        return <HomePage onNavigate={handleNavigate} />;
       default:
         return <NotFoundPage path={currentPath} onNavigate={handleNavigate} />;
     }
   };
 
-  if (currentPath === '/learn' || currentPath === '/') {
-    return <LearnApp onExit={() => handleNavigate('/sandbox')} />;
+  if (currentPath === '/learn' || currentPath === '/' || currentPath === '/sandbox') {
+    return <LearnApp initialScreen={currentPath === '/sandbox' ? 'sandbox' : 'today'} onExit={() => handleNavigate('/sandbox')} />;
   }
 
   return (

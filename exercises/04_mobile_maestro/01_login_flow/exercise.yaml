@@ -1,0 +1,6 @@
+appId: com.example.app
+---
+- launchApp
+# TODO: Tap on the 'Username' field and type 'user1'
+# TODO: Tap on the 'Password' field and type 'pass1'
+# TODO: Tap on the 'Login' button

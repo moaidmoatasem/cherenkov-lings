@@ -1,0 +1,8 @@
+appId: com.example.app
+---
+- launchApp
+- tapOn: "Username"
+- inputText: "user1"
+- tapOn: "Password"
+- inputText: "pass1"
+- tapOn: "Login"
