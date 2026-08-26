@@ -434,7 +434,9 @@ export const CodeReviewPage: React.FC = () => {
 
         <div className="header-actions">
           <button
-            className="secondary-btn"
+            className={`secondary-btn ${viewMode === 'Embedded' ? 'active-toggle' : ''}`}
+            data-testid="view-mode-toggle"
+            aria-pressed={viewMode === 'Embedded'}
             onClick={() => setViewMode(viewMode === 'Embedded' ? 'Native' : 'Embedded')}
           >
             <span className="btn-icon">📺</span>
@@ -482,7 +484,7 @@ export const CodeReviewPage: React.FC = () => {
           {viewMode === 'Embedded' ? (
             <StreamViewer />
           ) : (
-            <div className="native-mode-message" style={{ padding: '20px', backgroundColor: '#f0f4f8', border: '1px solid #cce0ff', borderRadius: '4px', marginBottom: '20px', color: '#0056b3' }}>
+            <div className="native-mode-message" data-testid="native-mode-message">
               Tests are running in external native windows.
             </div>
           )}

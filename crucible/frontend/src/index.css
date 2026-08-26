@@ -3105,3 +3105,92 @@ body {
   gap: 16px;
   padding-top: 8px;
 }
+
+/* ---------------------------------------------------------------------------
+   Embedded live test stream (Mission Control -> Code Review, Embedded mode)
+   --------------------------------------------------------------------------- */
+
+/* Referenced by .live-dot and by .step-dot.running, which animated nothing
+   until this keyframe existed. */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.82);
+  }
+}
+
+.stream-viewer {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  background: var(--bg-card);
+}
+
+.stream-viewer .stream-header {
+  background: var(--bg-card-hover);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.stream-viewer .live-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent-red);
+  display: inline-block;
+  flex: 0 0 auto;
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+.stream-viewer .stream-title {
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.stream-viewer .stream-badge {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--accent-red);
+  border: 1px solid var(--accent-red);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+.stream-viewer .stream-content {
+  background: #000;
+  color: var(--accent-green);
+  font-family: var(--font-mono);
+  padding: 20px;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.native-mode-message {
+  padding: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-focus);
+  border-radius: 8px;
+  margin-bottom: 20px;
+  color: var(--accent-cyan);
+}
+
+/* Users who ask for reduced motion get a static indicator rather than none. */
+@media (prefers-reduced-motion: reduce) {
+  .stream-viewer .live-dot {
+    animation: none;
+  }
+}

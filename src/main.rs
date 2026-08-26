@@ -319,9 +319,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let device_manager = crate::device_manager::DeviceManager::new();
                 if track_config.runner == "maestro" {
-                    // device_manager.start_android_emulator("Pixel_6_Pro_API_33");
-                } else if track_config.runner == "node" {
-                    device_manager.start_browser_node("chromium");
+                    // Launching a real emulator hijacks the user's machine, so
+                    // it is opt-in: export CHERENKOV_AVD=<avd name> to enable.
+                    match std::env::var("CHERENKOV_AVD") {
+                        Ok(avd) if !avd.trim().is_empty() => {
+                            if let Err(e) = device_manager.start_android_emulator(&avd) {
+                                println!("{} Emulator unavailable: {e}", "!".yellow());
+                                println!("  Continuing without a device — Maestro drills are graded on flow source.");
+                            }
+                        }
+                        _ => {
+                            println!(
+                                "{} No emulator started (set CHERENKOV_AVD=<avd name> to auto-launch one).",
+                                "i".blue()
+                            );
+                        }
+                    }
+                } else if track_config.runner == "node"
+                    && let Err(e) = device_manager.start_browser_node("chromium")
+                {
+                    println!("{} Browser node unavailable: {e}", "!".yellow());
                 }
 
                 // Auto-spawn background Chaos Proxy if configured in lings.toml
