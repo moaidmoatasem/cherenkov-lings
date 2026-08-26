@@ -1,5 +1,11 @@
 #![allow(dead_code, unused_imports)]
 
+// src/runner.rs references crate::pipeline (the in-process CI simulator
+// backing the ci-pipeline track), so the module must exist in this test
+// crate too for the #[path] include below to resolve.
+#[path = "../src/pipeline/mod.rs"]
+mod pipeline;
+
 #[path = "../src/runner.rs"]
 mod runner;
 

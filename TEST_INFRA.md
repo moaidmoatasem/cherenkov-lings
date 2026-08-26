@@ -34,7 +34,7 @@ cargo run -- dashboard
    - JMeter: 8 drills (with complete exercise + solution + hints)
    - Tool Decisions: 4 drills
    - Track 0 (5), Track 5 (2), Track 6 (2)
-   - Total 60 drills across 11 tracks.
+   - Total 65 drills across 12 tracks.
 2. **Bundle Integrity**: Every drill directory contains `exercise.*`, `solution.*`, `hints.md`, and `theory.md`.
 3. **Production Story**: Every exercise file contains a named real-world incident comment block.
 4. **Theory Modules**: Every `theory.md` >= 150 words, contains incident story, mechanism, ASCII diagram, and closes with "You will now simulate this in the Crucible".

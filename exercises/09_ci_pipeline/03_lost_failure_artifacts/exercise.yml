@@ -1,0 +1,38 @@
+# A flaky test failed at 02:14 on the Windows runner. The trace, the video
+# and the HTML report all died with the container.
+#
+# TASK: make failure evidence survive the runner.
+
+name: E-Commerce Regression Suite
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e-tests:
+    name: Playwright E2E Suite
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node-version: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Install dependencies
+        run: npm ci
+      - name: Run Playwright suite
+        run: npx playwright test --reporter=json
+        env:
+          CRUCIBLE_TOKEN: ${{ secrets.CRUCIBLE_TOKEN }}

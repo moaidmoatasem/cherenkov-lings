@@ -1011,120 +1011,51 @@ pub fn extract_drill_id_from_path(path_str: &str) -> String {
     path_str.to_string()
 }
 
-/// Default curriculum tracks matching lings.toml
+/// The curriculum tracks defined by the embedded `lings.toml` manifest.
+///
+/// `lings.toml` is the single source of truth for the curriculum. This function
+/// exists only as the fallback for callers that cannot read the manifest from
+/// disk (for example when the binary is run from outside the repository root),
+/// so it parses the copy baked in at compile time rather than duplicating the
+/// curriculum in Rust source.
 pub fn default_curriculum_tracks() -> Vec<crate::config::TrackConfig> {
-    vec![
-        crate::config::TrackConfig {
-            id: "foundations".to_string(),
-            name: "Automation Foundations — Manual QA On-Ramp (Python / Pytest)".to_string(),
-            runner: "python".to_string(),
-            exercise_dir: "exercises/00_foundations".to_string(),
-            extension: ".py".to_string(),
-            command: "python -m pytest {file} --json-report --json-report-file=report.json"
-                .to_string(),
-        },
-        crate::config::TrackConfig {
-            id: "playwright-ts".to_string(),
-            name: "Modern Web Automation (Playwright TypeScript)".to_string(),
-            runner: "node".to_string(),
-            exercise_dir: "exercises/01_web_playwright_ts".to_string(),
-            extension: ".ts".to_string(),
-            command: "npx playwright test {file} --reporter=json".to_string(),
-        },
-        crate::config::TrackConfig {
-            id: "restassured-java".to_string(),
-            name: "API Resilience & Security (REST Assured Java)".to_string(),
-            runner: "jvm".to_string(),
-            exercise_dir: "exercises/02_api_restassured_java".to_string(),
-            extension: ".java".to_string(),
-            command: "mvn test -Dtest={class}".to_string(),
-        },
-        crate::config::TrackConfig {
-            id: "maestro-mobile".to_string(),
-            name: "Mobile UI Automation (Maestro YAML)".to_string(),
-            runner: "maestro".to_string(),
-            exercise_dir: "exercises/03_mobile_maestro".to_string(),
-            extension: ".yaml".to_string(),
-            command: "maestro test {file}".to_string(),
-        },
-        crate::config::TrackConfig {
-            id: "k6-js".to_string(),
-            name: "High-Concurrency Load Testing (k6 JS)".to_string(),
-            runner: "k6".to_string(),
-            exercise_dir: "exercises/04_perf_k6_js".to_string(),
-            extension: ".js".to_string(),
-            command: "k6 run {file} --summary-export=summary.json".to_string(),
-        },
-        crate::config::TrackConfig {
-            id: "genai-qa".to_string(),
-            name: "GenAI QA Testing (Playwright TypeScript)".to_string(),
-            runner: "node".to_string(),
-            exercise_dir: "exercises/05_genai_qa".to_string(),
-            extension: ".ts".to_string(),
-            command: "npx playwright test {file} --reporter=json".to_string(),
-        },
-        crate::config::TrackConfig {
-            id: "devsecops-python".to_string(),
-            name: "Cloud-Native & DevSecOps (Python / Pytest)".to_string(),
-            runner: "python".to_string(),
-            exercise_dir: "exercises/06_cloud_devsecops".to_string(),
-            extension: ".py".to_string(),
-            command: "python -m pytest {file} --json-report --json-report-file=report.json"
-                .to_string(),
-        },
-        crate::config::TrackConfig {
-            id: "jmeter".to_string(),
-            name: "Enterprise Performance Testing (JMeter)".to_string(),
-            runner: "jmeter".to_string(),
-            exercise_dir: "exercises/05_perf_jmeter".to_string(),
-            extension: ".jmx".to_string(),
-            command: "jmeter -n -t {file} -l results.jtl".to_string(),
-        },
-        crate::config::TrackConfig {
-            id: "tool-decisions".to_string(),
-            name: "Cross-Tool Decision Framework (Python / Pytest)".to_string(),
-            runner: "python".to_string(),
-            exercise_dir: "exercises/06_tool_decisions".to_string(),
-            extension: ".py".to_string(),
-            command: "python -m pytest {file} --json-report --json-report-file=report.json"
-                .to_string(),
-        },
-        crate::config::TrackConfig {
-            id: "contract-pact".to_string(),
-            name: "Consumer-Driven Contract Testing (Python / Pact)".to_string(),
-            runner: "python".to_string(),
-            exercise_dir: "exercises/07_contract_pact".to_string(),
-            extension: ".py".to_string(),
-            command: "python -m pytest {file} --json-report --json-report-file=report.json"
-                .to_string(),
-        },
-        crate::config::TrackConfig {
-            id: "a11y-axe".to_string(),
-            name: "Accessibility & Visual Testing (Playwright TypeScript)".to_string(),
-            runner: "node".to_string(),
-            exercise_dir: "exercises/08_a11y_axe".to_string(),
-            extension: ".ts".to_string(),
-            command: "npx playwright test {file} --reporter=json".to_string(),
-        },
-    ]
+    embedded_config().tracks
 }
 
-/// Discover drill identifiers for a given track from disk, falling back to standard curriculum if not on disk
+/// Parses the compile-time-embedded `lings.toml` manifest.
+///
+/// The manifest is validated by `cargo test` (see `tests/curriculum_manifest_tests.rs`),
+/// so a parse failure here means the repository is in a broken state; we surface
+/// that loudly rather than silently serving an empty curriculum.
+pub fn embedded_config() -> crate::config::Config {
+    crate::config::parse_config(crate::config::EMBEDDED_MANIFEST)
+        .expect("embedded lings.toml manifest must parse; run `cargo test manifest` to diagnose")
+}
+
+/// Discover drill identifiers for a track from disk, falling back to the
+/// curriculum manifest when the exercise directory is not present.
+///
+/// The drill root is resolved from the manifest, so layouts that do not put
+/// drills directly under `exercise_dir` (the Maven-structured Java track) need
+/// no special-casing here.
 pub fn discover_track_drills(track_id: &str, exercise_dir: &str) -> Vec<String> {
-    let base = Path::new(exercise_dir);
+    let manifest_track = embedded_config()
+        .tracks
+        .into_iter()
+        .find(|t| t.id == track_id);
+
+    // Honour the manifest's drill_root, but only when the caller is asking about
+    // that track's real exercise_dir; otherwise respect the argument as given.
+    let search_dir = manifest_track
+        .as_ref()
+        .filter(|t| t.exercise_dir == exercise_dir)
+        .and_then(|t| t.drill_root.as_deref())
+        .map(Path::new)
+        .filter(|p| p.exists())
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| Path::new(exercise_dir).to_path_buf());
+
     let mut discovered = Vec::new();
-
-    let search_dir = if track_id == "restassured-java" {
-        let java_pkg = base.join("src/test/java/com/cherenkov");
-        if java_pkg.exists() {
-            java_pkg
-        } else {
-            base.to_path_buf()
-        }
-    } else {
-        base.to_path_buf()
-    };
-
     if let Ok(entries) = fs::read_dir(&search_dir) {
         for entry in entries.flatten() {
             let path = entry.path();
@@ -1172,76 +1103,11 @@ pub fn discover_track_drills(track_id: &str, exercise_dir: &str) -> Vec<String> 
         return discovered;
     }
 
-    // Fallback to standard curriculum drill list per track
-    match track_id {
-        "foundations" => vec![
-            "01_what_is_a_test".to_string(),
-            "02_test_naming_matters".to_string(),
-            "03_arrange_act_assert".to_string(),
-            "04_dont_test_the_mock".to_string(),
-            "05_one_thing_per_test".to_string(),
-        ],
-        "playwright-ts" => vec![
-            "01_hydration_timing".to_string(),
-            "02_shadow_dom_v2".to_string(),
-            "03_debounce_race_condition".to_string(),
-            "04_first_playwright_test".to_string(),
-            "05_locator_hierarchy".to_string(),
-            "06_page_object_intro".to_string(),
-            "07_iframe_cross_origin".to_string(),
-            "08_network_intercept".to_string(),
-            "09_visual_regression_trap".to_string(),
-            "10_parallel_state_pollution".to_string(),
-        ],
-        "restassured-java" => vec![
-            "drill01_idempotency".to_string(),
-            "drill02_jwt_auth".to_string(),
-            "drill03_kafka_lag".to_string(),
-            "drill04_pagination_boundary".to_string(),
-            "drill05_json_schema_validation".to_string(),
-            "drill06_graphql_assertions".to_string(),
-            "drill07_request_spec_reuse".to_string(),
-        ],
-        "maestro-mobile" => vec![
-            "01_biometric_fallback".to_string(),
-            "02_deep_link_cold_start".to_string(),
-            "03_activity_recreation".to_string(),
-            "04_scroll_to_element".to_string(),
-            "05_push_notification_handling".to_string(),
-        ],
-        "k6-js" => vec![
-            "01_database_pool_starvation".to_string(),
-            "02_spike_profile_p99".to_string(),
-            "03_chaos_sla_assertion".to_string(),
-            "04_streaming_sse_test".to_string(),
-            "05_grafana_output".to_string(),
-        ],
-        "genai-qa" => vec![
-            "01_rag_context_faithfulness".to_string(),
-            "02_llm_assertion_flakiness".to_string(),
-        ],
-        "devsecops-python" => vec![
-            "01_insecure_docker_mount".to_string(),
-            "02_jwt_weak_signing_key".to_string(),
-        ],
-        "jmeter" => vec![
-            "01_gui_mode_antipattern".to_string(),
-            "02_missing_assertion".to_string(),
-            "03_constant_think_time".to_string(),
-            "04_listener_in_production".to_string(),
-            "05_hardcoded_token".to_string(),
-            "06_throughput_vs_concurrency".to_string(),
-            "07_distributed_load".to_string(),
-            "08_jtl_dashboard".to_string(),
-        ],
-        "tool-decisions" => vec![
-            "01_ui_vs_api_test".to_string(),
-            "02_k6_vs_jmeter".to_string(),
-            "03_appium_vs_maestro".to_string(),
-            "04_contract_vs_e2e".to_string(),
-        ],
-        _ => Vec::new(),
-    }
+    // Nothing on disk: fall back to the manifest, which is the single source of
+    // truth for what the curriculum is supposed to contain.
+    manifest_track
+        .map(|t| t.drills.into_iter().map(|d| d.id).collect())
+        .unwrap_or_default()
 }
 
 /// Calculate curriculum progression summaries across all configured tracks

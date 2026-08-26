@@ -124,13 +124,14 @@ cherenkov-lings watch --track=devsecops-python
 cherenkov-lings watch --track=tool-decisions
 cherenkov-lings watch --track=contract-pact
 cherenkov-lings watch --track=a11y-axe
+cherenkov-lings watch --track=ci-pipeline
 ```
 
 Open any `exercise.*` file in your favorite editor, write your fix, and hit **Save**. Feedback is instantaneous!
 
 ---
 
-## 📚 60-Drill Curriculum Matrix (11 Tracks)
+## 📚 65-Drill Curriculum Matrix (12 Tracks)
 
 | Track | Stack | Drills | Core Concepts & Incident Case Studies |
 |---|---|:---:|---|
@@ -145,6 +146,7 @@ Open any `exercise.*` file in your favorite editor, write your fix, and hit **Sa
 | **8. Tool Decisions** | Python | 4 | UI vs API layer decision matrix, k6 vs JMeter enterprise tradeoffs, Appium vs Maestro mobile strategy, Pact contract vs E2E microservice testing |
 | **9. Contract Testing** | Python / Pact | 3 | Consumer schema definition, automated provider verification gates, breaking additive vs destructive API changes |
 | **10. Accessibility** | Playwright TS | 3 | WCAG semantic trees & color contrast, keyboard sequential focus traps, ARIA screen-reader live regions |
+| **11. CI/CD Pipeline** | GitHub Actions YAML | 5 | Plaintext credentials in workflow files, single-runner coverage gaps, failure evidence lost with the ephemeral runner, unbounded job timeouts, queue starvation from superseded runs |
 
 ---
 

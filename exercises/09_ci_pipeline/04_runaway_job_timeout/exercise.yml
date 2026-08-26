@@ -1,0 +1,45 @@
+# A hung Playwright worker held a runner for six hours last weekend and
+# burned the month's CI budget. The timeout here is not protecting anyone.
+#
+# TASK: bound the job so a hung runner fails fast.
+# NOTE: deleting timeout-minutes is not a fix — the default is 360 minutes.
+
+name: E-Commerce Regression Suite
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e-tests:
+    name: Playwright E2E Suite
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node-version: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Install dependencies
+        run: npm ci
+      - name: Run Playwright suite
+        run: npx playwright test --reporter=json
+        env:
+          CRUCIBLE_TOKEN: ${{ secrets.CRUCIBLE_TOKEN }}
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
