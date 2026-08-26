@@ -1,7 +1,7 @@
 use cherenkov_lings::review::{
+    AiMentorClient, AstViolation, ReviewConfig, RuleScanner, Severity, SupportedLanguage,
     apply_all_fixes, apply_automated_fixes, apply_fix, calculate_score, generate_unified_diff,
-    run_review, run_review_on_content, AiMentorClient, AstViolation, ReviewConfig, RuleScanner,
-    Severity, SupportedLanguage,
+    run_review, run_review_on_content,
 };
 use std::fs;
 use std::path::Path;
@@ -49,7 +49,11 @@ fn test_ast_hardcoded_sleep_detection_polyglot() {
         });
     "#;
     let ts_violations = RuleScanner::scan_content("test.ts", ts_code);
-    assert!(ts_violations.iter().any(|v| v.rule_id == "ANTI_PATTERN_HARDCODED_SLEEP" && v.line_number == 4));
+    assert!(
+        ts_violations
+            .iter()
+            .any(|v| v.rule_id == "ANTI_PATTERN_HARDCODED_SLEEP" && v.line_number == 4)
+    );
     assert_eq!(ts_violations[0].severity, Severity::Error);
 
     // Python
@@ -62,7 +66,11 @@ def test_slow_search(page):
     assert page.title() == "Results"
     "#;
     let py_violations = RuleScanner::scan_content("test.py", py_code);
-    assert!(py_violations.iter().any(|v| v.rule_id == "ANTI_PATTERN_HARDCODED_SLEEP" && v.line_number == 6));
+    assert!(
+        py_violations
+            .iter()
+            .any(|v| v.rule_id == "ANTI_PATTERN_HARDCODED_SLEEP" && v.line_number == 6)
+    );
 
     // Java
     let java_code = r#"
@@ -74,7 +82,11 @@ def test_slow_search(page):
         }
     "#;
     let java_violations = RuleScanner::scan_content("CheckoutTest.java", java_code);
-    assert!(java_violations.iter().any(|v| v.rule_id == "ANTI_PATTERN_HARDCODED_SLEEP" && v.line_number == 5));
+    assert!(
+        java_violations
+            .iter()
+            .any(|v| v.rule_id == "ANTI_PATTERN_HARDCODED_SLEEP" && v.line_number == 5)
+    );
 
     // Rust
     let rs_code = r#"
@@ -85,7 +97,11 @@ def test_slow_search(page):
         }
     "#;
     let rs_violations = RuleScanner::scan_content("test.rs", rs_code);
-    assert!(rs_violations.iter().any(|v| v.rule_id == "ANTI_PATTERN_HARDCODED_SLEEP"));
+    assert!(
+        rs_violations
+            .iter()
+            .any(|v| v.rule_id == "ANTI_PATTERN_HARDCODED_SLEEP")
+    );
 }
 
 #[test]
@@ -103,9 +119,21 @@ fn test_ast_fragile_locator_detection() {
     "#;
     let violations = RuleScanner::scan_content("test.ts", bad_locators_code);
 
-    assert!(violations.iter().any(|v| v.rule_id == "ANTI_PATTERN_FRAGILE_LOCATOR_XPATH"));
-    assert!(violations.iter().any(|v| v.rule_id == "ANTI_PATTERN_FRAGILE_LOCATOR_CSS"));
-    assert!(violations.iter().any(|v| v.rule_id == "ANTI_PATTERN_FRAGILE_LOCATOR_AUTO_ID"));
+    assert!(
+        violations
+            .iter()
+            .any(|v| v.rule_id == "ANTI_PATTERN_FRAGILE_LOCATOR_XPATH")
+    );
+    assert!(
+        violations
+            .iter()
+            .any(|v| v.rule_id == "ANTI_PATTERN_FRAGILE_LOCATOR_CSS")
+    );
+    assert!(
+        violations
+            .iter()
+            .any(|v| v.rule_id == "ANTI_PATTERN_FRAGILE_LOCATOR_AUTO_ID")
+    );
 }
 
 #[test]
@@ -126,7 +154,13 @@ fn test_ast_floating_unawaited_promise_detection() {
     assert_eq!(floating_violations.len(), 2);
     assert!(floating_violations.iter().any(|v| v.line_number == 3));
     assert!(floating_violations.iter().any(|v| v.line_number == 4));
-    assert!(floating_violations[0].suggested_fix.as_ref().unwrap().starts_with("await "));
+    assert!(
+        floating_violations[0]
+            .suggested_fix
+            .as_ref()
+            .unwrap()
+            .starts_with("await ")
+    );
 }
 
 #[test]
@@ -146,7 +180,11 @@ fn test_ast_hardcoded_secrets_detection() {
 
     assert_eq!(secret_violations.len(), 2);
     assert_eq!(secret_violations[0].severity, Severity::Error);
-    assert!(secret_violations[0].message.contains("Plaintext credential"));
+    assert!(
+        secret_violations[0]
+            .message
+            .contains("Plaintext credential")
+    );
 }
 
 #[test]
@@ -159,7 +197,11 @@ fn test_ast_vacuous_and_missing_assertions() {
         });
     "#;
     let violations = RuleScanner::scan_content("test.ts", tautology_code);
-    assert!(violations.iter().any(|v| v.rule_id == "ANTI_PATTERN_VACUOUS_ASSERTION"));
+    assert!(
+        violations
+            .iter()
+            .any(|v| v.rule_id == "ANTI_PATTERN_VACUOUS_ASSERTION")
+    );
 
     // Missing assertions entirely in test file
     let no_assert_code = r#"
@@ -169,7 +211,11 @@ fn test_ast_vacuous_and_missing_assertions() {
         });
     "#;
     let violations_missing = RuleScanner::scan_content("test.ts", no_assert_code);
-    assert!(violations_missing.iter().any(|v| v.rule_id == "ANTI_PATTERN_MISSING_ASSERTION"));
+    assert!(
+        violations_missing
+            .iter()
+            .any(|v| v.rule_id == "ANTI_PATTERN_MISSING_ASSERTION")
+    );
 }
 
 #[test]
@@ -183,7 +229,11 @@ fn test_ast_unsafe_unwraps_and_type_bypass() {
         }
     "#;
     let violations_rs = RuleScanner::scan_content("test.rs", rust_code);
-    assert!(violations_rs.iter().any(|v| v.rule_id == "ANTI_PATTERN_UNSAFE_UNWRAP"));
+    assert!(
+        violations_rs
+            .iter()
+            .any(|v| v.rule_id == "ANTI_PATTERN_UNSAFE_UNWRAP")
+    );
 
     // TypeScript as any
     let ts_code = r#"
@@ -193,7 +243,11 @@ fn test_ast_unsafe_unwraps_and_type_bypass() {
         });
     "#;
     let violations_ts = RuleScanner::scan_content("test.ts", ts_code);
-    assert!(violations_ts.iter().any(|v| v.rule_id == "ANTI_PATTERN_UNSAFE_TYPE_BYPASS"));
+    assert!(
+        violations_ts
+            .iter()
+            .any(|v| v.rule_id == "ANTI_PATTERN_UNSAFE_TYPE_BYPASS")
+    );
 }
 
 #[test]
@@ -201,17 +255,15 @@ fn test_score_calculation_and_thresholds() {
     let clean_violations: Vec<AstViolation> = vec![];
     assert_eq!(calculate_score(&clean_violations), 100);
 
-    let error_violations = vec![
-        AstViolation {
-            rule_id: "ANTI_PATTERN_HARDCODED_SLEEP".to_string(),
-            severity: Severity::Error,
-            file_path: "test.ts".to_string(),
-            line_number: 5,
-            message: "Sleep".to_string(),
-            code_snippet: "await page.waitForTimeout(1000);".to_string(),
-            suggested_fix: None,
-        },
-    ];
+    let error_violations = vec![AstViolation {
+        rule_id: "ANTI_PATTERN_HARDCODED_SLEEP".to_string(),
+        severity: Severity::Error,
+        file_path: "test.ts".to_string(),
+        line_number: 5,
+        message: "Sleep".to_string(),
+        code_snippet: "await page.waitForTimeout(1000);".to_string(),
+        suggested_fix: None,
+    }];
     assert_eq!(calculate_score(&error_violations), 75);
 
     let multiple_violations = vec![
@@ -290,7 +342,13 @@ fn test_automated_fixes_application_and_diff() {
 #[test]
 fn test_apply_fix_on_disk_temp_file() {
     let temp_dir = std::env::temp_dir();
-    let file_path = temp_dir.join(format!("test_review_fix_{}.ts", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+    let file_path = temp_dir.join(format!(
+        "test_review_fix_{}.ts",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
 
     let code = "test('demo', async ({ page }) => {\n    page.click('button');\n    expect(page).toBeDefined();\n});\n";
     fs::write(&file_path, code).unwrap();
@@ -354,7 +412,8 @@ fn test_clean_test_review_full_score() {
     "#;
 
     let config = ReviewConfig::default();
-    let report = run_review_on_content("clean_test.ts", clean_code, &config).expect("Review passes");
+    let report =
+        run_review_on_content("clean_test.ts", clean_code, &config).expect("Review passes");
 
     assert_eq!(report.score, 100);
     assert!(report.passed);
@@ -365,7 +424,8 @@ fn test_clean_test_review_full_score() {
 
 #[test]
 fn test_run_review_on_actual_file_path() {
-    let drill_path = Path::new("exercises/01_web_playwright_ts/04_first_playwright_test/exercise.ts");
+    let drill_path =
+        Path::new("exercises/01_web_playwright_ts/04_first_playwright_test/exercise.ts");
     if drill_path.exists() {
         let config = ReviewConfig::default();
         let report = run_review(drill_path, &config).expect("Review on file path succeeds");

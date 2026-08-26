@@ -132,6 +132,10 @@ pub struct ChaosTestResult {
 }
 
 /// Generate the realistic deterministic dataset of 70 chaotic test executions
+// `vec![]` would fold 70 entries and their category headings into one ~2,100-line
+// literal. The pushes stay: they keep the dataset grouped by failure category and
+// the pre-sized allocation explicit, for no behavioural difference.
+#[allow(clippy::vec_init_then_push)]
 pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
     let mut tests = Vec::with_capacity(70);
 
@@ -1859,10 +1863,26 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
             historical_flake_score: 0.0,
         }),
         steps: vec![
-            TestStepTelemetry { name: "Locate button using page.getByRole('button', { name: 'Submit' })".to_string(), status: TestStatus::Passed, duration_ms: 120, error: None },
-            TestStepTelemetry { name: "Await web assertion expect(locator).toBeVisible()".to_string(), status: TestStatus::Passed, duration_ms: 330, error: None },
+            TestStepTelemetry {
+                name: "Locate button using page.getByRole('button', { name: 'Submit' })"
+                    .to_string(),
+                status: TestStatus::Passed,
+                duration_ms: 120,
+                error: None,
+            },
+            TestStepTelemetry {
+                name: "Await web assertion expect(locator).toBeVisible()".to_string(),
+                status: TestStatus::Passed,
+                duration_ms: 330,
+                error: None,
+            },
         ],
-        labels: create_labels("normal", "playwright-ts", "BestPractices", "01_hydration_timing"),
+        labels: create_labels(
+            "normal",
+            "playwright-ts",
+            "BestPractices",
+            "01_hydration_timing",
+        ),
         root_cause_hint: None,
     });
 
@@ -1879,10 +1899,25 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         chaos_event: None,
         flakiness_metrics: None,
         steps: vec![
-            TestStepTelemetry { name: "Send POST /orders with Idempotency-Key header".to_string(), status: TestStatus::Passed, duration_ms: 220, error: None },
-            TestStepTelemetry { name: "Assert HTTP 201 and valid JSON response schema".to_string(), status: TestStatus::Passed, duration_ms: 160, error: None },
+            TestStepTelemetry {
+                name: "Send POST /orders with Idempotency-Key header".to_string(),
+                status: TestStatus::Passed,
+                duration_ms: 220,
+                error: None,
+            },
+            TestStepTelemetry {
+                name: "Assert HTTP 201 and valid JSON response schema".to_string(),
+                status: TestStatus::Passed,
+                duration_ms: 160,
+                error: None,
+            },
         ],
-        labels: create_labels("normal", "restassured-java", "Idempotency", "03_checkout_flow"),
+        labels: create_labels(
+            "normal",
+            "restassured-java",
+            "Idempotency",
+            "03_checkout_flow",
+        ),
         root_cause_hint: None,
     });
 
@@ -1899,9 +1934,24 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         chaos_event: None,
         flakiness_metrics: None,
         steps: vec![
-            TestStepTelemetry { name: "Launch app com.cherenkov.app".to_string(), status: TestStatus::Passed, duration_ms: 600, error: None },
-            TestStepTelemetry { name: "tapOn: id: 'btn_login'".to_string(), status: TestStatus::Passed, duration_ms: 350, error: None },
-            TestStepTelemetry { name: "assertVisible: text: 'Welcome back'".to_string(), status: TestStatus::Passed, duration_ms: 500, error: None },
+            TestStepTelemetry {
+                name: "Launch app com.cherenkov.app".to_string(),
+                status: TestStatus::Passed,
+                duration_ms: 600,
+                error: None,
+            },
+            TestStepTelemetry {
+                name: "tapOn: id: 'btn_login'".to_string(),
+                status: TestStatus::Passed,
+                duration_ms: 350,
+                error: None,
+            },
+            TestStepTelemetry {
+                name: "assertVisible: text: 'Welcome back'".to_string(),
+                status: TestStatus::Passed,
+                duration_ms: 500,
+                error: None,
+            },
         ],
         labels: create_labels("normal", "maestro-mobile", "Mobile", "01_biometric_auth"),
         root_cause_hint: None,
@@ -1920,8 +1970,18 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         chaos_event: None,
         flakiness_metrics: None,
         steps: vec![
-            TestStepTelemetry { name: "Ramp up to 50 VUs over 10s".to_string(), status: TestStatus::Passed, duration_ms: 1000, error: None },
-            TestStepTelemetry { name: "Verify p95 response time < 300ms".to_string(), status: TestStatus::Passed, duration_ms: 850, error: None },
+            TestStepTelemetry {
+                name: "Ramp up to 50 VUs over 10s".to_string(),
+                status: TestStatus::Passed,
+                duration_ms: 1000,
+                error: None,
+            },
+            TestStepTelemetry {
+                name: "Verify p95 response time < 300ms".to_string(),
+                status: TestStatus::Passed,
+                duration_ms: 850,
+                error: None,
+            },
         ],
         labels: create_labels("normal", "k6-js", "Performance", "03_chaos_sla"),
         root_cause_hint: None,
@@ -1939,9 +1999,12 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         stack_trace: None,
         chaos_event: None,
         flakiness_metrics: None,
-        steps: vec![
-            TestStepTelemetry { name: "Scan Python codebase for B101, B105, B301 violations".to_string(), status: TestStatus::Passed, duration_ms: 220, error: None },
-        ],
+        steps: vec![TestStepTelemetry {
+            name: "Scan Python codebase for B101, B105, B301 violations".to_string(),
+            status: TestStatus::Passed,
+            duration_ms: 220,
+            error: None,
+        }],
         labels: create_labels("normal", "devsecops-python", "Security", "01_rbac_security"),
         root_cause_hint: None,
     });
@@ -1959,8 +2022,18 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         chaos_event: None,
         flakiness_metrics: None,
         steps: vec![
-            TestStepTelemetry { name: "Retrieve top 3 vector chunks".to_string(), status: TestStatus::Passed, duration_ms: 180, error: None },
-            TestStepTelemetry { name: "Evaluate answer faithfulness score (0.96 >= 0.85 SLA)".to_string(), status: TestStatus::Passed, duration_ms: 500, error: None },
+            TestStepTelemetry {
+                name: "Retrieve top 3 vector chunks".to_string(),
+                status: TestStatus::Passed,
+                duration_ms: 180,
+                error: None,
+            },
+            TestStepTelemetry {
+                name: "Evaluate answer faithfulness score (0.96 >= 0.85 SLA)".to_string(),
+                status: TestStatus::Passed,
+                duration_ms: 500,
+                error: None,
+            },
         ],
         labels: create_labels("normal", "genai-qa", "GenAI", "01_rag_faithfulness"),
         root_cause_hint: None,
@@ -1978,9 +2051,12 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         stack_trace: None,
         chaos_event: None,
         flakiness_metrics: None,
-        steps: vec![
-            TestStepTelemetry { name: "Execute JMeter plan at 100 TPS".to_string(), status: TestStatus::Passed, duration_ms: 1250, error: None },
-        ],
+        steps: vec![TestStepTelemetry {
+            name: "Execute JMeter plan at 100 TPS".to_string(),
+            status: TestStatus::Passed,
+            duration_ms: 1250,
+            error: None,
+        }],
         labels: create_labels("normal", "jmeter", "Performance", "01_thread_group"),
         root_cause_hint: None,
     });
@@ -1997,9 +2073,12 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         stack_trace: None,
         chaos_event: None,
         flakiness_metrics: None,
-        steps: vec![
-            TestStepTelemetry { name: "Verify all consumer pact interactions".to_string(), status: TestStatus::Passed, duration_ms: 290, error: None },
-        ],
+        steps: vec![TestStepTelemetry {
+            name: "Verify all consumer pact interactions".to_string(),
+            status: TestStatus::Passed,
+            duration_ms: 290,
+            error: None,
+        }],
         labels: create_labels("normal", "contract-pact", "Contracts", "02_provider_states"),
         root_cause_hint: None,
     });
@@ -2016,9 +2095,12 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         stack_trace: None,
         chaos_event: None,
         flakiness_metrics: None,
-        steps: vec![
-            TestStepTelemetry { name: "Analyze DOM with full Axe-Core rule engine".to_string(), status: TestStatus::Passed, duration_ms: 380, error: None },
-        ],
+        steps: vec![TestStepTelemetry {
+            name: "Analyze DOM with full Axe-Core rule engine".to_string(),
+            status: TestStatus::Passed,
+            duration_ms: 380,
+            error: None,
+        }],
         labels: create_labels("normal", "a11y-axe", "Accessibility", "01_color_contrast"),
         root_cause_hint: None,
     });
@@ -2035,9 +2117,12 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         stack_trace: None,
         chaos_event: None,
         flakiness_metrics: None,
-        steps: vec![
-            TestStepTelemetry { name: "Evaluate min, min+1, nominal, max-1, max boundary points".to_string(), status: TestStatus::Passed, duration_ms: 120, error: None },
-        ],
+        steps: vec![TestStepTelemetry {
+            name: "Evaluate min, min+1, nominal, max-1, max boundary points".to_string(),
+            status: TestStatus::Passed,
+            duration_ms: 120,
+            error: None,
+        }],
         labels: create_labels("normal", "foundations", "Foundations", "01_what_is_a_test"),
         root_cause_hint: None,
     });
@@ -2054,10 +2139,18 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         stack_trace: None,
         chaos_event: None,
         flakiness_metrics: None,
-        steps: vec![
-            TestStepTelemetry { name: "Evaluate test pyramid tier cost vs speed trade-offs".to_string(), status: TestStatus::Passed, duration_ms: 95, error: None },
-        ],
-        labels: create_labels("normal", "tool-decisions", "Architecture", "01_ui_vs_api_test"),
+        steps: vec![TestStepTelemetry {
+            name: "Evaluate test pyramid tier cost vs speed trade-offs".to_string(),
+            status: TestStatus::Passed,
+            duration_ms: 95,
+            error: None,
+        }],
+        labels: create_labels(
+            "normal",
+            "tool-decisions",
+            "Architecture",
+            "01_ui_vs_api_test",
+        ),
         root_cause_hint: None,
     });
 
@@ -2073,10 +2166,18 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         stack_trace: None,
         chaos_event: None,
         flakiness_metrics: None,
-        steps: vec![
-            TestStepTelemetry { name: "Execute search with network idle synchronization".to_string(), status: TestStatus::Passed, duration_ms: 410, error: None },
-        ],
-        labels: create_labels("normal", "playwright-ts", "AutoWait", "04_first_playwright_test"),
+        steps: vec![TestStepTelemetry {
+            name: "Execute search with network idle synchronization".to_string(),
+            status: TestStatus::Passed,
+            duration_ms: 410,
+            error: None,
+        }],
+        labels: create_labels(
+            "normal",
+            "playwright-ts",
+            "AutoWait",
+            "04_first_playwright_test",
+        ),
         root_cause_hint: None,
     });
 
@@ -2092,9 +2193,12 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         stack_trace: None,
         chaos_event: None,
         flakiness_metrics: None,
-        steps: vec![
-            TestStepTelemetry { name: "Validate response matches JSON Schema Draft-07".to_string(), status: TestStatus::Passed, duration_ms: 310, error: None },
-        ],
+        steps: vec![TestStepTelemetry {
+            name: "Validate response matches JSON Schema Draft-07".to_string(),
+            status: TestStatus::Passed,
+            duration_ms: 310,
+            error: None,
+        }],
         labels: create_labels("normal", "restassured-java", "Schema", "03_checkout_flow"),
         root_cause_hint: None,
     });
@@ -2111,17 +2215,30 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         stack_trace: None,
         chaos_event: None,
         flakiness_metrics: None,
-        steps: vec![
-            TestStepTelemetry { name: "Audit package dependencies against OSV and CVE database".to_string(), status: TestStatus::Passed, duration_ms: 270, error: None },
-        ],
-        labels: create_labels("normal", "devsecops-python", "SupplyChain", "06_secrets_hygiene"),
+        steps: vec![TestStepTelemetry {
+            name: "Audit package dependencies against OSV and CVE database".to_string(),
+            status: TestStatus::Passed,
+            duration_ms: 270,
+            error: None,
+        }],
+        labels: create_labels(
+            "normal",
+            "devsecops-python",
+            "SupplyChain",
+            "06_secrets_hygiene",
+        ),
         root_cause_hint: None,
     });
 
     tests
 }
 
-fn create_labels(severity: &str, track: &str, feature: &str, drill: &str) -> HashMap<String, String> {
+fn create_labels(
+    severity: &str,
+    track: &str,
+    feature: &str,
+    drill: &str,
+) -> HashMap<String, String> {
     let mut map = HashMap::new();
     map.insert("severity".to_string(), severity.to_string());
     map.insert("track".to_string(), track.to_string());
@@ -2136,7 +2253,9 @@ fn create_labels(severity: &str, track: &str, feature: &str, drill: &str) -> Has
 pub fn get_test_by_id(test_id: &str) -> Option<ChaosTestResult> {
     let clean_id = test_id.trim().to_lowercase();
     generate_chaos_dataset().into_iter().find(|t| {
-        t.test_id.to_lowercase() == clean_id || t.name.to_lowercase() == clean_id || t.name.to_lowercase().contains(&clean_id)
+        t.test_id.to_lowercase() == clean_id
+            || t.name.to_lowercase() == clean_id
+            || t.name.to_lowercase().contains(&clean_id)
     })
 }
 

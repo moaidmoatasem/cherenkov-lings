@@ -9,7 +9,6 @@ from __future__ import annotations
 import difflib
 from pathlib import Path
 import re
-from typing import Any
 
 from crucible.backend.models import AstViolation, ReviewFixResponse, ReviewReport
 

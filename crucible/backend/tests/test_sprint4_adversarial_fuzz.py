@@ -12,7 +12,6 @@ Tests:
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
@@ -301,7 +300,7 @@ def test_fuzz_triage_submit_xss_and_unicode_payloads(tmp_path: Path, monkeypatch
     payload = {
         "test_id": "BUG-101",
         "category": "real_bug",
-        "explanation": "<script>alert('XSS')</script> RBAC privilege escalation \u0000 \u{202E} 🚀💥",
+        "explanation": "<script>alert('XSS')</script> RBAC privilege escalation \u0000 \u202e 🚀💥",
         "fix": "<img src=x onerror=alert(1)> Prepared statement and parameterization",
     }
     resp = client.post("/api/triage/submit", json=payload)

@@ -751,10 +751,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::NewDrill { track, name, title } => {
             run_new_drill(track, name, title.as_deref());
         }
-        Commands::Review { target, file, llm, model, fix, strict } => {
-            run_review(target.as_deref().or(file.as_deref()), llm.as_deref(), model.as_deref(), *fix, *strict);
+        Commands::Review {
+            target,
+            file,
+            llm,
+            model,
+            fix,
+            strict,
+        } => {
+            run_review(
+                target.as_deref().or(file.as_deref()),
+                llm.as_deref(),
+                model.as_deref(),
+                *fix,
+                *strict,
+            );
         }
-        Commands::Pipeline { action, path, strict, verbose } => {
+        Commands::Pipeline {
+            action,
+            path,
+            strict,
+            verbose,
+        } => {
             run_pipeline(action, path.as_deref(), *strict, *verbose);
         }
         Commands::Triage {
@@ -938,19 +956,41 @@ fn run_curriculum_audit() {
                     let sol_path = p.join(&sol_name);
                     if let Ok(content) = fs::read_to_string(&sol_path) {
                         let has_content = match ext.as_str() {
-                            ".ts" => content.contains("import") || content.contains("test(") || content.contains("expect("),
-                            ".py" => content.contains("def test_") || content.contains("class Test") || content.contains("import pytest"),
+                            ".ts" => {
+                                content.contains("import")
+                                    || content.contains("test(")
+                                    || content.contains("expect(")
+                            }
+                            ".py" => {
+                                content.contains("def test_")
+                                    || content.contains("class Test")
+                                    || content.contains("import pytest")
+                            }
                             ".java" => content.contains("import") || content.contains("@Test"),
-                            ".jmx" => content.contains("<HTTPSamplerProxy") || content.contains("<TestPlan"),
-                            ".js" => content.contains("import") || content.contains("export") || content.contains("http.get"),
-                            ".yaml" => content.contains("launchApp") || content.contains("openLink") || content.contains("tapOn"),
+                            ".jmx" => {
+                                content.contains("<HTTPSamplerProxy")
+                                    || content.contains("<TestPlan")
+                            }
+                            ".js" => {
+                                content.contains("import")
+                                    || content.contains("export")
+                                    || content.contains("http.get")
+                            }
+                            ".yaml" => {
+                                content.contains("launchApp")
+                                    || content.contains("openLink")
+                                    || content.contains("tapOn")
+                            }
                             _ => !content.trim().is_empty(),
                         };
                         if has_content {
                             passed_checks += 1;
                             dir_passed += 1;
                         } else {
-                            issues.push(format!("Solution file appears empty or invalid: {}", sol_path.display()));
+                            issues.push(format!(
+                                "Solution file appears empty or invalid: {}",
+                                sol_path.display()
+                            ));
                         }
                     } else {
                         issues.push(format!("Cannot read solution file: {}", sol_path.display()));
@@ -1150,7 +1190,8 @@ fn run_review(
     fix: bool,
     strict: bool,
 ) {
-    let target = file_or_target.unwrap_or("exercises/01_web_playwright_ts/04_first_playwright_test/exercise.ts");
+    let target = file_or_target
+        .unwrap_or("exercises/01_web_playwright_ts/04_first_playwright_test/exercise.ts");
     let target_path = std::path::Path::new(target);
 
     let config = review::ReviewConfig {
@@ -1171,7 +1212,11 @@ fn run_review(
                 );
             }
             Err(e) => {
-                eprintln!("{} Failed to apply automated fixes: {}", "✗".red().bold(), e);
+                eprintln!(
+                    "{} Failed to apply automated fixes: {}",
+                    "✗".red().bold(),
+                    e
+                );
                 std::process::exit(1);
             }
         }
@@ -1196,7 +1241,9 @@ fn run_pipeline(action: &str, path: Option<&str>, strict: bool, verbose: bool) {
                 let mut found = None;
                 for entry in entries.flatten() {
                     let p = entry.path();
-                    if p.extension().map_or(false, |ext| ext == "yml" || ext == "yaml") {
+                    if p.extension()
+                        .is_some_and(|ext| ext == "yml" || ext == "yaml")
+                    {
                         found = Some(p);
                         break;
                     }
@@ -1204,11 +1251,17 @@ fn run_pipeline(action: &str, path: Option<&str>, strict: bool, verbose: bool) {
                 if let Some(f) = found {
                     ("run", f)
                 } else {
-                    eprintln!("{} No GitHub Actions workflow found at .github/workflows/ci.yml or in .github/workflows/", "✗".red());
+                    eprintln!(
+                        "{} No GitHub Actions workflow found at .github/workflows/ci.yml or in .github/workflows/",
+                        "✗".red()
+                    );
                     std::process::exit(1);
                 }
             } else {
-                eprintln!("{} No .github/workflows directory found. Specify a path explicitly: cherenkov-lings pipeline run <path>", "✗".red());
+                eprintln!(
+                    "{} No .github/workflows directory found. Specify a path explicitly: cherenkov-lings pipeline run <path>",
+                    "✗".red()
+                );
                 std::process::exit(1);
             }
         }
@@ -1217,7 +1270,10 @@ fn run_pipeline(action: &str, path: Option<&str>, strict: bool, verbose: bool) {
             if default_path.exists() {
                 ("validate", default_path)
             } else {
-                eprintln!("{} No workflow file found to validate at .github/workflows/ci.yml", "✗".red());
+                eprintln!(
+                    "{} No workflow file found to validate at .github/workflows/ci.yml",
+                    "✗".red()
+                );
                 std::process::exit(1);
             }
         }
@@ -1229,7 +1285,11 @@ fn run_pipeline(action: &str, path: Option<&str>, strict: bool, verbose: bool) {
     };
 
     if !workflow_path.exists() {
-        eprintln!("{} Workflow file does not exist: {}", "✗".red(), workflow_path.display());
+        eprintln!(
+            "{} Workflow file does not exist: {}",
+            "✗".red(),
+            workflow_path.display()
+        );
         std::process::exit(1);
     }
 
@@ -1244,21 +1304,46 @@ fn run_pipeline(action: &str, path: Option<&str>, strict: bool, verbose: bool) {
             };
             let validation = pipeline::validate_workflow(&content);
             println!("{}", "========================================================================================".cyan());
-            println!(" {} v1.0.0  |  {}", "CHERENKOV-LINGS".bold().bright_cyan(), "CI/CD Policy Validator".bright_yellow());
+            println!(
+                " {} v1.0.0  |  {}",
+                "CHERENKOV-LINGS".bold().bright_cyan(),
+                "CI/CD Policy Validator".bright_yellow()
+            );
             println!("{}", "========================================================================================".cyan());
             println!();
-            println!("{} File: {}", "▶".bright_blue(), workflow_path.display().to_string().bold());
+            println!(
+                "{} File: {}",
+                "▶".bright_blue(),
+                workflow_path.display().to_string().bold()
+            );
             println!("  SDET Policy Score: {}/100", validation.sdet_score);
-            println!("  Status: {}", if validation.valid { "VALID".green().bold() } else { "POLICY VIOLATIONS FOUND".red().bold() });
+            println!(
+                "  Status: {}",
+                if validation.valid {
+                    "VALID".green().bold()
+                } else {
+                    "POLICY VIOLATIONS FOUND".red().bold()
+                }
+            );
             println!();
             for err in &validation.errors {
-                println!("  {} [{}] {}", "✗".red().bold(), err.code.bright_red(), err.message);
+                println!(
+                    "  {} [{}] {}",
+                    "✗".red().bold(),
+                    err.code.bright_red(),
+                    err.message
+                );
                 if let Some(ref s) = err.suggestion {
                     println!("    {} {}", "💡 Fix:".yellow(), s.italic());
                 }
             }
             for warn in &validation.warnings {
-                println!("  {} [{}] {}", "⚠".yellow(), warn.code.bright_yellow(), warn.message);
+                println!(
+                    "  {} [{}] {}",
+                    "⚠".yellow(),
+                    warn.code.bright_yellow(),
+                    warn.message
+                );
                 if let Some(ref s) = warn.suggestion {
                     println!("    {} {}", "💡 Suggestion:".yellow(), s.italic());
                 }
@@ -1289,7 +1374,13 @@ fn run_pipeline(action: &str, path: Option<&str>, strict: bool, verbose: bool) {
                                 pipeline::LogLevel::Error => "ERROR".red(),
                                 pipeline::LogLevel::Debug => "DEBUG".dimmed(),
                             };
-                            println!("  [{}] [{}] ({}) {}", lvl_str, log.runner.dimmed(), log.step.dimmed(), log.message);
+                            println!(
+                                "  [{}] [{}] ({}) {}",
+                                lvl_str,
+                                log.runner.dimmed(),
+                                log.step.dimmed(),
+                                log.message
+                            );
                         }
                         println!();
                     }
@@ -1364,7 +1455,10 @@ fn run_report_cmd(output_dir: &str) -> std::io::Result<()> {
 
     match reports::generate_chaos_allure_report(out_path) {
         Ok(summary) => {
-            println!("{} Allure Report generated successfully!", "✓".bold().green());
+            println!(
+                "{} Allure Report generated successfully!",
+                "✓".bold().green()
+            );
             println!(
                 "   Total Tests:         {}",
                 summary.total_tests.to_string().cyan()
@@ -1404,4 +1498,3 @@ fn run_report_cmd(output_dir: &str) -> std::io::Result<()> {
 
     Ok(())
 }
-

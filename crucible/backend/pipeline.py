@@ -9,7 +9,6 @@ from __future__ import annotations
 import itertools
 import re
 import time
-from typing import Any
 import yaml
 
 from crucible.backend.models import (
@@ -250,9 +249,17 @@ def simulate_pipeline_run(
     """Simulate parallel matrix execution of a workflow."""
     validation = validate_workflow_yaml(yaml_content, strict=strict_validation)
 
+    yaml_error: str | None = None
     try:
         data = yaml.safe_load(yaml_content) or {}
-    except Exception:
+    except Exception as exc:
+        # Keep the reason. Discarding it reports a failed run with no diagnostic
+        # in the logs, which leaves the learner nothing to act on.
+        yaml_error = str(exc)
+        data = {}
+
+    if not isinstance(data, dict):
+        # Scalar or sequence at the root: no jobs to run, and `.get` would raise.
         data = {}
 
     workflow_name = data.get("name", "Enterprise CI/CD Workflow")
@@ -261,6 +268,17 @@ def simulate_pipeline_run(
     job_results: list[JobRunResult] = []
     logs: list[LogEntry] = []
     start_ts = int(time.time() * 1000)
+
+    if yaml_error is not None:
+        logs.append(
+            LogEntry(
+                timestamp=start_ts,
+                runner="orchestrator",
+                step="parse_workflow",
+                level="error",
+                message=f"YAML parsing error: {yaml_error}",
+            )
+        )
 
     runner_counter = 1
     total_pipeline_duration = 0

@@ -20,12 +20,9 @@ Comprehensive Empirical Scenarios:
 
 import sys
 import os
-import shutil
 import hashlib
 import subprocess
-import json
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 # Reconfigure stdout for UTF-8
 if sys.stdout and hasattr(sys.stdout, "reconfigure"):
@@ -38,7 +35,7 @@ WORKSPACE_ROOT = Path(__file__).resolve().parent.parent
 VERIFIER_SCRIPT = WORKSPACE_ROOT / "tests" / "verify_all_exercises.py"
 FOUNDATIONS_DIR = WORKSPACE_ROOT / "exercises" / "00_foundations"
 
-def calculate_dir_hashes(directory: Path) -> Dict[str, str]:
+def calculate_dir_hashes(directory: Path) -> dict[str, str]:
     """Calculates SHA256 hashes of all files in a directory recursively."""
     hashes = {}
     for path in sorted(directory.rglob("*")):
@@ -48,7 +45,7 @@ def calculate_dir_hashes(directory: Path) -> Dict[str, str]:
             hashes[rel_path] = h
     return hashes
 
-def run_verifier(track: str = "00_foundations", cwd: Path = WORKSPACE_ROOT) -> Tuple[int, str, str]:
+def run_verifier(track: str = "00_foundations", cwd: Path = WORKSPACE_ROOT) -> tuple[int, str, str]:
     """Executes verify_all_exercises.py as a subprocess and captures output."""
     cmd = [sys.executable, "-B", str(VERIFIER_SCRIPT), "--track", track, "--json"]
     env = os.environ.copy()
@@ -64,7 +61,7 @@ def run_verifier(track: str = "00_foundations", cwd: Path = WORKSPACE_ROOT) -> T
     )
     return proc.returncode, proc.stdout, proc.stderr
 
-def run_cargo(args: List[str]) -> Tuple[int, str, str]:
+def run_cargo(args: list[str]) -> tuple[int, str, str]:
     """Runs a cargo command and captures output."""
     cmd = ["cargo"] + args
     proc = subprocess.run(
@@ -92,7 +89,7 @@ def test_suite():
     # SCENARIO 1: Pristine Baseline Verification
     # =========================================================================
     total_scenarios += 1
-    print(f"\n[SCENARIO 1] Baseline verify_all_exercises.py on pristine 00_foundations...")
+    print("\n[SCENARIO 1] Baseline verify_all_exercises.py on pristine 00_foundations...")
     code, stdout, stderr = run_verifier()
     print(f"  Return code: {code}")
     if code == 0 and "5 / 5 (100.0%)" in stdout and "100% VERIFIED SUCCESS" in stdout:
@@ -105,7 +102,7 @@ def test_suite():
     # SCENARIO 2: Missing 4-File Contract Components
     # =========================================================================
     total_scenarios += 1
-    print(f"\n[SCENARIO 2] Missing contract file adversarial test (missing hints.md & solution.py in drill 01)...")
+    print("\n[SCENARIO 2] Missing contract file adversarial test (missing hints.md & solution.py in drill 01)...")
     target_drill = FOUNDATIONS_DIR / "01_what_is_a_test"
     solution_file = target_drill / "solution.py"
     hints_file = target_drill / "hints.md"
@@ -133,7 +130,7 @@ def test_suite():
     # SCENARIO 3: Syntax Error in Solution (Adversarial Corrupted Code)
     # =========================================================================
     total_scenarios += 1
-    print(f"\n[SCENARIO 3] Corrupted Python syntax in solution.py in drill 02...")
+    print("\n[SCENARIO 3] Corrupted Python syntax in solution.py in drill 02...")
     drill_02 = FOUNDATIONS_DIR / "02_test_naming_matters"
     sol_02 = drill_02 / "solution.py"
     original_sol_02_bytes = sol_02.read_bytes()
@@ -156,7 +153,7 @@ def test_suite():
     # SCENARIO 4: Broken Assertion Logic in Solution (Semantic Failure)
     # =========================================================================
     total_scenarios += 1
-    print(f"\n[SCENARIO 4] Broken assertion logic in solution.py in drill 03...")
+    print("\n[SCENARIO 4] Broken assertion logic in solution.py in drill 03...")
     drill_03 = FOUNDATIONS_DIR / "03_arrange_act_assert"
     sol_03 = drill_03 / "solution.py"
     original_sol_03_bytes = sol_03.read_bytes()
@@ -180,7 +177,7 @@ def test_suite():
     # SCENARIO 5: Corrupted Starter Code in exercise.py (Garbage / Non-Python)
     # =========================================================================
     total_scenarios += 1
-    print(f"\n[SCENARIO 5] Corrupted starter code in exercise.py (Junk content) in drill 04...")
+    print("\n[SCENARIO 5] Corrupted starter code in exercise.py (Junk content) in drill 04...")
     drill_04 = FOUNDATIONS_DIR / "04_dont_test_the_mock"
     ex_04 = drill_04 / "exercise.py"
     original_ex_04_bytes = ex_04.read_bytes()
@@ -204,7 +201,7 @@ def test_suite():
     # SCENARIO 6: True Baseline Failure Validation on All 5 Starter Exercises
     # =========================================================================
     total_scenarios += 1
-    print(f"\n[SCENARIO 6] True Baseline Failure Verification on Unsolved Starter Drills...")
+    print("\n[SCENARIO 6] True Baseline Failure Verification on Unsolved Starter Drills...")
     all_starters_pending = True
     for drill in sorted(FOUNDATIONS_DIR.iterdir()):
         if drill.is_dir():
@@ -230,7 +227,7 @@ def test_suite():
     # SCENARIO 7: Atomic Restoration Verification (Zero Residual Backup Files)
     # =========================================================================
     total_scenarios += 1
-    print(f"\n[SCENARIO 7] Verification of atomic file cleanup and zero leftover artifacts...")
+    print("\n[SCENARIO 7] Verification of atomic file cleanup and zero leftover artifacts...")
     backup_files = list(FOUNDATIONS_DIR.rglob("*.backup_verifier"))
     temp_files = list(FOUNDATIONS_DIR.rglob("*.hidden_test"))
     
@@ -244,7 +241,7 @@ def test_suite():
     # SCENARIO 8: SHA-256 Byte-for-Byte Integrity Snapshot Comparison
     # =========================================================================
     total_scenarios += 1
-    print(f"\n[SCENARIO 8] SHA-256 Directory Integrity Comparison (Before vs After)...")
+    print("\n[SCENARIO 8] SHA-256 Directory Integrity Comparison (Before vs After)...")
     post_hashes = calculate_dir_hashes(FOUNDATIONS_DIR)
     
     hash_mismatches = []
@@ -263,7 +260,7 @@ def test_suite():
     # SCENARIO 9: CLI Learning Engine Verification (audit, dashboard, diagnose)
     # =========================================================================
     total_scenarios += 1
-    print(f"\n[SCENARIO 9] Learning Engine CLI Commands Verification...")
+    print("\n[SCENARIO 9] Learning Engine CLI Commands Verification...")
     
     # 9a: cargo run -- audit
     audit_code, audit_out, audit_err = run_cargo(["run", "--", "audit"])
@@ -291,7 +288,7 @@ def test_suite():
     # SCENARIO 10: Cargo Test Suite (Zero Regressions)
     # =========================================================================
     total_scenarios += 1
-    print(f"\n[SCENARIO 10] Cargo Test Suite Execution...")
+    print("\n[SCENARIO 10] Cargo Test Suite Execution...")
     test_code, test_out, test_err = run_cargo(["test"])
     test_ok = (test_code == 0) and ("test result: ok." in test_out or "test result: ok." in test_err)
     print(f"  cargo test: code={test_code}, ok={test_ok}")
@@ -300,7 +297,7 @@ def test_suite():
         print("  [PASS] Scenario 10: cargo test passed completely with zero failures.")
         passed_scenarios += 1
     else:
-        print(f"  [FAIL] Scenario 10: cargo test failed.")
+        print("  [FAIL] Scenario 10: cargo test failed.")
 
     print("\n" + "=" * 80)
     print(f"EMPIRICAL ADVERSARIAL TEST SUMMARY: {passed_scenarios} / {total_scenarios} SCENARIOS PASSED ({passed_scenarios/total_scenarios*100:.1f}%)")

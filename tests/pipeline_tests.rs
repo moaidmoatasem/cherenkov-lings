@@ -1,6 +1,6 @@
 use cherenkov_lings::pipeline::{
-    parse_workflow_str, run_pipeline, run_workflow, validate_workflow, JobStatus, MatrixDefinition,
-    PipelineRunOptions, StepStatus,
+    JobStatus, MatrixDefinition, PipelineRunOptions, StepStatus, parse_workflow_str, run_pipeline,
+    run_workflow, validate_workflow,
 };
 use std::collections::HashMap;
 use std::path::Path;
@@ -234,10 +234,12 @@ fn test_validator_passes_valid_enterprise_workflow() {
 fn test_validator_fails_missing_matrix_strategy() {
     let validation = validate_workflow(MISSING_MATRIX_WORKFLOW);
     assert!(!validation.valid);
-    assert!(validation
-        .errors
-        .iter()
-        .any(|e| e.code == "MISSING_MATRIX_STRATEGY"));
+    assert!(
+        validation
+            .errors
+            .iter()
+            .any(|e| e.code == "MISSING_MATRIX_STRATEGY")
+    );
     assert!(validation.sdet_score < 100);
 }
 
@@ -245,10 +247,12 @@ fn test_validator_fails_missing_matrix_strategy() {
 fn test_validator_fails_missing_artifact_upload() {
     let validation = validate_workflow(MISSING_ARTIFACT_WORKFLOW);
     assert!(!validation.valid);
-    assert!(validation
-        .errors
-        .iter()
-        .any(|e| e.code == "MISSING_ARTIFACT_UPLOAD"));
+    assert!(
+        validation
+            .errors
+            .iter()
+            .any(|e| e.code == "MISSING_ARTIFACT_UPLOAD")
+    );
 }
 
 #[test]
@@ -287,14 +291,18 @@ jobs:
           path: target/
 "#;
     let validation = validate_workflow(workflow);
-    assert!(validation
-        .warnings
-        .iter()
-        .any(|w| w.code == "MISSING_CONCURRENCY"));
-    assert!(validation
-        .warnings
-        .iter()
-        .any(|w| w.code == "MISSING_TIMEOUT"));
+    assert!(
+        validation
+            .warnings
+            .iter()
+            .any(|w| w.code == "MISSING_CONCURRENCY")
+    );
+    assert!(
+        validation
+            .warnings
+            .iter()
+            .any(|w| w.code == "MISSING_TIMEOUT")
+    );
 }
 
 #[test]
@@ -324,10 +332,12 @@ fn test_runner_simulates_parallel_matrix_jobs() {
     }
 
     assert!(!result.logs.is_empty());
-    assert!(result
-        .logs
-        .iter()
-        .any(|l| l.message.contains("Playwright") || l.message.contains("Node.js")));
+    assert!(
+        result
+            .logs
+            .iter()
+            .any(|l| l.message.contains("Playwright") || l.message.contains("Node.js"))
+    );
 }
 
 #[test]
@@ -405,7 +415,10 @@ fn test_runner_strict_validation_abort() {
     let result = run_workflow(&workflow, &opts);
 
     assert!(!result.success);
-    assert!(result.jobs.is_empty(), "Strict validation should abort before running jobs");
+    assert!(
+        result.jobs.is_empty(),
+        "Strict validation should abort before running jobs"
+    );
     assert!(result.validation.is_some());
     assert!(!result.validation.unwrap().valid);
 }

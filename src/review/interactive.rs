@@ -1,4 +1,4 @@
-use crate::review::{apply_all_fixes, run_review, ReviewConfig, ReviewReport, Severity};
+use crate::review::{ReviewConfig, ReviewReport, Severity, apply_all_fixes, run_review};
 use colored::Colorize;
 use std::io::{self, BufRead, Write};
 use std::path::Path;
@@ -33,7 +33,11 @@ pub fn display_review_report(report: &ReviewReport) {
     };
 
     println!("  Target: {}", report.exercise_name.bright_white().bold());
-    println!("  Quality Score: {} [{}]", format!("{}/100", report.score).bright_yellow().bold(), score_bar);
+    println!(
+        "  Quality Score: {} [{}]",
+        format!("{}/100", report.score).bright_yellow().bold(),
+        score_bar
+    );
     println!("  Assessment:    {}", status_str);
     println!();
 
@@ -42,14 +46,18 @@ pub fn display_review_report(report: &ReviewReport) {
         println!(
             "  {} {}",
             "✓".green().bold(),
-            "Zero lint rule violations detected! Code is clean, resilient, and deterministic.".green()
+            "Zero AST rule violations detected! Code is clean, resilient, and deterministic."
+                .green()
         );
         println!();
     } else {
         println!(
             "{}",
-            format!("  ── Detected Rule Violations ({}) ─────────────────────────────", report.violations.len())
-                .bright_yellow()
+            format!(
+                "  ── Detected Rule Violations ({}) ─────────────────────────────",
+                report.violations.len()
+            )
+            .bright_yellow()
         );
         println!();
 
@@ -79,8 +87,7 @@ pub fn display_review_report(report: &ReviewReport) {
     // Senior QA Mentor Critique
     println!(
         "{}",
-        "  ── 🧠 Senior QA Mentor Critique ──────────────────────────────────────"
-            .bright_cyan()
+        "  ── 🧠 Senior QA Mentor Critique ──────────────────────────────────────".bright_cyan()
     );
     println!();
     for line in report.mentor_critique.lines() {
@@ -118,13 +125,24 @@ pub fn run_interactive_review(
             println!(
                 "{} {}",
                 "🎉".green(),
-                "Your test implementation meets all Enterprise SDET criteria! Great work.".bold().green()
+                "Your test implementation meets all Enterprise SDET criteria! Great work."
+                    .bold()
+                    .green()
             );
             break;
         }
 
-        println!("{}", "══════════════════════════════════════════════════════════════════════════════".bright_cyan());
-        println!("{}", "  Interactive Fix-It-Together Wizard:".bold().bright_white());
+        println!(
+            "{}",
+            "══════════════════════════════════════════════════════════════════════════════"
+                .bright_cyan()
+        );
+        println!(
+            "{}",
+            "  Interactive Fix-It-Together Wizard:"
+                .bold()
+                .bright_white()
+        );
         println!("  [1] Preview unified diff of proposed automated fixes");
         println!("  [2] Apply all automated fixes to file");
         println!("  [3] Re-run review");
@@ -143,7 +161,11 @@ pub fn run_interactive_review(
         match input.trim() {
             "1" => {
                 println!();
-                println!("{}", "── Proposed Unified Diff ──────────────────────────────────────".bright_yellow());
+                println!(
+                    "{}",
+                    "── Proposed Unified Diff ──────────────────────────────────────"
+                        .bright_yellow()
+                );
                 if let Some(diff) = &report.suggested_diff {
                     for line in diff.lines() {
                         if line.starts_with('+') && !line.starts_with("+++") {
@@ -164,24 +186,22 @@ pub fn run_interactive_review(
                 let mut pause = String::new();
                 let _ = handle.read_line(&mut pause);
             }
-            "2" => {
-                match apply_all_fixes(&p) {
-                    Ok(_) => {
-                        println!();
-                        println!(
-                            "{} Successfully applied automated fixes to {}!",
-                            "✓".green().bold(),
-                            p.display().to_string().bright_yellow()
-                        );
-                        println!();
-                    }
-                    Err(e) => {
-                        println!();
-                        println!("{} Failed to apply fixes: {}", "✗".red().bold(), e);
-                        println!();
-                    }
+            "2" => match apply_all_fixes(&p) {
+                Ok(_) => {
+                    println!();
+                    println!(
+                        "{} Successfully applied automated fixes to {}!",
+                        "✓".green().bold(),
+                        p.display().to_string().bright_yellow()
+                    );
+                    println!();
                 }
-            }
+                Err(e) => {
+                    println!();
+                    println!("{} Failed to apply fixes: {}", "✗".red().bold(), e);
+                    println!();
+                }
+            },
             "3" => {
                 // Re-runs on loop start
                 continue;
@@ -216,7 +236,9 @@ fn render_score_bar(score: u32) -> String {
     }
 }
 
-fn resolve_target_path(target_path: &str) -> Result<std::path::PathBuf, Box<dyn std::error::Error>> {
+fn resolve_target_path(
+    target_path: &str,
+) -> Result<std::path::PathBuf, Box<dyn std::error::Error>> {
     let p = Path::new(target_path);
     if p.is_file() {
         return Ok(p.to_path_buf());
@@ -224,7 +246,15 @@ fn resolve_target_path(target_path: &str) -> Result<std::path::PathBuf, Box<dyn 
 
     if p.is_dir() {
         // Look for common drill file names
-        for candidate in &["exercise.ts", "exercise.py", "exercise.java", "exercise.rs", "exercise.js", "solution.ts", "solution.py"] {
+        for candidate in &[
+            "exercise.ts",
+            "exercise.py",
+            "exercise.java",
+            "exercise.rs",
+            "exercise.js",
+            "solution.ts",
+            "solution.py",
+        ] {
             let candidate_path = p.join(candidate);
             if candidate_path.is_file() {
                 return Ok(candidate_path);
@@ -240,7 +270,13 @@ fn resolve_target_path(target_path: &str) -> Result<std::path::PathBuf, Box<dyn 
             return Ok(nested);
         }
         if nested.is_dir() {
-            for candidate in &["exercise.ts", "exercise.py", "exercise.java", "exercise.rs", "exercise.js"] {
+            for candidate in &[
+                "exercise.ts",
+                "exercise.py",
+                "exercise.java",
+                "exercise.rs",
+                "exercise.js",
+            ] {
                 let candidate_path = nested.join(candidate);
                 if candidate_path.is_file() {
                     return Ok(candidate_path);
@@ -252,6 +288,10 @@ fn resolve_target_path(target_path: &str) -> Result<std::path::PathBuf, Box<dyn 
     if p.exists() {
         Ok(p.to_path_buf())
     } else {
-        Err(format!("Could not find target file or exercise at '{}'", target_path).into())
+        Err(format!(
+            "Could not find target file or exercise at '{}'",
+            target_path
+        )
+        .into())
     }
 }

@@ -100,8 +100,10 @@ static RE_RUST_UNWRAP: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 static RE_TS_NON_NULL_OR_ANY: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"(?:as\s+any\b|:\s*any\b|!\s*\.\s*[a-zA-Z_]|\bany\s*=\s*(?:page|locator|element))"#)
-        .expect("Valid regex")
+    Regex::new(
+        r#"(?:as\s+any\b|:\s*any\b|!\s*\.\s*[a-zA-Z_]|\bany\s*=\s*(?:page|locator|element))"#,
+    )
+    .expect("Valid regex")
 });
 
 // 4. Vacuous / Tautological Assertions
@@ -338,7 +340,8 @@ impl RuleScanner {
                         .to_string()
                 }
                 SupportedLanguage::Rust => {
-                    "tokio::time::timeout(Duration::from_secs(5), async { ... }).await?;".to_string()
+                    "tokio::time::timeout(Duration::from_secs(5), async { ... }).await?;"
+                        .to_string()
                 }
                 _ => "// Replace static sleep with dynamic state or event polling".to_string(),
             };
@@ -418,9 +421,10 @@ impl RuleScanner {
                     });
                 }
             }
-            SupportedLanguage::TypeScript | SupportedLanguage::JavaScript => {
-                if RE_TS_NON_NULL_OR_ANY.is_match(trimmed) {
-                    violations.push(AstViolation {
+            SupportedLanguage::TypeScript | SupportedLanguage::JavaScript
+                if RE_TS_NON_NULL_OR_ANY.is_match(trimmed) =>
+            {
+                violations.push(AstViolation {
                         rule_id: "ANTI_PATTERN_UNSAFE_TYPE_BYPASS".to_string(),
                         severity: Severity::Warning,
                         file_path: file_path.to_string(),
@@ -429,7 +433,6 @@ impl RuleScanner {
                         code_snippet: original_line.to_string(),
                         suggested_fix: Some("expect(response.body).toBeDefined(); // Use explicit runtime type guard".to_string()),
                     });
-                }
             }
             _ => {}
         }
@@ -588,9 +591,7 @@ impl RuleScanner {
                     || content.contains("assert_ne!")
                     || content.contains("assert_matches!")
             }
-            _ => {
-                content.contains("assert") || content.contains("expect")
-            }
+            _ => content.contains("assert") || content.contains("expect"),
         };
 
         if !has_assertion && lines.len() > 2 {
@@ -620,7 +621,8 @@ pub fn apply_automated_fixes(content: &str, violations: &[AstViolation]) -> Stri
         .filter(|v| v.suggested_fix.is_some() && v.line_number > 0 && v.line_number <= lines.len())
         .collect();
 
-    fixable.sort_by(|a, b| b.line_number.cmp(&a.line_number));
+    // Descending: apply fixes bottom-up so earlier edits cannot shift later line numbers.
+    fixable.sort_by_key(|v| std::cmp::Reverse(v.line_number));
 
     let mut applied_lines = HashSet::new();
 

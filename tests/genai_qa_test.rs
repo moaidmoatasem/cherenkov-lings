@@ -181,7 +181,8 @@ fn test_genai_qa_drill05_ttft_streaming_contract() {
     );
 
     assert!(
-        sol_content.contains("ttft") || sol_content.contains("start") && sol_content.contains("Date.now()"),
+        sol_content.contains("ttft")
+            || sol_content.contains("start") && sol_content.contains("Date.now()"),
         "Drill 05 solution.ts must measure TTFT"
     );
     assert!(

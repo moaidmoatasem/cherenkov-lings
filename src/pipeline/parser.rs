@@ -16,17 +16,13 @@ pub struct WorkflowDefinition {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(untagged)]
+#[derive(Default)]
 pub enum TriggerConfig {
     Single(String),
     Multiple(Vec<String>),
     Detailed(HashMap<String, serde_yaml::Value>),
+    #[default]
     None,
-}
-
-impl Default for TriggerConfig {
-    fn default() -> Self {
-        TriggerConfig::None
-    }
 }
 
 impl TriggerConfig {
@@ -40,7 +36,9 @@ impl TriggerConfig {
     }
 
     pub fn has_trigger(&self, trigger_name: &str) -> bool {
-        self.triggers().iter().any(|t| t.eq_ignore_ascii_case(trigger_name))
+        self.triggers()
+            .iter()
+            .any(|t| t.eq_ignore_ascii_case(trigger_name))
     }
 }
 
@@ -66,9 +64,9 @@ impl ConcurrencyConfig {
     pub fn cancels_in_progress(&self) -> bool {
         match self {
             ConcurrencyConfig::Simple(_) => false,
-            ConcurrencyConfig::Detailed { cancel_in_progress, .. } => {
-                cancel_in_progress.unwrap_or(false)
-            }
+            ConcurrencyConfig::Detailed {
+                cancel_in_progress, ..
+            } => cancel_in_progress.unwrap_or(false),
         }
     }
 }
@@ -309,15 +307,20 @@ impl StepDefinition {
     }
 
     pub fn is_artifact_upload(&self) -> bool {
-        if let Some(ref uses) = self.uses {
-            if uses.starts_with("actions/upload-artifact") || uses.starts_with("codecov/codecov-action") {
-                return true;
-            }
+        if let Some(ref uses) = self.uses
+            && (uses.starts_with("actions/upload-artifact")
+                || uses.starts_with("codecov/codecov-action"))
+        {
+            return true;
         }
         if let Some(ref run) = self.run {
             let lower = run.to_lowercase();
-            if (lower.contains("allure") || lower.contains("test-results") || lower.contains("junit"))
-                && (lower.contains("upload") || lower.contains("publish") || lower.contains("archive"))
+            if (lower.contains("allure")
+                || lower.contains("test-results")
+                || lower.contains("junit"))
+                && (lower.contains("upload")
+                    || lower.contains("publish")
+                    || lower.contains("archive"))
             {
                 return true;
             }

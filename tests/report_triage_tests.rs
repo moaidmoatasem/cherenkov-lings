@@ -1,17 +1,31 @@
-use cherenkov_lings::gamification::{load_progress, GamificationState};
+use cherenkov_lings::gamification::{GamificationState, load_progress};
 use cherenkov_lings::reports::allure::{
-    generate_chaos_allure_report, summarize_dataset, AllureCategoryDef, AllureTestResultJson,
+    AllureCategoryDef, AllureTestResultJson, generate_chaos_allure_report, summarize_dataset,
 };
 use cherenkov_lings::reports::chaos_dataset::{
-    generate_chaos_dataset, get_failing_tests, get_test_by_id, get_tests_by_category,
-    get_tests_by_track, FailureCategory, TestStatus,
+    FailureCategory, TestStatus, generate_chaos_dataset, get_failing_tests, get_test_by_id,
+    get_tests_by_category, get_tests_by_track,
 };
 use cherenkov_lings::triage::evaluator::{
-    calculate_triage_stats, evaluate_and_record_progress, evaluate_triage, TriageSubmission,
+    TriageSubmission, calculate_triage_stats, evaluate_and_record_progress, evaluate_triage,
 };
 use cherenkov_lings::triage::interactive::parse_category_from_str;
 use std::collections::HashSet;
 use std::fs;
+
+/// A scratch path unique to this test-binary run.
+///
+/// These tests previously shared fixed paths under the system temp directory and
+/// cleared them with `remove_dir_all` immediately before writing. On Windows that
+/// call can return before the directory is actually released, so a run could race
+/// the leftovers of the previous one and fail to create the report tree.
+fn unique_temp_path(label: &str) -> std::path::PathBuf {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    std::env::temp_dir().join(format!("{}_{}_{}", label, std::process::id(), nanos))
+}
 
 #[test]
 fn test_chaos_dataset_size_and_taxonomy_balance() {
@@ -133,7 +147,7 @@ fn test_chaos_dataset_telemetry_integrity() {
 
 #[test]
 fn test_allure_json_generation_fidelity() {
-    let temp_dir = std::env::temp_dir().join("cherenkov_allure_test_run");
+    let temp_dir = unique_temp_path("cherenkov_allure_test_run");
     let _ = fs::remove_dir_all(&temp_dir);
 
     let summary = generate_chaos_allure_report(&temp_dir).expect("Report generation must succeed");
@@ -193,7 +207,7 @@ fn test_allure_json_generation_fidelity() {
 
 #[test]
 fn test_allure_html_report_self_contained() {
-    let temp_dir = std::env::temp_dir().join("cherenkov_html_report_test");
+    let temp_dir = unique_temp_path("cherenkov_html_report_test");
     let _ = fs::remove_dir_all(&temp_dir);
 
     let summary = generate_chaos_allure_report(&temp_dir).expect("Report generation must succeed");
@@ -201,13 +215,19 @@ fn test_allure_html_report_self_contained() {
     let secondary_html = temp_dir.join("allure-report").join("index.html");
 
     assert!(primary_html.exists(), "Primary index.html must exist");
-    assert!(secondary_html.exists(), "allure-report/index.html must exist");
+    assert!(
+        secondary_html.exists(),
+        "allure-report/index.html must exist"
+    );
 
     let html = fs::read_to_string(&primary_html).expect("Cannot read primary HTML");
     assert!(html.starts_with("<!DOCTYPE html>"));
     assert!(html.contains("CHERENKOV-LINGS ALLURE REPORT"));
     assert!(html.contains("KPI Cards"));
-    assert!(html.contains(&format!("Total Tests</div>\n      <div class=\"value\">{}", summary.total_tests)));
+    assert!(html.contains(&format!(
+        "Total Tests</div>\n      <div class=\"value\">{}",
+        summary.total_tests
+    )));
     assert!(html.contains("Root-Cause Taxonomy Breakdown"));
     assert!(html.contains("Correlated L4/L7 Chaos Telemetry"));
     assert!(html.contains("Triage Solver"));
@@ -223,7 +243,11 @@ fn test_allure_html_report_self_contained() {
 #[test]
 fn test_allure_report_summary_metrics_consistency() {
     let dataset = generate_chaos_dataset();
-    let summary = summarize_dataset(&dataset, "target/allure-results", "target/allure-report/index.html");
+    let summary = summarize_dataset(
+        &dataset,
+        "target/allure-results",
+        "target/allure-report/index.html",
+    );
 
     assert_eq!(
         summary.passed + summary.failed + summary.broken + summary.flaky + summary.skipped,
@@ -334,7 +358,7 @@ fn test_triage_evaluator_bonus_scoring_quality() {
 
 #[test]
 fn test_triage_evaluator_gamification_progress_update() {
-    let temp_progress = std::env::temp_dir().join("test_triage_gamification_progress.json");
+    let temp_progress = unique_temp_path("test_triage_gamification_progress.json");
     let _ = fs::remove_file(&temp_progress);
 
     let sub = TriageSubmission {
@@ -354,7 +378,8 @@ fn test_triage_evaluator_gamification_progress_update() {
 
     // Verify persistence file was written
     assert!(temp_progress.exists());
-    let loaded: GamificationState = load_progress(Some(&temp_progress)).expect("Must load progress");
+    let loaded: GamificationState =
+        load_progress(Some(&temp_progress)).expect("Must load progress");
     assert_eq!(loaded.total_xp, state.total_xp);
 
     let _ = fs::remove_file(&temp_progress);
@@ -397,18 +422,48 @@ fn test_triage_stats_calculation() {
 #[test]
 fn test_triage_category_parser_variations() {
     assert_eq!(parse_category_from_str("1"), Some(FailureCategory::RealBug));
-    assert_eq!(parse_category_from_str("real_bug"), Some(FailureCategory::RealBug));
-    assert_eq!(parse_category_from_str("bug"), Some(FailureCategory::RealBug));
-    assert_eq!(parse_category_from_str("defect"), Some(FailureCategory::RealBug));
+    assert_eq!(
+        parse_category_from_str("real_bug"),
+        Some(FailureCategory::RealBug)
+    );
+    assert_eq!(
+        parse_category_from_str("bug"),
+        Some(FailureCategory::RealBug)
+    );
+    assert_eq!(
+        parse_category_from_str("defect"),
+        Some(FailureCategory::RealBug)
+    );
 
-    assert_eq!(parse_category_from_str("2"), Some(FailureCategory::FlakyInfra));
-    assert_eq!(parse_category_from_str("flaky_infra"), Some(FailureCategory::FlakyInfra));
-    assert_eq!(parse_category_from_str("flaky"), Some(FailureCategory::FlakyInfra));
-    assert_eq!(parse_category_from_str("proxy"), Some(FailureCategory::FlakyInfra));
+    assert_eq!(
+        parse_category_from_str("2"),
+        Some(FailureCategory::FlakyInfra)
+    );
+    assert_eq!(
+        parse_category_from_str("flaky_infra"),
+        Some(FailureCategory::FlakyInfra)
+    );
+    assert_eq!(
+        parse_category_from_str("flaky"),
+        Some(FailureCategory::FlakyInfra)
+    );
+    assert_eq!(
+        parse_category_from_str("proxy"),
+        Some(FailureCategory::FlakyInfra)
+    );
 
-    assert_eq!(parse_category_from_str("3"), Some(FailureCategory::AntiPattern));
-    assert_eq!(parse_category_from_str("anti_pattern"), Some(FailureCategory::AntiPattern));
-    assert_eq!(parse_category_from_str("antipattern"), Some(FailureCategory::AntiPattern));
+    assert_eq!(
+        parse_category_from_str("3"),
+        Some(FailureCategory::AntiPattern)
+    );
+    assert_eq!(
+        parse_category_from_str("anti_pattern"),
+        Some(FailureCategory::AntiPattern)
+    );
+    assert_eq!(
+        parse_category_from_str("antipattern"),
+        Some(FailureCategory::AntiPattern)
+    );
 
     assert_eq!(parse_category_from_str("invalid_xyz"), None);
 }

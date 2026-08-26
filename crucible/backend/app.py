@@ -21,7 +21,6 @@ import jwt
 from crucible.backend.chaos import ChaosMiddleware
 from crucible.backend.models import (
     AllureSummaryResponse,
-    AstViolation,
     BalanceResponse,
     ChaosTestResultItem,
     CheckoutRequest,

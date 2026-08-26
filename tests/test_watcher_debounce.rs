@@ -6,9 +6,23 @@ use std::sync::mpsc::channel;
 use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 
+/// A scratch path unique to this test-binary run.
+///
+/// These tests previously shared fixed paths under the system temp directory and
+/// cleared them with `remove_dir_all` immediately before writing. On Windows that
+/// call can return before the directory is actually released, so a run could race
+/// the leftovers of the previous one and fail to create the report tree.
+fn unique_temp_path(label: &str) -> std::path::PathBuf {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    std::env::temp_dir().join(format!("{}_{}_{}", label, std::process::id(), nanos))
+}
+
 #[tokio::test]
 async fn test_watcher_debouncing_coalesces_rapid_events() {
-    let temp_dir = std::env::temp_dir().join("cherenkov_watcher_test");
+    let temp_dir = unique_temp_path("cherenkov_watcher_test");
     let _ = fs::remove_dir_all(&temp_dir);
     fs::create_dir_all(&temp_dir).unwrap();
 

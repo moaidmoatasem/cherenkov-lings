@@ -21,8 +21,7 @@ impl Default for AiMentorClient {
     fn default() -> Self {
         let endpoint = std::env::var("CHERENKOV_LLM_URL")
             .unwrap_or_else(|_| "http://localhost:11434/api/generate".to_string());
-        let model = std::env::var("CHERENKOV_LLM_MODEL")
-            .unwrap_or_else(|_| "llama3".to_string());
+        let model = std::env::var("CHERENKOV_LLM_MODEL").unwrap_or_else(|_| "llama3".to_string());
 
         Self {
             endpoint,
@@ -58,9 +57,7 @@ impl AiMentorClient {
                     }
                 })
                 .unwrap_or(default_client.endpoint),
-            model: model
-                .map(|s| s.to_string())
-                .unwrap_or(default_client.model),
+            model: model.map(|s| s.to_string()).unwrap_or(default_client.model),
             offline_fallback,
             timeout: Duration::from_millis(2500),
         }
@@ -73,10 +70,10 @@ impl AiMentorClient {
         violations: &[AstViolation],
     ) -> MentorReview {
         // If not in offline-only mode, try calling the remote LLM
-        if !self.endpoint.is_empty() {
-            if let Ok(review) = self.call_llm(file_name, code_content, violations).await {
-                return review;
-            }
+        if !self.endpoint.is_empty()
+            && let Ok(review) = self.call_llm(file_name, code_content, violations).await
+        {
+            return review;
         }
 
         // Fallback to deterministic offline Senior QA Mentor
@@ -89,13 +86,16 @@ impl AiMentorClient {
         code_content: &str,
         violations: &[AstViolation],
     ) -> Result<MentorReview, Box<dyn std::error::Error + Send + Sync>> {
-        let client = reqwest::Client::builder()
-            .timeout(self.timeout)
-            .build()?;
+        let client = reqwest::Client::builder().timeout(self.timeout).build()?;
 
         let violations_summary = violations
             .iter()
-            .map(|v| format!("- [Line {} | {}] {}: {}", v.line_number, v.severity, v.rule_id, v.message))
+            .map(|v| {
+                format!(
+                    "- [Line {} | {}] {}: {}",
+                    v.line_number, v.severity, v.rule_id, v.message
+                )
+            })
             .collect::<Vec<_>>()
             .join("\n");
 
@@ -117,20 +117,17 @@ impl AiMentorClient {
             stream: false,
         };
 
-        let res = client
-            .post(&self.endpoint)
-            .json(&req_body)
-            .send()
-            .await?;
+        let res = client.post(&self.endpoint).json(&req_body).send().await?;
 
         if !res.status().is_success() {
             return Err(format!("LLM returned status {}", res.status()).into());
         }
 
         let resp_body: OllamaResponse = res.json().await?;
-        if let Some(text) = resp_body.response {
-            if !text.trim().is_empty() {
-                return Ok(MentorReview {
+        if let Some(text) = resp_body.response
+            && !text.trim().is_empty()
+        {
+            return Ok(MentorReview {
                     critique: text.clone(),
                     socratic_questions: vec![
                         "How would this test behave under 500ms network jitter in a parallel CI runner matrix?".to_string(),
@@ -138,7 +135,6 @@ impl AiMentorClient {
                     ],
                     architectural_advice: "Adopt resilient user-facing locators, deterministic event-driven waiting, and isolated test secrets.".to_string(),
                 });
-            }
         }
 
         Err("Empty LLM response".into())
@@ -173,11 +169,19 @@ impl AiMentorClient {
         let mut advice_points = Vec::new();
 
         let has_sleep = violations.iter().any(|v| v.rule_id.contains("SLEEP"));
-        let has_xpath = violations.iter().any(|v| v.rule_id.contains("XPATH") || v.rule_id.contains("LOCATOR"));
+        let has_xpath = violations
+            .iter()
+            .any(|v| v.rule_id.contains("XPATH") || v.rule_id.contains("LOCATOR"));
         let has_secret = violations.iter().any(|v| v.rule_id.contains("SECRET"));
-        let has_floating = violations.iter().any(|v| v.rule_id.contains("FLOATING_PROMISE"));
-        let has_vacuous = violations.iter().any(|v| v.rule_id.contains("VACUOUS_ASSERTION") || v.rule_id.contains("MISSING_ASSERTION"));
-        let has_unwrap = violations.iter().any(|v| v.rule_id.contains("UNWRAP") || v.rule_id.contains("UNSAFE"));
+        let has_floating = violations
+            .iter()
+            .any(|v| v.rule_id.contains("FLOATING_PROMISE"));
+        let has_vacuous = violations.iter().any(|v| {
+            v.rule_id.contains("VACUOUS_ASSERTION") || v.rule_id.contains("MISSING_ASSERTION")
+        });
+        let has_unwrap = violations
+            .iter()
+            .any(|v| v.rule_id.contains("UNWRAP") || v.rule_id.contains("UNSAFE"));
 
         critique_points.push(format!(
             "🔍 **Senior QA Code Review for `{}`** (Found {} anti-pattern violation{}):",
@@ -259,7 +263,10 @@ impl AiMentorClient {
         }
 
         if questions.is_empty() {
-            questions.push("How would this test behave in a heavily throttled containerized test matrix?".to_string());
+            questions.push(
+                "How would this test behave in a heavily throttled containerized test matrix?"
+                    .to_string(),
+            );
         }
 
         MentorReview {
