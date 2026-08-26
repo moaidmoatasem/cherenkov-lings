@@ -1,4 +1,5 @@
 pub mod config;
+pub mod device_manager;
 pub mod feedback;
 pub mod gamification;
 pub mod pipeline;

@@ -300,12 +300,15 @@ test.describe('Learn environment — read, watch, practice, build', () => {
 
   test('the catalog lists every track the manifest declares', async ({ page }) => {
     await page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'All modules' }).click();
+    // A track with no curated copy still arrives, straight from lings.toml.
+    // Waiting on it first also pins the moment the manifest has replaced the
+    // curated seed the catalog paints with, so the count below is the settled
+    // one rather than whichever render this read happened to catch.
+    await expect(page.getByText('CI/CD Pipeline Engineering')).toBeVisible();
     const heading = await page.locator('.l-h1').textContent();
     const declared = Number(/(\d+) tracks/.exec(heading ?? '')?.[1]);
     expect(declared).toBeGreaterThan(4);
     await expect(page.locator('.l-track-name')).toHaveCount(declared);
-    // A track with no curated copy still arrives, straight from lings.toml.
-    await expect(page.getByText('CI/CD Pipeline Engineering')).toBeVisible();
   });
   test('a manifest drill opens its own theory and hints', async ({ page }) => {
     await page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'All modules' }).click();

@@ -68,6 +68,25 @@ description = "Core mental model: AAA pattern, assertions, test naming, and avoi
   name = "Single Responsibility in Test Cases"
 
 # -----------------------------------------------------------------------------
+#  API Validation Fundamentals - Python / Pytest
+# -----------------------------------------------------------------------------
+[[tracks]]
+id = "api-pytest"
+name = "API Validation Fundamentals (Python / Pytest)"
+display_name = "API Validation Fundamentals"
+runner = "python"
+exercise_dir = "exercises/02_api_pytest"
+extension = ".py"
+command = "python -m pytest {file} --json-report --json-report-file=report.json"
+stack = "Python / Pytest"
+tier = "Tier 1 — Beginner"
+description = "Direct HTTP contract validation: status code assertions, vacuous test detection, and reading a response before parsing it."
+
+  [[tracks.drills]]
+  id = "01_status_code"
+  name = "Health Endpoint Status Code Assertion"
+
+# -----------------------------------------------------------------------------
 #  Modern Web Automation - Playwright TypeScript
 # -----------------------------------------------------------------------------
 [[tracks]]
@@ -203,6 +222,10 @@ description = "Black-box mobile automation: biometric fallback conditional flows
   id = "05_push_notification_handling"
   name = "Handling OS Permission & Push Dialogs"
 
+  [[tracks.drills]]
+  id = "06_login_flow"
+  name = "Login Flow & Selector Durability"
+
 # -----------------------------------------------------------------------------
 #  High-Concurrency Load Testing - k6 JavaScript
 # -----------------------------------------------------------------------------
@@ -237,6 +260,10 @@ description = "Code-first load testing: connection pool starvation, 10x spike p9
   [[tracks.drills]]
   id = "05_grafana_output"
   name = "Exporting Metrics to InfluxDB & Grafana"
+
+  [[tracks.drills]]
+  id = "06_rps_spike"
+  name = "Checkout RPS Spike via Open Workload Model"
 
 # -----------------------------------------------------------------------------
 #  GenAI QA & LLM Red-Teaming - Playwright TypeScript

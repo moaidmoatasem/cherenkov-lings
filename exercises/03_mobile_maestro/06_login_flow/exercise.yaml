@@ -1,0 +1,13 @@
+# PRODUCTION STORY:
+# Aadhaar mAadhaar Localization Failures (2018)
+# Authentication defects reached users in regional-language builds while the
+# English build tested clean: automation that identifies controls by their
+# rendered label validates exactly one locale.
+
+appId: com.example.app
+---
+- launchApp
+# TODO: Tap on the 'Username' field and type 'user1'
+# TODO: Tap on the 'Password' field and type 'pass1'
+# TODO: Tap on the 'Login' button
+# TODO: Assert that the authenticated screen is visible
