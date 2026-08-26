@@ -1122,7 +1122,11 @@ pub fn render_scorecard(card: &Scorecard) -> String {
 }
 
 /// Render standalone diagnostic view (for `cherenkov-lings diagnose`)
-pub fn render_diagnostic(ast: &StaticAnalysisReport, track_name: &str, platform_version: &str) -> String {
+pub fn render_diagnostic(
+    ast: &StaticAnalysisReport,
+    track_name: &str,
+    platform_version: &str,
+) -> String {
     let mut out = String::new();
     let border =
         "========================================================================================"
@@ -1627,7 +1631,15 @@ test('checkout hydration timing', async ({ page }) => {
 
         let mut files = Vec::new();
         collect(Path::new("exercises"), &mut files);
-        assert_eq!(files.len(), 60, "expected one hints.md per drill");
+        // Deliberately not an exact count: the curriculum grows, and pinning a
+        // literal here means every new drill breaks this test for no reason.
+        // The floor only proves the walk actually found the curriculum; the real
+        // invariant is the per-file assertions below.
+        assert!(
+            files.len() >= 60,
+            "expected to find the drill curriculum, only found {} hints.md files",
+            files.len()
+        );
 
         for file in files {
             let dir = file.parent().expect("hints.md has a parent");
