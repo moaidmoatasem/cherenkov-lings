@@ -20,7 +20,7 @@ Every drill runs against a purposely pathological embedded application — the *
 * Concurrency connection pool starvation
 * Non-deterministic LLM hallucinations
 
-When you save an exercise file, the sub-50ms Rust watcher triggers the feedback loop and immediately evaluates your code against the **4D Feedback Matrix**:
+When you save an exercise file, the Rust watcher picks up the change after a 50ms debounce and runs your drill — by default 5 consecutive times under injected network chaos — then scores the run against the **4D Feedback Matrix**. Total turnaround is however long your tests take; the watcher removes the manual re-run, not the test runtime:
 
 ```
 ╔══════════════════════════════════════════════════════════════════════════════════════╗
@@ -36,7 +36,7 @@ When you save an exercise file, the sub-50ms Rust watcher triggers the feedback 
 ║  Locator Quality  ║  100 ║ getByRole — semantic accessibility tree locator           ║
 ║  Speed            ║   92 ║ 820ms vs 1000ms baseline benchmark                        ║
 ╠═══════════════════╩══════╩═══════════════════════════════════════════════════════════╣
-║  TOTAL SCORE: 98/100  │  [PASSED]  │  +150 XP Earned  │  Rank: Mid QA                ║
+║  TOTAL SCORE: 98.8/100  │  [PASSED]  │  +99 XP Earned  │  Rank: Mid QA               ║
 ╚══════════════════════════════════════════════════════════════════════════════════════╝
 ```
 
@@ -126,7 +126,7 @@ cherenkov-lings watch --track=contract-pact
 cherenkov-lings watch --track=a11y-axe
 ```
 
-Open any `exercise.*` file in your favorite editor, write your fix, and hit **Save**. Feedback is instantaneous!
+Open any `exercise.*` file in your favorite editor, write your fix, and hit **Save**. The watcher re-runs the drill for you and prints the scorecard as soon as the run finishes.
 
 ---
 
@@ -168,8 +168,8 @@ cherenkov-lings mcp
 ```
 
 * `.cursor/mcp.json` and `.vscode/mcp.json` automatically register:
-  * `get_diagnostic_report`: AST anti-pattern analysis & locator scoring.
-  * `get_hints`: Progressive 3-tier hints for any drill.
+  * `get_diagnostic_report`: static source analysis (regex-based anti-pattern detection) & locator scoring.
+  * `get_hints`: one hint level at a time for any drill — level 1 is a conceptual nudge, and the agent must escalate explicitly to reach the solution diff.
 
 ---
 

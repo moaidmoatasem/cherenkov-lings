@@ -102,7 +102,7 @@ impl AiMentorClient {
         let prompt = format!(
             "You are a Senior Principal Quality Engineering (SDET) Architect conducting a code review.\n\
             File: {}\n\n\
-            Static AST Rule Violations Detected:\n{}\n\n\
+            Static Rule Violations Detected:\n{}\n\n\
             Code Under Review:\n```\n{}\n```\n\n\
             Provide:\n\
             1. An incisive Senior QA architectural critique explaining why these patterns cause test flakiness, maintenance drag, or security vulnerabilities in enterprise CI/CD.\n\

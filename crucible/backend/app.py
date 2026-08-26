@@ -1019,11 +1019,11 @@ async def get_curriculum() -> JSONResponse:
             "tier": "Tier 3 — Advanced",
             "description": "Testing non-deterministic LLM applications: RAG context faithfulness, prompt injection red-teaming, and token streaming TTFT.",
             "drills": [
-                {"id": "01_rag_context_faithfulness", "name": "RAG Answer Faithfulness Verification", "path": "exercises/05_genai_qa/01_rag_context_faithfulness"},
-                {"id": "02_llm_assertion_flakiness", "name": "Structured Intent Assertions for LLM Output", "path": "exercises/05_genai_qa/02_llm_assertion_flakiness"},
-                {"id": "03_llm_hallucination_eval", "name": "G-Eval Grounding & Citation Fact-Checking", "path": "exercises/05_genai_qa/03_llm_hallucination_eval"},
-                {"id": "04_prompt_injection_red_teaming", "name": "Direct Prompt Injection Defense Guardrails", "path": "exercises/05_genai_qa/04_prompt_injection_red_teaming"},
-                {"id": "05_latency_streaming_ttft", "name": "Time-To-First-Token (TTFT) Streaming Latency", "path": "exercises/05_genai_qa/05_latency_streaming_ttft"},
+                {"id": "01_rag_context_faithfulness", "name": "RAG Answer Faithfulness Verification", "path": "exercises/06_genai_qa/01_rag_context_faithfulness"},
+                {"id": "02_llm_assertion_flakiness", "name": "Structured Intent Assertions for LLM Output", "path": "exercises/06_genai_qa/02_llm_assertion_flakiness"},
+                {"id": "03_llm_hallucination_eval", "name": "G-Eval Grounding & Citation Fact-Checking", "path": "exercises/06_genai_qa/03_llm_hallucination_eval"},
+                {"id": "04_prompt_injection_red_teaming", "name": "Direct Prompt Injection Defense Guardrails", "path": "exercises/06_genai_qa/04_prompt_injection_red_teaming"},
+                {"id": "05_latency_streaming_ttft", "name": "Time-To-First-Token (TTFT) Streaming Latency", "path": "exercises/06_genai_qa/05_latency_streaming_ttft"},
             ],
         },
         {
@@ -1033,11 +1033,11 @@ async def get_curriculum() -> JSONResponse:
             "tier": "Tier 3 — Advanced",
             "description": "Security testing in CI/CD pipelines: container socket mounts, JWT signature bypass, SQL injection, SSRF, and CORS origins.",
             "drills": [
-                {"id": "01_insecure_docker_mount", "name": "Docker Socket Mount Privilege Escalation", "path": "exercises/06_cloud_devsecops/01_insecure_docker_mount"},
-                {"id": "02_jwt_weak_signing_key", "name": "JWT Algorithm None Signature Bypass", "path": "exercises/06_cloud_devsecops/02_jwt_weak_signing_key"},
-                {"id": "03_sql_injection_blind_timing", "name": "SQL Injection Parameterized Prepared Statements", "path": "exercises/06_cloud_devsecops/03_sql_injection_blind_timing"},
-                {"id": "04_ssrf_metadata_service", "name": "SSRF Cloud Metadata (169.254.169.254) Interception", "path": "exercises/06_cloud_devsecops/04_ssrf_metadata_service"},
-                {"id": "05_cors_misconfiguration_exploit", "name": "CORS Origin Whitelisting & Credential Isolation", "path": "exercises/06_cloud_devsecops/05_cors_misconfiguration_exploit"},
+                {"id": "01_insecure_docker_mount", "name": "Docker Socket Mount Privilege Escalation", "path": "exercises/07_cloud_devsecops/01_insecure_docker_mount"},
+                {"id": "02_jwt_weak_signing_key", "name": "JWT Algorithm None Signature Bypass", "path": "exercises/07_cloud_devsecops/02_jwt_weak_signing_key"},
+                {"id": "03_sql_injection_blind_timing", "name": "SQL Injection Parameterized Prepared Statements", "path": "exercises/07_cloud_devsecops/03_sql_injection_blind_timing"},
+                {"id": "04_ssrf_metadata_service", "name": "SSRF Cloud Metadata (169.254.169.254) Interception", "path": "exercises/07_cloud_devsecops/04_ssrf_metadata_service"},
+                {"id": "05_cors_misconfiguration_exploit", "name": "CORS Origin Whitelisting & Credential Isolation", "path": "exercises/07_cloud_devsecops/05_cors_misconfiguration_exploit"},
             ],
         },
         {
@@ -1047,10 +1047,10 @@ async def get_curriculum() -> JSONResponse:
             "tier": "Tier 3 — QA Architect",
             "description": "Architectural decision making: when to choose UI vs API, k6 vs JMeter, Appium vs Maestro, and Contract vs E2E.",
             "drills": [
-                {"id": "01_ui_vs_api_test", "name": "UI vs API Test Layer Decision Matrix", "path": "exercises/06_tool_decisions/01_ui_vs_api_test"},
-                {"id": "02_k6_vs_jmeter", "name": "k6 vs JMeter Framework Evaluation", "path": "exercises/06_tool_decisions/02_k6_vs_jmeter"},
-                {"id": "03_appium_vs_maestro", "name": "Appium vs Maestro Mobile Strategy", "path": "exercises/06_tool_decisions/03_appium_vs_maestro"},
-                {"id": "04_contract_vs_e2e", "name": "Pact Contract Testing vs Microservice E2E", "path": "exercises/06_tool_decisions/04_contract_vs_e2e"},
+                {"id": "01_ui_vs_api_test", "name": "UI vs API Test Layer Decision Matrix", "path": "exercises/08_tool_decisions/01_ui_vs_api_test"},
+                {"id": "02_k6_vs_jmeter", "name": "k6 vs JMeter Framework Evaluation", "path": "exercises/08_tool_decisions/02_k6_vs_jmeter"},
+                {"id": "03_appium_vs_maestro", "name": "Appium vs Maestro Mobile Strategy", "path": "exercises/08_tool_decisions/03_appium_vs_maestro"},
+                {"id": "04_contract_vs_e2e", "name": "Pact Contract Testing vs Microservice E2E", "path": "exercises/08_tool_decisions/04_contract_vs_e2e"},
             ],
         },
         {
@@ -1060,9 +1060,9 @@ async def get_curriculum() -> JSONResponse:
             "tier": "Tier 2 to 3 — Intermediate to Advanced",
             "description": "Independent microservice deployment safety: consumer contract definitions, provider verification, and schema evolution.",
             "drills": [
-                {"id": "01_pact_consumer_definition", "name": "Consumer Contract Schema Definition", "path": "exercises/07_contract_pact/01_pact_consumer_definition"},
-                {"id": "02_pact_provider_verification", "name": "Automated Provider Verification CI Gates", "path": "exercises/07_contract_pact/02_pact_provider_verification"},
-                {"id": "03_breaking_schema_evolution", "name": "Detecting Destructive vs Additive Schema Changes", "path": "exercises/07_contract_pact/03_breaking_schema_evolution"},
+                {"id": "01_pact_consumer_definition", "name": "Consumer Contract Schema Definition", "path": "exercises/09_contract_pact/01_pact_consumer_definition"},
+                {"id": "02_pact_provider_verification", "name": "Automated Provider Verification CI Gates", "path": "exercises/09_contract_pact/02_pact_provider_verification"},
+                {"id": "03_breaking_schema_evolution", "name": "Detecting Destructive vs Additive Schema Changes", "path": "exercises/09_contract_pact/03_breaking_schema_evolution"},
             ],
         },
         {
@@ -1072,9 +1072,9 @@ async def get_curriculum() -> JSONResponse:
             "tier": "Tier 1 to 2 — Beginner to Intermediate",
             "description": "Inclusive quality engineering: WCAG 2.1 AA accessibility trees, keyboard Tab focus traps, and ARIA live regions.",
             "drills": [
-                {"id": "01_wcag_color_contrast_axe", "name": "WCAG Semantic Accessibility Tree & Roles", "path": "exercises/08_a11y_axe/01_wcag_color_contrast_axe"},
-                {"id": "02_keyboard_focus_trap_aria", "name": "Sequential Keyboard Tab Navigation & Focus Traps", "path": "exercises/08_a11y_axe/02_keyboard_focus_trap_aria"},
-                {"id": "03_screen_reader_live_regions", "name": "Dynamic UI Announcements via ARIA Live Regions", "path": "exercises/08_a11y_axe/03_screen_reader_live_regions"},
+                {"id": "01_wcag_color_contrast_axe", "name": "WCAG Semantic Accessibility Tree & Roles", "path": "exercises/10_a11y_axe/01_wcag_color_contrast_axe"},
+                {"id": "02_keyboard_focus_trap_aria", "name": "Sequential Keyboard Tab Navigation & Focus Traps", "path": "exercises/10_a11y_axe/02_keyboard_focus_trap_aria"},
+                {"id": "03_screen_reader_live_regions", "name": "Dynamic UI Announcements via ARIA Live Regions", "path": "exercises/10_a11y_axe/03_screen_reader_live_regions"},
             ],
         },
     ]

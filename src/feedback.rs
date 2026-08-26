@@ -15,7 +15,7 @@ pub const DEFAULT_PASS_THRESHOLD: f64 = 85.0;
 pub const DEFAULT_BASELINE_DURATION_MS: u64 = 1000;
 pub const FLAKINESS_PENALTY_CAP: f64 = 40.0;
 
-// Lazy static regex patterns for AST scanning
+// Lazy static regex patterns for source scanning
 static RE_WAIT_FOR_TIMEOUT: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?:page|locator|\b)\s*\.\s*waitForTimeout\s*\(\s*(\d+)?\s*\)|waitForTimeout\s*\(\s*(\d+)?\s*\)").expect("Valid regex")
 });
@@ -98,7 +98,7 @@ pub struct LocatorOccurrence {
     pub score: f64,
 }
 
-/// Anti-pattern classification detected in source AST
+/// Anti-pattern classification detected by static source analysis
 #[derive(Debug, Clone, PartialEq)]
 pub enum AntiPatternKind {
     WaitForTimeout { duration_ms: Option<u64> },
@@ -125,7 +125,7 @@ pub struct AntiPattern {
 
 /// Static analysis report of a test or flow definition file
 #[derive(Debug, Clone, Default)]
-pub struct AstReport {
+pub struct StaticAnalysisReport {
     pub file_path: String,
     pub total_lines: usize,
     pub anti_patterns: Vec<AntiPattern>,
@@ -134,7 +134,7 @@ pub struct AstReport {
     pub has_wait_for_timeout: bool,
 }
 
-impl AstReport {
+impl StaticAnalysisReport {
     pub fn has_anti_patterns(&self) -> bool {
         !self.anti_patterns.is_empty()
     }
@@ -272,7 +272,7 @@ pub fn strip_yaml_comments(source: &str) -> String {
 }
 
 /// Analyze YAML source code for Maestro flow definitions, locators, and anti-patterns
-pub fn analyze_yaml_source(source: &str, file_path: &str) -> AstReport {
+pub fn analyze_yaml_source(source: &str, file_path: &str) -> StaticAnalysisReport {
     let stripped = strip_yaml_comments(source);
     let original_lines: Vec<&str> = source.lines().collect();
     let stripped_lines: Vec<&str> = stripped.lines().collect();
@@ -419,7 +419,7 @@ pub fn analyze_yaml_source(source: &str, file_path: &str) -> AstReport {
         sum / (locators.len() as f64)
     };
 
-    AstReport {
+    StaticAnalysisReport {
         file_path: file_path.to_string(),
         total_lines: original_lines.len(),
         anti_patterns,
@@ -430,7 +430,7 @@ pub fn analyze_yaml_source(source: &str, file_path: &str) -> AstReport {
 }
 
 /// Analyze source code (TypeScript, Java, or Maestro YAML) for locators, anti-patterns, and quality
-pub fn analyze_source(source: &str, file_path: &str) -> AstReport {
+pub fn analyze_source(source: &str, file_path: &str) -> StaticAnalysisReport {
     let is_yaml = file_path.ends_with(".yaml")
         || file_path.ends_with(".yml")
         || source.trim_start().starts_with("---");
@@ -602,7 +602,7 @@ pub fn analyze_source(source: &str, file_path: &str) -> AstReport {
         sum / (locators.len() as f64)
     };
 
-    AstReport {
+    StaticAnalysisReport {
         file_path: file_path.to_string(),
         total_lines: original_lines.len(),
         anti_patterns,
@@ -613,7 +613,7 @@ pub fn analyze_source(source: &str, file_path: &str) -> AstReport {
 }
 
 /// Analyze a file on disk
-pub fn analyze_file<P: AsRef<Path>>(path: P) -> Result<AstReport, std::io::Error> {
+pub fn analyze_file<P: AsRef<Path>>(path: P) -> Result<StaticAnalysisReport, std::io::Error> {
     let p = path.as_ref();
     let content = fs::read_to_string(p)?;
     Ok(analyze_source(&content, &p.to_string_lossy()))
@@ -656,45 +656,80 @@ pub struct ProgressiveHints {
 impl ProgressiveHints {
     /// Load progressive hints from `hints.md` located next to the exercise file
     pub fn load_from_exercise_path<P: AsRef<Path>>(exercise_path: P) -> Option<Self> {
-        let p = exercise_path.as_ref();
-        let parent = p.parent()?;
-        let hints_file = parent.join("hints.md");
+        Self::load_from_dir(exercise_path.as_ref().parent()?)
+    }
+
+    /// Load progressive hints from the `hints.md` inside a drill directory
+    pub fn load_from_dir<P: AsRef<Path>>(exercise_dir: P) -> Option<Self> {
+        let hints_file = exercise_dir.as_ref().join("hints.md");
         if !hints_file.exists() {
             return None;
         }
-
         let content = fs::read_to_string(hints_file).ok()?;
+        Some(Self::parse(&content))
+    }
+
+    /// Split a `hints.md` document into its individual hint levels.
+    ///
+    /// Each `## `/`### ` heading (or a bold `**Hint` marker) opens a new level. A
+    /// leading `# ` document title is a preamble, not a hint — counting it would
+    /// shift every level by one and hand a struggling learner nothing but a title.
+    pub fn parse(content: &str) -> Self {
+        fn starts_hint(line: &str) -> bool {
+            line.starts_with("## ") || line.starts_with("### ") || line.starts_with("**Hint")
+        }
+
         let mut hints = Vec::new();
         let mut current_hint = String::new();
+        let mut in_hint = false;
 
         for line in content.lines() {
-            if line.starts_with("# ")
-                || line.starts_with("## ")
-                || line.starts_with("### ")
-                || line.starts_with("**Hint")
-            {
-                if !current_hint.trim().is_empty() {
+            if starts_hint(line) {
+                if in_hint && !current_hint.trim().is_empty() {
                     hints.push(current_hint.trim().to_string());
-                    current_hint.clear();
                 }
-                current_hint.push_str(line);
-                current_hint.push('\n');
-            } else {
+                current_hint.clear();
+                in_hint = true;
+            }
+            // Lines before the first hint heading are preamble and are dropped.
+            if in_hint {
                 current_hint.push_str(line);
                 current_hint.push('\n');
             }
         }
-        if !current_hint.trim().is_empty() {
+        if in_hint && !current_hint.trim().is_empty() {
             hints.push(current_hint.trim().to_string());
         }
 
         if hints.is_empty() {
-            Some(Self {
+            // No recognizable hint headings — fall back to the whole document.
+            Self {
                 hints: vec![content.trim().to_string()],
-            })
+            }
         } else {
-            Some(Self { hints })
+            Self { hints }
         }
+    }
+
+    /// Number of hint levels available
+    pub fn len(&self) -> usize {
+        self.hints.len()
+    }
+
+    /// Whether the drill has no hints at all
+    pub fn is_empty(&self) -> bool {
+        self.hints.is_empty()
+    }
+
+    /// Select a specific 1-based hint level, clamped to the available range.
+    /// Returns `(level, total_levels, hint_text)`.
+    pub fn get_hint_at_level(&self, level: usize) -> Option<(usize, usize, &str)> {
+        if self.hints.is_empty() {
+            return None;
+        }
+        let total = self.hints.len();
+        let index = level.max(1).min(total) - 1;
+        Some((index + 1, total, self.hints[index].as_str()))
     }
 
     /// Select the appropriate hint based on current total score
@@ -742,10 +777,10 @@ pub fn calculate_speed_score(
     (score, avg_duration_ms)
 }
 
-/// Evaluate the 4D Feedback Matrix against test execution results and AST analysis
+/// Evaluate the 4D Feedback Matrix against test execution results and static analysis
 pub fn evaluate_feedback(
     response: &DrillResponse,
-    ast: &AstReport,
+    ast: &StaticAnalysisReport,
     track_name: &str,
     platform_version: &str,
     pass_threshold: f64,
@@ -795,7 +830,7 @@ pub fn evaluate_feedback(
     // 3. Locator Quality Dimension (0.15)
     let locator_score = ast.locator_quality_score;
     let locator_detail = if ast.locators.is_empty() {
-        "No locators detected in AST (Default: 100)".to_string()
+        "No locators detected in source (Default: 100)".to_string()
     } else {
         let roles = ast
             .locators
@@ -1087,7 +1122,7 @@ pub fn render_scorecard(card: &Scorecard) -> String {
 }
 
 /// Render standalone diagnostic view (for `cherenkov-lings diagnose`)
-pub fn render_diagnostic(ast: &AstReport, track_name: &str, platform_version: &str) -> String {
+pub fn render_diagnostic(ast: &StaticAnalysisReport, track_name: &str, platform_version: &str) -> String {
     let mut out = String::new();
     let border =
         "========================================================================================"
@@ -1106,7 +1141,7 @@ pub fn render_diagnostic(ast: &AstReport, track_name: &str, platform_version: &s
     // Locator Quality Breakdown
     out.push_str(&format!(
         " {}\n",
-        "STATIC AST ANALYSIS:".bold().bright_cyan()
+        "STATIC SOURCE ANALYSIS:".bold().bright_cyan()
     ));
     let bar = render_progress_bar(ast.locator_quality_score, 10);
     out.push_str(&format!(
@@ -1141,7 +1176,7 @@ pub fn render_diagnostic(ast: &AstReport, track_name: &str, platform_version: &s
     if ast.anti_patterns.is_empty() {
         out.push_str(&format!(
             " {}\n",
-            "✓ No anti-patterns detected in AST.".green().bold()
+            "✓ No anti-patterns detected.".green().bold()
         ));
     } else {
         out.push_str(&format!(
@@ -1353,7 +1388,7 @@ test('checkout hydration timing', async ({ page }) => {
         };
 
         // When waitForTimeout is present, flakiness score is capped at 40.0
-        let ast_with_sleep = AstReport {
+        let ast_with_sleep = StaticAnalysisReport {
             file_path: "exercise.ts".to_string(),
             has_wait_for_timeout: true,
             locator_quality_score: 100.0,
@@ -1372,7 +1407,7 @@ test('checkout hydration timing', async ({ page }) => {
         assert!(!card_flaky.passed);
 
         // Without waitForTimeout, flakiness score is 100.0
-        let ast_clean = AstReport {
+        let ast_clean = StaticAnalysisReport {
             file_path: "solution.ts".to_string(),
             has_wait_for_timeout: false,
             locator_quality_score: 100.0,
@@ -1437,7 +1472,7 @@ test('checkout hydration timing', async ({ page }) => {
             error: None,
         };
 
-        let ast = AstReport {
+        let ast = StaticAnalysisReport {
             file_path: "exercises/01_hydration/exercise.ts".to_string(),
             total_lines: 15,
             anti_patterns: vec![AntiPattern {
@@ -1528,6 +1563,99 @@ test('checkout hydration timing', async ({ page }) => {
         assert!(h3.contains("Code diff"));
     }
 
+    /// The `# Hints: ...` document title must not become hint level 1, or a
+    /// struggling learner is handed a bare title instead of a nudge.
+    #[test]
+    fn test_progressive_hints_parse_drops_document_title() {
+        let doc = "# Hints: Drill 01 - Hydration Timing\n\
+                   \n\
+                   ## Hint 1 (Architectural Nudge)\n\
+                   Hydration attaches listeners after HTML streams in.\n\
+                   \n\
+                   ## Hint 2 (API Pattern)\n\
+                   Use an auto-retrying assertion on `data-hydrated`.\n\
+                   \n\
+                   ## Hint 3 (Code Diff)\n\
+                   ```diff\n\
+                   - await page.waitForTimeout(200);\n\
+                   ```\n";
+
+        let hints = ProgressiveHints::parse(doc);
+        assert_eq!(hints.len(), 3, "title must not count as a hint level");
+        assert!(hints.hints[0].starts_with("## Hint 1"));
+        assert!(!hints.hints[0].contains("Hints: Drill 01"));
+        assert!(hints.hints[2].contains("waitForTimeout"));
+
+        // A struggling learner gets the conceptual nudge, not the title.
+        let (idx, total, text) = hints.get_hint_for_score(10.0).expect("hint for low score");
+        assert_eq!((idx, total), (1, 3));
+        assert!(text.contains("Hydration attaches listeners"));
+    }
+
+    #[test]
+    fn test_get_hint_at_level_clamps_and_falls_back() {
+        let hints = ProgressiveHints {
+            hints: vec!["one".to_string(), "two".to_string()],
+        };
+
+        assert_eq!(hints.get_hint_at_level(1).expect("level 1").2, "one");
+        assert_eq!(hints.get_hint_at_level(2).expect("level 2").2, "two");
+        // Out-of-range levels clamp rather than erroring.
+        assert_eq!(hints.get_hint_at_level(0).expect("clamped low").2, "one");
+        assert_eq!(hints.get_hint_at_level(99).expect("clamped high").2, "two");
+
+        assert!(ProgressiveHints::default().get_hint_at_level(1).is_none());
+    }
+
+    /// Every shipped drill must expose more than one hint level, otherwise the
+    /// first request would hand over the solution diff.
+    #[test]
+    fn test_every_drill_hints_file_has_multiple_levels() {
+        fn collect(dir: &Path, out: &mut Vec<std::path::PathBuf>) {
+            let Ok(entries) = fs::read_dir(dir) else {
+                return;
+            };
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    collect(&path, out);
+                } else if path.file_name().is_some_and(|n| n == "hints.md") {
+                    out.push(path);
+                }
+            }
+        }
+
+        let mut files = Vec::new();
+        collect(Path::new("exercises"), &mut files);
+        assert_eq!(files.len(), 60, "expected one hints.md per drill");
+
+        for file in files {
+            let dir = file.parent().expect("hints.md has a parent");
+            let hints = ProgressiveHints::load_from_dir(dir).expect("hints load");
+            assert!(
+                hints.len() >= 2,
+                "{} parsed into {} level(s); the first level would leak the solution",
+                file.display(),
+                hints.len()
+            );
+            let (level, _, text) = hints.get_hint_at_level(1).expect("level 1");
+            assert_eq!(level, 1);
+            assert!(
+                !text.starts_with("# Hints:"),
+                "{} exposes its document title as hint level 1",
+                file.display()
+            );
+        }
+    }
+
+    /// A document with no `##` hint headings still yields something usable.
+    #[test]
+    fn test_progressive_hints_parse_without_headings() {
+        let hints = ProgressiveHints::parse("Just some freeform guidance.\n");
+        assert_eq!(hints.len(), 1);
+        assert!(hints.hints[0].contains("freeform guidance"));
+    }
+
     #[test]
     fn test_all_locator_kinds_and_data_testid_variations() {
         let code = r#"
@@ -1560,7 +1688,7 @@ test('checkout hydration timing', async ({ page }) => {
 
     #[test]
     fn test_diagnostic_view_rendering() {
-        let ast = AstReport {
+        let ast = StaticAnalysisReport {
             file_path: "exercises/01_web_playwright_ts/01_hydration/exercise.ts".to_string(),
             total_lines: 20,
             anti_patterns: vec![AntiPattern {
@@ -1590,7 +1718,7 @@ test('checkout hydration timing', async ({ page }) => {
         );
         assert!(diag.contains("CHERENKOV-LINGS DIAGNOSTIC"));
         assert!(diag.contains("Target File:"));
-        assert!(diag.contains("STATIC AST ANALYSIS"));
+        assert!(diag.contains("STATIC SOURCE ANALYSIS"));
         assert!(diag.contains("DETECTED ANTI-PATTERNS"));
         assert!(diag.contains("waitForTimeout(2000)"));
     }
@@ -1694,7 +1822,7 @@ public class Exercise {
         };
 
         // When Thread.sleep is present, flakiness score is capped at 40.0
-        let ast_with_sleep = AstReport {
+        let ast_with_sleep = StaticAnalysisReport {
             file_path: "Exercise.java".to_string(),
             has_wait_for_timeout: true,
             anti_patterns: vec![AntiPattern {
@@ -1728,7 +1856,7 @@ public class Exercise {
         );
 
         // When clean (e.g. Solution.java with Awaitility), score is 100.0
-        let ast_clean = AstReport {
+        let ast_clean = StaticAnalysisReport {
             file_path: "Solution.java".to_string(),
             has_wait_for_timeout: false,
             locator_quality_score: 100.0,

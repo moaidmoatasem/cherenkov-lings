@@ -37,7 +37,7 @@ enum Commands {
         #[arg(short, long)]
         track: String,
     },
-    /// Diagnose why an exercise is failing (AST & anti-pattern root cause)
+    /// Diagnose why an exercise is failing (static analysis & anti-pattern root cause)
     Diagnose {
         #[arg(short, long)]
         file: Option<String>,
@@ -163,11 +163,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "exercises/03_mobile_maestro",
                 "exercises/04_perf_k6_js",
                 "exercises/05_perf_jmeter",
-                "exercises/05_genai_qa",
-                "exercises/06_tool_decisions",
-                "exercises/06_cloud_devsecops",
-                "exercises/07_contract_pact",
-                "exercises/08_a11y_axe",
+                "exercises/06_genai_qa",
+                "exercises/08_tool_decisions",
+                "exercises/07_cloud_devsecops",
+                "exercises/09_contract_pact",
+                "exercises/10_a11y_axe",
             ];
             for dir in &exercise_dirs {
                 let p = Path::new(dir);
@@ -482,10 +482,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 .await
                             {
                                 Ok(response) => {
-                                    // Perform static AST analysis of the modified exercise file
+                                    // Perform static analysis of the modified exercise file
                                     let ast_report =
                                         feedback::analyze_file(&path).unwrap_or_else(|_| {
-                                            feedback::AstReport {
+                                            feedback::StaticAnalysisReport {
                                                 file_path: path.clone(),
                                                 ..Default::default()
                                             }
@@ -1165,7 +1165,7 @@ fn run_review(
         match review::apply_all_fixes(target_path) {
             Ok(_) => {
                 println!(
-                    "{} Successfully applied automated AST fixes to '{}'!",
+                    "{} Successfully applied automated lint fixes to '{}'!",
                     "✓".green().bold(),
                     target.bright_white()
                 );

@@ -86,7 +86,7 @@ pub fn calculate_score(violations: &[AstViolation]) -> u32 {
     }
 }
 
-/// Runs a static AST review and AI mentor consultation on a target file
+/// Runs a static rule review and AI mentor consultation on a target file
 pub fn run_review(
     file_path: &Path,
     config: &ReviewConfig,
@@ -103,7 +103,7 @@ pub fn run_review(
     run_review_on_content(&file_str, &content, config)
 }
 
-/// Runs a static AST review on raw code content
+/// Runs a static rule review on raw code content
 pub fn run_review_on_content(
     file_path: &str,
     content: &str,
@@ -191,7 +191,7 @@ pub fn apply_fix(file_path: &Path, fix_id: &str) -> Result<String, ReviewError> 
     Ok(modified)
 }
 
-/// Applies all automated AST fixes to a file on disk
+/// Applies all automated rule fixes to a file on disk
 pub fn apply_all_fixes(file_path: &Path) -> Result<String, ReviewError> {
     apply_fix(file_path, "all")
 }

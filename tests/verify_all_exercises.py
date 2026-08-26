@@ -7,7 +7,7 @@ This script programmatically verifies the platform's learning engine by:
 2. Verifying baseline failure: ensures broken starter code fails out-of-the-box or requires fixes.
 3. Injecting reference solutions: replaces exercise code with solution code.
 4. Executing test validation: runs the test runner (pytest) to confirm 100% pass rate.
-5. Computing 4D evaluation metrics: correctness, flakiness resilience, AST quality, and speed.
+5. Computing 4D evaluation metrics: correctness, flakiness resilience, locator quality, and speed.
 6. Restoring starter code cleanly with zero disk or environment side-effects.
 
 Usage:
@@ -24,6 +24,7 @@ import shutil
 import subprocess
 import time
 import json
+import math
 import argparse
 import atexit
 import signal
@@ -113,6 +114,42 @@ def _should_ignore_path(p: Path) -> bool:
         if sub in name:
             return True
     return False
+
+
+# ---------------------------------------------------------------------------
+# XP model. Mirrors `tier_for_track_or_drill`, `get_tier_multiplier`, and
+# `calculate_xp` in src/gamification.rs — the Rust engine is the source of
+# truth, so keep these in sync. A flat constant here would report XP totals the
+# platform never actually awards.
+# ---------------------------------------------------------------------------
+BASE_XP = 100.0
+
+
+def _tier_for_track_or_drill(track_id: str, drill_id: str) -> int:
+    track = (track_id or "").lower()
+    drill = (drill_id or "").lower()
+
+    if track in ("devsecops-python", "genai-qa") or any(
+        k in drill for k in ("09_", "10_", "drill07_", "05_grafana", "07_", "08_")
+    ):
+        return 3
+    if track in ("maestro-mobile", "k6-js", "jmeter", "tool-decisions") or any(
+        k in drill for k in ("06_", "07_", "08_", "drill04_", "drill05_", "drill06_")
+    ):
+        return 2
+    return 1
+
+
+def _tier_multiplier(tier: int) -> float:
+    return {1: 1.0, 2: 1.5, 3: 2.0}.get(tier, 1.0)
+
+
+def _calculate_xp(total_score: float, tier: int) -> int:
+    """round(BASE_XP * score/100 * multiplier), matching Rust's f64::round
+    (half away from zero) rather than Python's banker's rounding."""
+    clamped = max(0.0, min(100.0, total_score))
+    raw = BASE_XP * (clamped / 100.0) * _tier_multiplier(tier)
+    return int(math.floor(raw + 0.5))
 
 
 def _load_tracks_config(workspace_root: Path) -> Dict[str, Dict[str, str]]:
@@ -263,6 +300,8 @@ class AutomatedExerciseVerifier:
         track_cfg = self._tracks_config.get(track_name, {})
         track_ext = track_cfg.get("extension", ".py")
         runner = track_cfg.get("runner", "python")
+        track_id = track_cfg.get("id", track_name)
+        tier = _tier_for_track_or_drill(track_id, drill_name)
         exercise_file, solution_file = self._find_exercise_solution(drill_dir, track_ext)
         theory_file = drill_dir / "theory.md"
         hints_file = drill_dir / "hints.md"
@@ -321,8 +360,9 @@ class AutomatedExerciseVerifier:
                 err = f"Solution file appears empty/invalid for {track_ext}"
                 print(f"  [FAIL] Step 3: Solution content check -> FAILED: {err}")
                 return DrillResult(drill_name=drill_name, track_name=track_name, baseline_failed=baseline_failed, solution_passed=False, duration_ms=0.0, score=0.0, xp_awarded=0, error_message=err)
-            print(f"  [OK] Step 3: Structural Validation -> PASSED (Score: 100.0/100, +150 XP)")
-            return DrillResult(drill_name=drill_name, track_name=track_name, baseline_failed=baseline_failed, solution_passed=True, duration_ms=5.0, score=100.0, xp_awarded=150)
+            xp = _calculate_xp(100.0, tier)
+            print(f"  [OK] Step 3: Structural Validation -> PASSED (Score: 100.0/100, +{xp} XP, tier {tier})")
+            return DrillResult(drill_name=drill_name, track_name=track_name, baseline_failed=baseline_failed, solution_passed=True, duration_ms=5.0, score=100.0, xp_awarded=xp)
 
         backup_file = drill_dir / f"{exercise_file.name}.backup_verifier"
         try:
@@ -342,8 +382,8 @@ class AutomatedExerciseVerifier:
             error_message = None
             if solution_passed:
                 score = 100.0
-                xp = 150
-                print(f"  [OK] Step 3: Test Validation -> PASSED in {duration_ms:.1f}ms (Score: 100.0/100, +{xp} XP)")
+                xp = _calculate_xp(score, tier)
+                print(f"  [OK] Step 3: Test Validation -> PASSED in {duration_ms:.1f}ms (Score: {score:.1f}/100, +{xp} XP, tier {tier})")
             else:
                 score = 0.0
                 xp = 0

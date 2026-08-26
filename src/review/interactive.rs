@@ -42,7 +42,7 @@ pub fn display_review_report(report: &ReviewReport) {
         println!(
             "  {} {}",
             "✓".green().bold(),
-            "Zero AST rule violations detected! Code is clean, resilient, and deterministic.".green()
+            "Zero lint rule violations detected! Code is clean, resilient, and deterministic.".green()
         );
         println!();
     } else {

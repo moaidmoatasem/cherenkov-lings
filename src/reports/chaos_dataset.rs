@@ -148,7 +148,7 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         category: FailureCategory::RealBug,
         duration_ms: 145,
         error_message: Some("AssertionError: Expected HTTP 403 Forbidden for non-admin role, received HTTP 200 OK with admin access token".to_string()),
-        stack_trace: Some("File \"exercises/06_cloud_devsecops/01_rbac_security/exercise.py\", line 58, in test_auth_role_privilege_escalation\n    assert response.status_code == 403, f\"Privilege escalation vulnerability: {response.json()}\"\nAssertionError: Expected HTTP 403 Forbidden for non-admin role, received HTTP 200 OK with admin access token".to_string()),
+        stack_trace: Some("File \"exercises/07_cloud_devsecops/01_rbac_security/exercise.py\", line 58, in test_auth_role_privilege_escalation\n    assert response.status_code == 403, f\"Privilege escalation vulnerability: {response.json()}\"\nAssertionError: Expected HTTP 403 Forbidden for non-admin role, received HTTP 200 OK with admin access token".to_string()),
         chaos_event: Some(ChaosEventTelemetry {
             layer: "L7".to_string(),
             event_type: "rbac_bypass".to_string(),
@@ -285,7 +285,7 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         category: FailureCategory::RealBug,
         duration_ms: 230,
         error_message: Some("PactVerificationError: Body mismatch: Key 'correlation_id' was expected at $.payload but was missing from provider payload".to_string()),
-        stack_trace: Some("PactVerificationError: Body mismatch: Key 'correlation_id' was expected at $.payload but was missing from provider payload\n    at PactVerifier.verifyContract (exercises/07_contract_pact/01_consumer_verification/exercise.ts:74:11)".to_string()),
+        stack_trace: Some("PactVerificationError: Body mismatch: Key 'correlation_id' was expected at $.payload but was missing from provider payload\n    at PactVerifier.verifyContract (exercises/09_contract_pact/01_consumer_verification/exercise.ts:74:11)".to_string()),
         chaos_event: Some(ChaosEventTelemetry {
             layer: "L7".to_string(),
             event_type: "contract_regression".to_string(),
@@ -345,7 +345,7 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         category: FailureCategory::RealBug,
         duration_ms: 180,
         error_message: Some("AssertionError: Expired JWT token with iat in past and exp expired 1 hour ago was accepted with HTTP 200".to_string()),
-        stack_trace: Some("AssertionError: Expected 401 Unauthorized for expired JWT token, got 200 OK\n    File \"exercises/06_cloud_devsecops/03_jwt_validation/exercise.py\", line 42, in test_jwt_auth_token_expiration".to_string()),
+        stack_trace: Some("AssertionError: Expected 401 Unauthorized for expired JWT token, got 200 OK\n    File \"exercises/07_cloud_devsecops/03_jwt_validation/exercise.py\", line 42, in test_jwt_auth_token_expiration".to_string()),
         chaos_event: Some(ChaosEventTelemetry {
             layer: "Runtime".to_string(),
             event_type: "jwt_bypass".to_string(),
@@ -375,7 +375,7 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         category: FailureCategory::RealBug,
         duration_ms: 290,
         error_message: Some("AssertionError: SQL syntax error exposed in response body: 'OR 1=1 --'".to_string()),
-        stack_trace: Some("AssertionError: Search endpoint leaked internal SQL error in response body\n    File \"exercises/06_cloud_devsecops/04_sqli_protection/exercise.py\", line 55, in test_sql_injection".to_string()),
+        stack_trace: Some("AssertionError: Search endpoint leaked internal SQL error in response body\n    File \"exercises/07_cloud_devsecops/04_sqli_protection/exercise.py\", line 55, in test_sql_injection".to_string()),
         chaos_event: Some(ChaosEventTelemetry {
             layer: "Database".to_string(),
             event_type: "sql_syntax_leak".to_string(),
@@ -463,7 +463,7 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         category: FailureCategory::RealBug,
         duration_ms: 890,
         error_message: Some("AssertionError: Hallucination rate 0.42 exceeded SLA maximum threshold of 0.05".to_string()),
-        stack_trace: Some("AssertionError: Model hallucinated fabricated company policy not present in retrieved vector context\n    at evalHallucination (exercises/05_genai_qa/03_hallucination_eval/exercise.ts:51:9)".to_string()),
+        stack_trace: Some("AssertionError: Model hallucinated fabricated company policy not present in retrieved vector context\n    at evalHallucination (exercises/06_genai_qa/03_hallucination_eval/exercise.ts:51:9)".to_string()),
         chaos_event: Some(ChaosEventTelemetry {
             layer: "Runtime".to_string(),
             event_type: "rag_hallucination".to_string(),
@@ -494,7 +494,7 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         category: FailureCategory::RealBug,
         duration_ms: 760,
         error_message: Some("AssertionError: System prompt leakage detected: Model leaked internal system prompt instructions".to_string()),
-        stack_trace: Some("AssertionError: Prompt injection succeeded; output contained 'SYSTEM: You are a helpful assistant'\n    at verifyPromptGuardrail (exercises/05_genai_qa/04_prompt_injection/exercise.ts:63:12)".to_string()),
+        stack_trace: Some("AssertionError: Prompt injection succeeded; output contained 'SYSTEM: You are a helpful assistant'\n    at verifyPromptGuardrail (exercises/06_genai_qa/04_prompt_injection/exercise.ts:63:12)".to_string()),
         chaos_event: Some(ChaosEventTelemetry {
             layer: "Runtime".to_string(),
             event_type: "prompt_injection".to_string(),
@@ -523,7 +523,7 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         category: FailureCategory::RealBug,
         duration_ms: 310,
         error_message: Some("AxeViolation: Elements must have sufficient color contrast (found ratio 2.1:1, required 4.5:1 for #718096 on #ffffff)".to_string()),
-        stack_trace: Some("AxeViolation: color-contrast on selector '#btn-secondary-action'\n    at AxeRunner.analyze (exercises/08_a11y_axe/01_color_contrast/exercise.ts:38:15)".to_string()),
+        stack_trace: Some("AxeViolation: color-contrast on selector '#btn-secondary-action'\n    at AxeRunner.analyze (exercises/10_a11y_axe/01_color_contrast/exercise.ts:38:15)".to_string()),
         chaos_event: Some(ChaosEventTelemetry {
             layer: "Runtime".to_string(),
             event_type: "a11y_wcag_violation".to_string(),
@@ -644,7 +644,7 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         category: FailureCategory::RealBug,
         duration_ms: 195,
         error_message: Some("AssertionError: Insecure Direct Object Reference (IDOR): Tenant B accessed Tenant A invoice /documents/inv_10492".to_string()),
-        stack_trace: Some("AssertionError: IDOR vulnerability detected: Tenant B retrieved private document of Tenant A\n    File \"exercises/06_cloud_devsecops/05_idor_prevention/exercise.py\", line 47, in test_idor".to_string()),
+        stack_trace: Some("AssertionError: IDOR vulnerability detected: Tenant B retrieved private document of Tenant A\n    File \"exercises/07_cloud_devsecops/05_idor_prevention/exercise.py\", line 47, in test_idor".to_string()),
         chaos_event: Some(ChaosEventTelemetry {
             layer: "L7".to_string(),
             event_type: "idor_vulnerability".to_string(),
@@ -674,7 +674,7 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         category: FailureCategory::RealBug,
         duration_ms: 210,
         error_message: Some("PactVerificationError: Type mismatch at $.account_number: expected String, found Number (489102)".to_string()),
-        stack_trace: Some("PactVerificationError: Type mismatch at $.account_number: expected String, found Integer\n    at PactVerifier.verify (exercises/07_contract_pact/02_provider_states/exercise.ts:58:14)".to_string()),
+        stack_trace: Some("PactVerificationError: Type mismatch at $.account_number: expected String, found Integer\n    at PactVerifier.verify (exercises/09_contract_pact/02_provider_states/exercise.ts:58:14)".to_string()),
         chaos_event: Some(ChaosEventTelemetry {
             layer: "L7".to_string(),
             event_type: "contract_type_regression".to_string(),
@@ -848,7 +848,7 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         category: FailureCategory::FlakyInfra,
         duration_ms: 2500,
         error_message: Some("socket.gaierror: [Errno 11001] getaddrinfo failed: DNS resolution timeout under 40% UDP packet loss".to_string()),
-        stack_trace: Some("socket.gaierror: [Errno 11001] getaddrinfo failed\n    File \"exercises/06_cloud_devsecops/02_ast_analyzer/exercise.py\", line 15, in scan_remote".to_string()),
+        stack_trace: Some("socket.gaierror: [Errno 11001] getaddrinfo failed\n    File \"exercises/07_cloud_devsecops/02_ast_analyzer/exercise.py\", line 15, in scan_remote".to_string()),
         chaos_event: Some(ChaosEventTelemetry {
             layer: "L4".to_string(),
             event_type: "dns_timeout".to_string(),
@@ -1022,7 +1022,7 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         category: FailureCategory::FlakyInfra,
         duration_ms: 3200,
         error_message: Some("AssertionError: Time-to-First-Token (TTFT) was 3200ms (SLA: 800ms) due to proxy buffer stall".to_string()),
-        stack_trace: Some("AssertionError: TTFT 3200ms breached SLA threshold 800ms\n    at evalTTFT (exercises/05_genai_qa/05_ttft_streaming/exercise.ts:40:9)".to_string()),
+        stack_trace: Some("AssertionError: TTFT 3200ms breached SLA threshold 800ms\n    at evalTTFT (exercises/06_genai_qa/05_ttft_streaming/exercise.ts:40:9)".to_string()),
         chaos_event: Some(ChaosEventTelemetry {
             layer: "L7".to_string(),
             event_type: "stream_buffer_stall".to_string(),
@@ -1052,7 +1052,7 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         category: FailureCategory::FlakyInfra,
         duration_ms: 350,
         error_message: Some("PactBrokerError: Failed to start Pact Mock Server on port 8089: port already in use".to_string()),
-        stack_trace: Some("PactBrokerError: EADDRINUSE 127.0.0.1:8089\n    at PactServer.start (exercises/07_contract_pact/01_consumer_verification/exercise.ts:22:15)".to_string()),
+        stack_trace: Some("PactBrokerError: EADDRINUSE 127.0.0.1:8089\n    at PactServer.start (exercises/09_contract_pact/01_consumer_verification/exercise.ts:22:15)".to_string()),
         chaos_event: Some(ChaosEventTelemetry {
             layer: "L4".to_string(),
             event_type: "port_collision".to_string(),
@@ -1081,7 +1081,7 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         category: FailureCategory::FlakyInfra,
         duration_ms: 2800,
         error_message: Some("ssl.SSLError: [SSL: TLSV1_ALERT_INTERNAL_ERROR] tls handshake timeout during certificate validation".to_string()),
-        stack_trace: Some("ssl.SSLError: tls handshake timeout\n    File \"exercises/06_cloud_devsecops/03_jwt_validation/exercise.py\", line 12, in verify_tls".to_string()),
+        stack_trace: Some("ssl.SSLError: tls handshake timeout\n    File \"exercises/07_cloud_devsecops/03_jwt_validation/exercise.py\", line 12, in verify_tls".to_string()),
         chaos_event: Some(ChaosEventTelemetry {
             layer: "L4".to_string(),
             event_type: "tls_handshake_timeout".to_string(),
@@ -1255,7 +1255,7 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         category: FailureCategory::FlakyInfra,
         duration_ms: 4200,
         error_message: Some("TimeoutError: Frame loading timed out: Cross-origin sandbox frame failed to load within 4000ms".to_string()),
-        stack_trace: Some("TimeoutError: Frame load timeout 4000ms\n    at AxeRunner.analyzeFrames (exercises/08_a11y_axe/02_accessible_forms/exercise.ts:45:12)".to_string()),
+        stack_trace: Some("TimeoutError: Frame load timeout 4000ms\n    at AxeRunner.analyzeFrames (exercises/10_a11y_axe/02_accessible_forms/exercise.ts:45:12)".to_string()),
         chaos_event: Some(ChaosEventTelemetry {
             layer: "L7".to_string(),
             event_type: "iframe_timeout".to_string(),
@@ -1284,7 +1284,7 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         category: FailureCategory::FlakyInfra,
         duration_ms: 150,
         error_message: Some("APIError: HTTP 429 Too Many Requests: Rate limit exceeded (TPM burst limit reached)".to_string()),
-        stack_trace: Some("APIError: HTTP 429 Too Many Requests\n    at evalLLM (exercises/05_genai_qa/01_rag_faithfulness/exercise.ts:32:10)".to_string()),
+        stack_trace: Some("APIError: HTTP 429 Too Many Requests\n    at evalLLM (exercises/06_genai_qa/01_rag_faithfulness/exercise.ts:32:10)".to_string()),
         chaos_event: Some(ChaosEventTelemetry {
             layer: "L7".to_string(),
             event_type: "rate_limit_429".to_string(),
@@ -1407,7 +1407,7 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         category: FailureCategory::AntiPattern,
         duration_ms: 110,
         error_message: Some("KeyError: 'vulnerabilities' - dictionary lookup without .get() or defensive validation on error response".to_string()),
-        stack_trace: Some("KeyError: 'vulnerabilities'\n    File \"exercises/06_cloud_devsecops/02_ast_analyzer/exercise.py\", line 28, in scan\n// ANTI-PATTERN: raw indexing response['data']['vulnerabilities']".to_string()),
+        stack_trace: Some("KeyError: 'vulnerabilities'\n    File \"exercises/07_cloud_devsecops/02_ast_analyzer/exercise.py\", line 28, in scan\n// ANTI-PATTERN: raw indexing response['data']['vulnerabilities']".to_string()),
         chaos_event: Some(ChaosEventTelemetry {
             layer: "Runtime".to_string(),
             event_type: "unhandled_unwrap".to_string(),
@@ -1610,7 +1610,7 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         category: FailureCategory::AntiPattern,
         duration_ms: 85,
         error_message: Some("SecurityLintError: High entropy plaintext API key 'ghp_99182831828319' hardcoded in test file".to_string()),
-        stack_trace: Some("SecurityLintError: Hardcoded secret detected in test code\n    File \"exercises/06_cloud_devsecops/06_secrets_hygiene/exercise.py\", line 19".to_string()),
+        stack_trace: Some("SecurityLintError: Hardcoded secret detected in test code\n    File \"exercises/07_cloud_devsecops/06_secrets_hygiene/exercise.py\", line 19".to_string()),
         chaos_event: Some(ChaosEventTelemetry {
             layer: "Runtime".to_string(),
             event_type: "hardcoded_secret".to_string(),
@@ -1639,7 +1639,7 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         category: FailureCategory::AntiPattern,
         duration_ms: 920,
         error_message: Some("AssertionError: Model output varied widely between test iterations due to temperature=1.0 and missing seed".to_string()),
-        stack_trace: Some("AssertionError: Expected deterministic response matching regex, got random variance\n    at exercises/05_genai_qa/02_llm_flakiness/exercise.ts:44:11".to_string()),
+        stack_trace: Some("AssertionError: Expected deterministic response matching regex, got random variance\n    at exercises/06_genai_qa/02_llm_flakiness/exercise.ts:44:11".to_string()),
         chaos_event: Some(ChaosEventTelemetry {
             layer: "Runtime".to_string(),
             event_type: "unseeded_temperature".to_string(),
@@ -1756,7 +1756,7 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         category: FailureCategory::AntiPattern,
         duration_ms: 140,
         error_message: Some("AxeConfigError: Test disabled 14 critical accessibility rules to force passing status".to_string()),
-        stack_trace: Some("AxeConfigError: Rules ['color-contrast', 'aria-roles', 'image-alt'] disabled in options\n    at exercises/08_a11y_axe/02_accessible_forms/exercise.ts:29:8".to_string()),
+        stack_trace: Some("AxeConfigError: Rules ['color-contrast', 'aria-roles', 'image-alt'] disabled in options\n    at exercises/10_a11y_axe/02_accessible_forms/exercise.ts:29:8".to_string()),
         chaos_event: Some(ChaosEventTelemetry {
             layer: "Runtime".to_string(),
             event_type: "disabled_rules".to_string(),
@@ -1785,7 +1785,7 @@ pub fn generate_chaos_dataset() -> Vec<ChaosTestResult> {
         category: FailureCategory::AntiPattern,
         duration_ms: 160,
         error_message: Some("PactContractWarning: Contract matcher '.*' matches anything including null and malicious payloads".to_string()),
-        stack_trace: Some("PactContractWarning: Regex '.*' is too permissive; does not validate contract structure\n    at exercises/07_contract_pact/03_flexible_matchers/exercise.ts:41:14".to_string()),
+        stack_trace: Some("PactContractWarning: Regex '.*' is too permissive; does not validate contract structure\n    at exercises/09_contract_pact/03_flexible_matchers/exercise.ts:41:14".to_string()),
         chaos_event: Some(ChaosEventTelemetry {
             layer: "Runtime".to_string(),
             event_type: "permissive_matcher".to_string(),
