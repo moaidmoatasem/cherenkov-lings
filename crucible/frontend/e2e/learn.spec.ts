@@ -250,11 +250,16 @@ test.describe('Learn environment — read, watch, practice, build', () => {
     await expect(page.getByRole('button', { name: 'Cherenkov — back to the sandbox' })).toBeVisible();
     await page.getByRole('button', { name: 'Cherenkov — back to the sandbox' }).click();
     await expect(page).toHaveURL('/sandbox');
-    await expect(page.getByText('Cherenkov-Lings Crucible Sandbox')).toBeVisible();
+    // /sandbox renders the sandbox inside the Learn shell, so the assertion is
+    // the sandbox's own content rather than the standalone page's footer.
+    await expect(page.locator('.l-h1')).toContainText('Micro-Crucible Sandbox');
+    await expect(page.getByText('Drill 01: Hydration Timing Gap')).toBeVisible();
   });
 
   test('Navbar learn entry routes correctly', async ({ page }) => {
-    await page.goto('/sandbox');
+    // Started from a page that carries the Navbar: /sandbox now renders inside
+    // the Learn shell, which has the sidebar rather than the sandbox header.
+    await page.goto('/checkout');
     await expect(page.getByTestId('nav-learn')).toBeVisible();
     await page.getByTestId('nav-learn').click();
     await expect(page).toHaveURL(/\/learn/);

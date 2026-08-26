@@ -7,6 +7,7 @@ import { DeviceLabScreen } from './screens/DeviceLabScreen';
 import { AllModulesScreen } from './screens/AllModulesScreen';
 import { RecordScreen } from './screens/RecordScreen';
 import { DrillScreen } from './screens/DrillScreen';
+import { HomePage } from '../pages/HomePage';
 import { useLearnerProgress } from './useLearnerProgress';
 import type { CurriculumModule, ScreenId, SelectedDrill, StepId, Track } from './types';
 import './learn.css';

@@ -1,5 +1,3 @@
-from typing import Any
-
 def generate_pytest_from_openapi(openapi_url: str) -> str:
     """Fetches the FastAPI /openapi.json and auto-generates basic Pytest endpoint validation tests."""
     return f"""import pytest
