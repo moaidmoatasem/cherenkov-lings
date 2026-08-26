@@ -1,5 +1,5 @@
 use crate::reports::chaos_dataset::{
-    generate_chaos_dataset, ChaosTestResult, FailureCategory, TestStatus,
+    ChaosTestResult, FailureCategory, TestStatus, generate_chaos_dataset,
 };
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -216,7 +216,13 @@ pub fn generate_allure_results(
         let safe_id: String = test
             .test_id
             .chars()
-            .map(|c| if c.is_ascii_alphanumeric() || c == '-' || c == '_' { c } else { '_' })
+            .map(|c| {
+                if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
+                    c
+                } else {
+                    '_'
+                }
+            })
             .collect();
         let test_uuid = format!("cherenkov-{:04x}-{}", idx + 1, safe_id.to_lowercase());
         let start_time = base_start_time + (idx as u64 * 500);
@@ -323,17 +329,17 @@ pub fn generate_allure_results(
 
         // Construct attachments
         let mut attachments = Vec::new();
-        if let Some(ref chaos) = test.chaos_event {
-            if let Some(ref proxy_log) = chaos.proxy_log {
-                let attach_filename = format!("{}-chaos-log.txt", test_uuid);
-                let attach_path = results_dir.join(&attach_filename);
-                let _ = fs::write(&attach_path, proxy_log);
-                attachments.push(AllureAttachment {
-                    name: "Chaos Telemetry Log".to_string(),
-                    source: attach_filename,
-                    r#type: "text/plain".to_string(),
-                });
-            }
+        if let Some(ref chaos) = test.chaos_event
+            && let Some(ref proxy_log) = chaos.proxy_log
+        {
+            let attach_filename = format!("{}-chaos-log.txt", test_uuid);
+            let attach_path = results_dir.join(&attach_filename);
+            let _ = fs::write(&attach_path, proxy_log);
+            attachments.push(AllureAttachment {
+                name: "Chaos Telemetry Log".to_string(),
+                source: attach_filename,
+                r#type: "text/plain".to_string(),
+            });
         }
 
         let full_name = format!("com.cherenkov.{}.{}", test.track_id, test.name);
@@ -484,9 +490,11 @@ pub fn render_html_report_string(
             "rootCauseHint": t.root_cause_hint
         }));
     }
-    let tests_payload_json = serde_json::to_string(&tests_json).unwrap_or_else(|_| "[]".to_string());
+    let tests_payload_json =
+        serde_json::to_string(&tests_json).unwrap_or_else(|_| "[]".to_string());
 
-    format!(r##"<!DOCTYPE html>
+    format!(
+        r##"<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">

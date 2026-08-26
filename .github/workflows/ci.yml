@@ -52,7 +52,9 @@ jobs:
     - name: Install Dependencies
       run: |
         pip install -r crucible/backend/requirements.txt
-        pip install ruff pytest pytest-asyncio pytest-json-report
+        # ruff is pinned: an unpinned install changes rule sets between releases,
+        # so the same commit can lint clean one day and fail the next.
+        pip install ruff==0.15.12 pytest pytest-asyncio pytest-json-report
 
     - name: Lint Backend Code
       run: ruff check crucible/ tests/
@@ -90,7 +92,12 @@ jobs:
         python-version: '3.11'
 
     - name: Install Dependencies
-      run: pip install pytest pytest-json-report
+      run: |
+        # The devsecops and contract-pact solutions import the crucible backend
+        # and drive it through fastapi's TestClient, which needs httpx; the
+        # foundations and tool-decisions solutions import requests.
+        pip install -r crucible/backend/requirements.txt
+        pip install pytest pytest-json-report requests httpx
 
     - name: Validate Foundations Track (5 drills)
       run: |

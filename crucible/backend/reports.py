@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import functools
 import json
-from typing import Any
 
 from crucible.backend.models import (
     AllureSummaryResponse,

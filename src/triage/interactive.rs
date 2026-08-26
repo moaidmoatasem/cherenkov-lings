@@ -1,15 +1,15 @@
-use crate::gamification::{render_level_progress_bar, GamificationState};
+use crate::gamification::{GamificationState, render_level_progress_bar};
 use crate::reports::chaos_dataset::{
-    get_failing_tests, get_test_by_id, ChaosTestResult, FailureCategory,
+    ChaosTestResult, FailureCategory, get_failing_tests, get_test_by_id,
 };
-use crate::triage::evaluator::{evaluate_and_record_progress, TriageResult, TriageSubmission};
+use crate::triage::evaluator::{TriageResult, TriageSubmission, evaluate_and_record_progress};
 use colored::Colorize;
 use std::io::{self, BufRead, Write};
 use std::path::Path;
 
 /// Parse category string from CLI arguments or user input
 pub fn parse_category_from_str(s: &str) -> Option<FailureCategory> {
-    let clean = s.trim().to_lowercase().replace('-', "_").replace(' ', "_");
+    let clean = s.trim().to_lowercase().replace(['-', ' '], "_");
     match clean.as_str() {
         "1" | "real_bug" | "bug" | "realbug" | "product_bug" | "defect" => {
             Some(FailureCategory::RealBug)
@@ -78,14 +78,21 @@ pub fn run_interactive_triage(
             print!(
                 "{} Enter Test ID to investigate (or press Enter for '{}'): ",
                 "▶".bright_yellow(),
-                failures.first().map(|f| f.test_id.as_str()).unwrap_or("BUG-101").cyan()
+                failures
+                    .first()
+                    .map(|f| f.test_id.as_str())
+                    .unwrap_or("BUG-101")
+                    .cyan()
             );
             io::stdout().flush()?;
             let mut input = String::new();
             io::stdin().lock().read_line(&mut input)?;
             let chosen = input.trim();
             let chosen_id = if chosen.is_empty() {
-                failures.first().map(|f| f.test_id.as_str()).unwrap_or("BUG-101")
+                failures
+                    .first()
+                    .map(|f| f.test_id.as_str())
+                    .unwrap_or("BUG-101")
             } else {
                 chosen
             };
@@ -109,7 +116,9 @@ pub fn run_interactive_triage(
         None => {
             println!(
                 "{}",
-                "SELECT ROOT-CAUSE HYPOTHESIS CATEGORY:".bold().bright_white()
+                "SELECT ROOT-CAUSE HYPOTHESIS CATEGORY:"
+                    .bold()
+                    .bright_white()
             );
             println!(
                 "  [1] {} — Server 500, RBAC bypass, DB constraint / deadlock, integer overflow",
@@ -121,7 +130,9 @@ pub fn run_interactive_triage(
             );
             println!(
                 "  [3] {} — Hardcoded sleep races, stale element references, brittle locators",
-                "Test Automation Anti-Pattern (AntiPattern)".bright_magenta().bold()
+                "Test Automation Anti-Pattern (AntiPattern)"
+                    .bright_magenta()
+                    .bold()
             );
             println!();
             print!("{} Select [1, 2, 3]: ", "▶".bright_yellow());
@@ -181,7 +192,10 @@ pub fn run_interactive_triage(
     };
 
     println!();
-    println!("{} Evaluating hypothesis against telemetry ground truth...", "⏳".yellow());
+    println!(
+        "{} Evaluating hypothesis against telemetry ground truth...",
+        "⏳".yellow()
+    );
     let (result, state) = evaluate_and_record_progress(&submission, None::<&Path>);
 
     display_triage_scorecard(&result, &submission, &state);
@@ -231,8 +245,7 @@ pub fn display_test_investigation_card(test: &ChaosTestResult) {
     println!();
     println!(
         "{}",
-        "──────────────────────────────────────────────────────────────────────────────────"
-            .cyan()
+        "──────────────────────────────────────────────────────────────────────────────────".cyan()
     );
     println!(
         "  {} [{}] {}",
@@ -248,8 +261,7 @@ pub fn display_test_investigation_card(test: &ChaosTestResult) {
     );
     println!(
         "{}",
-        "──────────────────────────────────────────────────────────────────────────────────"
-            .cyan()
+        "──────────────────────────────────────────────────────────────────────────────────".cyan()
     );
 
     if let Some(ref err) = test.error_message {
@@ -271,7 +283,10 @@ pub fn display_test_investigation_card(test: &ChaosTestResult) {
 
     if let Some(ref chaos) = test.chaos_event {
         println!();
-        println!("  {}", "CORRELATED L4/L7 CHAOS TELEMETRY:".bold().bright_cyan());
+        println!(
+            "  {}",
+            "CORRELATED L4/L7 CHAOS TELEMETRY:".bold().bright_cyan()
+        );
         println!("    Layer:             {}", chaos.layer.bright_white());
         println!("    Event Type:        {}", chaos.event_type.bright_white());
         if chaos.latency_ms > 0 {
@@ -295,8 +310,7 @@ pub fn display_test_investigation_card(test: &ChaosTestResult) {
     println!();
     println!(
         "{}",
-        "──────────────────────────────────────────────────────────────────────────────────"
-            .cyan()
+        "──────────────────────────────────────────────────────────────────────────────────".cyan()
     );
     println!();
 }
@@ -317,7 +331,9 @@ pub fn display_triage_scorecard(
         println!(
             "   {} {}",
             "✓ TRIAGE HYPOTHESIS ACCEPTED!".bold().bright_green(),
-            format!("(+{} XP)", result.score_awarded).bold().bright_yellow()
+            format!("(+{} XP)", result.score_awarded)
+                .bold()
+                .bright_yellow()
         );
     } else {
         println!(
@@ -333,12 +349,24 @@ pub fn display_triage_scorecard(
     );
     println!();
 
-    println!("  Test Under Investigation: {}", submission.test_id.bright_cyan());
-    println!("  Your Hypothesis Category:  {}", submission.learner_category.display_name().bold());
-    println!("  Actual Ground Truth:      {}", result.actual_category.display_name().bold().bright_yellow());
+    println!(
+        "  Test Under Investigation: {}",
+        submission.test_id.bright_cyan()
+    );
+    println!(
+        "  Your Hypothesis Category:  {}",
+        submission.learner_category.display_name().bold()
+    );
+    println!(
+        "  Actual Ground Truth:      {}",
+        result.actual_category.display_name().bold().bright_yellow()
+    );
     println!();
 
-    println!("  {}", "EXPLANATION & SENIOR QA CRITIQUE:".bold().bright_white());
+    println!(
+        "  {}",
+        "EXPLANATION & SENIOR QA CRITIQUE:".bold().bright_white()
+    );
     for line in result.feedback.lines() {
         println!("    {}", line);
     }
