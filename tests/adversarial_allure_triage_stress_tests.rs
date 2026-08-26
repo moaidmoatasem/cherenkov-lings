@@ -320,9 +320,14 @@ fn test_giant_dataset_stress_1000_tests() {
     assert_eq!(summary.flaky_infra, 250);
     assert_eq!(summary.anti_patterns, 250);
     assert_eq!(summary.passed, 250);
+    // Regression guard against an algorithmic blowup (an accidental O(n^2)),
+    // not a latency SLA. Isolated runtime is ~4s, but `cargo test` runs this
+    // binary alongside every other suite, so a tight bound fails on scheduler
+    // contention rather than on a real defect — the exact wall-clock flakiness
+    // this project's own Flakiness Guard penalises in learner code.
     assert!(
-        elapsed.as_secs() < 10,
-        "1000-test generation should complete under 10 seconds (took {:?})",
+        elapsed.as_secs() < 60,
+        "1000-test generation should complete well under a minute (took {:?})",
         elapsed
     );
 

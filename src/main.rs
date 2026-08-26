@@ -928,10 +928,24 @@ fn run_curriculum_audit() {
                                     || content.contains("import pytest")
                             }
                             ".java" => content.contains("import") || content.contains("@Test"),
-                            ".jmx" => content.contains("<HTTPSamplerProxy") || content.contains("<TestPlan"),
-                            ".js" => content.contains("import") || content.contains("export") || content.contains("http.get"),
-                            ".yaml" => content.contains("launchApp") || content.contains("openLink") || content.contains("tapOn"),
-                            ".yml" => content.contains("jobs:") && (content.contains("runs-on") || content.contains("uses:")),
+                            ".jmx" => {
+                                content.contains("<HTTPSamplerProxy")
+                                    || content.contains("<TestPlan")
+                            }
+                            ".js" => {
+                                content.contains("import")
+                                    || content.contains("export")
+                                    || content.contains("http.get")
+                            }
+                            ".yaml" => {
+                                content.contains("launchApp")
+                                    || content.contains("openLink")
+                                    || content.contains("tapOn")
+                            }
+                            ".yml" => {
+                                content.contains("jobs:")
+                                    && (content.contains("runs-on") || content.contains("uses:"))
+                            }
                             _ => !content.trim().is_empty(),
                         };
                         if has_content {

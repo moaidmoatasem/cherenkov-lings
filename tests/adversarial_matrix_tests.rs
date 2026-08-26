@@ -271,9 +271,12 @@ fn test_stress_ast_analysis_on_10000_lines() {
     assert_eq!(report.anti_patterns.len(), 0);
     assert_eq!(report.locator_quality_score, 100.0);
     assert!(!report.has_wait_for_timeout);
+    // Regression guard, not a latency SLA — see the note in
+    // adversarial_allure_triage_stress_tests.rs. Isolated runtime is ~300ms, so
+    // the previous 500ms bound left under 2x headroom on a contended runner.
     assert!(
-        elapsed.as_millis() < 500,
-        "10,000 lines AST analysis must execute under 500ms (took {}ms)",
+        elapsed.as_millis() < 5000,
+        "10,000 line static analysis should stay well under 5s (took {}ms)",
         elapsed.as_millis()
     );
 }

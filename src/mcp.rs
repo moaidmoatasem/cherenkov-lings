@@ -51,7 +51,10 @@ fn render_hint(exercise_dir: &Path, args: &Value) -> Option<String> {
             level + 1
         )
     } else {
-        format!("Hint {} of {} — final level, this reveals the solution.", level, total)
+        format!(
+            "Hint {} of {} — final level, this reveals the solution.",
+            level, total
+        )
     };
 
     Some(format!("{}\n\n---\n{}", text, footer))
@@ -166,10 +169,8 @@ pub fn run_mcp_server() {
                                     }
                                     "get_hints" => {
                                         let dir = args["exercise_dir"].as_str().unwrap_or("");
-                                        let text =
-                                            render_hint(Path::new(dir), args).unwrap_or_else(|| {
-                                                "No hints found.".to_string()
-                                            });
+                                        let text = render_hint(Path::new(dir), args)
+                                            .unwrap_or_else(|| "No hints found.".to_string());
                                         res.result = Some(json!({
                                             "content": [{ "type": "text", "text": text }]
                                         }));
