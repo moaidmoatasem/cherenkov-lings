@@ -52,9 +52,13 @@ jobs:
     - name: Install Dependencies
       run: |
         pip install -r crucible/backend/requirements.txt
-        # ruff is pinned: an unpinned install changes rule sets between releases,
-        # so the same commit can lint clean one day and fail the next.
-        pip install ruff==0.15.12 pytest pytest-asyncio pytest-json-report
+        # Every version below carries a ceiling on purpose. An unpinned ruff
+        # changes rule sets between releases, so the same commit lints clean one
+        # day and fails the next; the identical drift walked starlette onto a
+        # TestClient that wants httpx2 instead of httpx. And httpx is declared
+        # nowhere else in the tree even though every suite in this job imports
+        # TestClient, so collection died before a single test ran.
+        pip install ruff==0.15.12 'pytest>=8,<10' 'pytest-asyncio>=0.23,<2' 'pytest-json-report>=1.5,<2' 'httpx>=0.27,<1.0'
 
     - name: Lint Backend Code
       run: ruff check crucible/ tests/
@@ -157,7 +161,7 @@ jobs:
         # and drive it through fastapi's TestClient, which needs httpx; the
         # foundations and tool-decisions solutions import requests.
         pip install -r crucible/backend/requirements.txt
-        pip install pytest pytest-json-report requests httpx
+        pip install 'pytest>=8,<10' 'pytest-json-report>=1.5,<2' 'requests>=2.31,<3' 'httpx>=0.27,<1.0'
 
     # Several drills call the live Crucible on :8081 rather than a fake — that is
     # the lesson in 00_foundations/04_dont_test_the_mock, and 05_one_thing_per_test,
