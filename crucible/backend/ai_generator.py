@@ -1,7 +1,22 @@
-def generate_pytest_from_openapi(openapi_url: str) -> str:
-    """Fetches the FastAPI /openapi.json and auto-generates basic Pytest endpoint validation tests."""
-    return f"""import pytest
-import requests
+"""Spec-driven Pytest scaffolding.
+
+Reads an OpenAPI document and emits one Pytest function per GET operation that
+takes no required parameters — the subset that can be validated with nothing
+but a base URL. Anything needing a body, a path parameter, or auth is reported
+as a skipped stub rather than silently dropped, so the learner can see what the
+generator declined to guess at.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+import urllib.error
+import urllib.request
+from typing import Any
+
+# A generated module that hammers a live service should not hang a CI job.
+FETCH_TIMEOUT_SECONDS = 5.0
 
 DEFAULT_BASE_URL = "http://localhost:8081"
 
