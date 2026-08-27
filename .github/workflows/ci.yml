@@ -58,13 +58,35 @@ jobs:
         # TestClient that wants httpx2 instead of httpx. And httpx is declared
         # nowhere else in the tree even though every suite in this job imports
         # TestClient, so collection died before a single test ran.
-        pip install ruff==0.15.12 'pytest>=8,<10' 'pytest-asyncio>=0.23,<2' 'pytest-json-report>=1.5,<2' 'httpx>=0.27,<1.0'
+        # requests joins them because this job runs the empirical adversarial
+        # suite, which drives verify_all_exercises.py over 00_foundations, and
+        # drills 04 and 05 import requests to call the live Crucible.
+        pip install ruff==0.15.12 'pytest>=8,<10' 'pytest-asyncio>=0.23,<2' 'pytest-json-report>=1.5,<2' 'httpx>=0.27,<1.0' 'requests>=2.31,<3'
 
     - name: Lint Backend Code
       run: ruff check crucible/ tests/
 
     - name: Run Chaos & Pathology Pytest Suite
       run: python -m pytest tests/test_micro_crucible_chaos.py -v
+
+    # The empirical adversarial suite verifies every 00_foundations drill, and
+    # 04_dont_test_the_mock / 05_one_thing_per_test hit the real Crucible on
+    # :8081 rather than a fake -- that is the lesson in drill 04. Without the
+    # backend up they fail to connect, so the suite could never reach 10/10.
+    # Same rationale as python_exercise_validation, which already does this.
+    - name: Start Micro-Crucible Backend
+      # NOTE: keep `exit 1` off the start of its own line. src/pipeline/runner.rs
+      # simulates a bare `exit 1` as a deliberately-failing step, and
+      # tests/pipeline_tests.rs runs this very file through that simulator and
+      # asserts it comes out green. `... && exit 1` is not matched by that heuristic.
+      run: |
+        nohup python -m uvicorn crucible.backend.app:app --host 127.0.0.1 --port 8081 > /tmp/crucible-backend.log 2>&1 &
+        for i in $(seq 1 30); do
+          curl -sf http://127.0.0.1:8081/health > /dev/null && echo "Crucible backend healthy after ${i}s" && exit 0
+          sleep 1
+        done
+        cat /tmp/crucible-backend.log >&2
+        echo "Crucible backend did not become healthy within 30s" >&2 && exit 1
 
     # The Sprint 4 API and fuzz suites live under crucible/backend/tests and
     # were never invoked by CI, so /api/review, /api/pipeline, /api/reports and

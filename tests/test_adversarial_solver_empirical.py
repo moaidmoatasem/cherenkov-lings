@@ -74,7 +74,8 @@ def run_cargo(args: list[str]) -> tuple[int, str, str]:
     )
     return proc.returncode, proc.stdout, proc.stderr
 
-def test_suite():
+def run_empirical_suite() -> tuple[int, int]:
+    """Runs every scenario and reports (passed_scenarios, total_scenarios)."""
     print("=" * 80)
     print("STARTING COMPREHENSIVE EMPIRICAL ADVERSARIAL TEST SUITE (CHALLENGER 1)")
     print("=" * 80)
@@ -305,10 +306,19 @@ def test_suite():
 
     if passed_scenarios == total_scenarios:
         print("[VERDICT] ALL EMPIRICAL CHALLENGES SATISFIED -> APPROVE")
-        return 0
     else:
         print("[VERDICT] FAILURES ENCOUNTERED -> REQUEST_CHANGES")
-        return 1
+
+    return passed_scenarios, total_scenarios
+
+def test_suite():
+    """pytest entry point: every empirical scenario must pass."""
+    passed_scenarios, total_scenarios = run_empirical_suite()
+    assert passed_scenarios == total_scenarios, (
+        f"{total_scenarios - passed_scenarios} of {total_scenarios} empirical adversarial "
+        "scenarios failed; see the [FAIL] lines in the captured output above."
+    )
 
 if __name__ == "__main__":
-    sys.exit(test_suite())
+    passed, total = run_empirical_suite()
+    sys.exit(0 if passed == total else 1)
