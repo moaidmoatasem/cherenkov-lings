@@ -1890,6 +1890,12 @@ mod tests {
             extract_drill_id_from_path("exercises\\00_foundations\\01_what_is_a_test\\exercise.py"),
             "01_what_is_a_test"
         );
+        // Mixed conventions turn up when one half of a path is joined by the
+        // host and the other half was stored by a different one.
+        assert_eq!(
+            extract_drill_id_from_path("exercises\\04_perf_k6_js/06_rps_spike\\solution.js"),
+            "06_rps_spike"
+        );
     }
 
     #[test]
