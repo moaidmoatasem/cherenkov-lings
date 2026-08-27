@@ -139,7 +139,7 @@ jobs:
           sleep 1
         done
 
-    - name: Run Learn E2E Suite
+    - name: Run Learn & Triage E2E Suite
       run: |
         npm ci
         npx playwright install --with-deps chromium
