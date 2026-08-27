@@ -1,5 +1,11 @@
-fastapi>=0.110.0
-uvicorn[standard]>=0.28.0
-pydantic>=2.0.0
-python-multipart>=0.0.9
-PyJWT>=2.8.0
+# Upper bounds are as deliberate here as the pinned ruff in CI. `fastapi>=0.110.0`
+# on its own carries no ceiling on starlette, so master floated onto starlette
+# 1.6, whose TestClient swapped httpx for httpx2 and stopped collecting the
+# backend suite on a commit nobody had touched. Raise these on purpose, with a
+# green suite as the evidence.
+fastapi>=0.110.0,<0.142.0
+starlette>=0.46.0,<1.1.0
+uvicorn[standard]>=0.28.0,<0.53.0
+pydantic>=2.0.0,<3.0.0
+python-multipart>=0.0.9,<0.1.0
+PyJWT>=2.8.0,<3.0.0

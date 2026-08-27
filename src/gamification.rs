@@ -977,6 +977,11 @@ pub struct NextDrillRecommendation {
 /// normalisation, `Path` on Unix treats `a\b\exercise.ts` as one component
 /// and the whole string comes back instead of the drill id.
 pub fn extract_drill_id_from_path(path_str: &str) -> String {
+    // Separators are normalised first. This takes a path as a *string* from
+    // wherever the caller found it — a watcher event, a stored progress record,
+    // an API payload — and `Path` splits on `\` only when compiled for Windows.
+    // On Linux a Windows-style path is therefore one long filename, and every
+    // component collapses into the drill id that comes back.
     let normalized = path_str.replace('\\', "/");
     let p = Path::new(&normalized);
 
@@ -1885,6 +1890,18 @@ mod tests {
             "01_gui_mode_antipattern"
         );
         assert_eq!(extract_drill_id_from_path("01_assert.py"), "01_assert");
+        // A Windows-style path resolves the same way on every target: the
+        // watcher hands these to us verbatim, and CI runs both.
+        assert_eq!(
+            extract_drill_id_from_path("exercises\\00_foundations\\01_what_is_a_test\\exercise.py"),
+            "01_what_is_a_test"
+        );
+        // Mixed conventions turn up when one half of a path is joined by the
+        // host and the other half was stored by a different one.
+        assert_eq!(
+            extract_drill_id_from_path("exercises\\04_perf_k6_js/06_rps_spike\\solution.js"),
+            "06_rps_spike"
+        );
     }
 
     #[test]
