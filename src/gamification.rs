@@ -969,9 +969,16 @@ pub struct NextDrillRecommendation {
     pub command: String,
 }
 
-/// Extract drill identifier from arbitrary file path or folder
+/// Extract drill identifier from arbitrary file path or folder.
+///
+/// Backslashes are normalised to `/` first. Paths reach this function from
+/// `.cherenkov-progress.json` and from CLI arguments, so a progress file
+/// written on Windows is routinely read back on Linux (and in CI). Without the
+/// normalisation, `Path` on Unix treats `a\b\exercise.ts` as one component
+/// and the whole string comes back instead of the drill id.
 pub fn extract_drill_id_from_path(path_str: &str) -> String {
-    let p = Path::new(path_str);
+    let normalized = path_str.replace('\\', "/");
+    let p = Path::new(&normalized);
 
     // Check if filename is exercise.* or solution.* or hints.md or theory.md
     if let Some(file_name) = p.file_name().and_then(|n| n.to_str()) {
