@@ -412,6 +412,41 @@ fn test_tier2_proxy_zero_delay_and_negative_duration_handling() {
 }
 
 #[tokio::test]
+async fn test_spawn_background_binds_before_it_returns() {
+    let (upstream_addr, _req_rx) = spawn_mock_upstream_server().await;
+
+    let occupied_listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let proxy_addr = occupied_listener.local_addr().unwrap();
+
+    // The port is still held here. An eager bind surfaces that as an error the
+    // caller can act on; a bind deferred into the spawned task loses it inside
+    // a detached future, and the CLI cheerfully reports the proxy as active.
+    let conflict = ProxyServer::spawn_background(ProxyConfig::new(proxy_addr, upstream_addr)).await;
+    assert!(
+        conflict.is_err(),
+        "spawn_background must bind before returning, so a taken port is an error"
+    );
+
+    drop(occupied_listener);
+
+    let (handle, shutdown_tx) =
+        ProxyServer::spawn_background(ProxyConfig::new(proxy_addr, upstream_addr))
+            .await
+            .expect("spawn proxy");
+
+    // No sleep and no retry loop: the contract is that the listener is already
+    // accepting once this future resolves. Every proxy test in the suite relies
+    // on it, and on a loaded runner they all failed with ConnectionRefused when
+    // it did not hold.
+    TcpStream::connect(proxy_addr)
+        .await
+        .expect("proxy accepts immediately after spawn_background resolves");
+
+    let _ = shutdown_tx.send(());
+    let _ = handle.await;
+}
+
+#[tokio::test]
 async fn test_tier2_proxy_unreachable_upstream_returns_502_bad_gateway() {
     // Find an unused ephemeral port and close it immediately
     let dead_listener = TcpListener::bind("127.0.0.1:0").await.unwrap();

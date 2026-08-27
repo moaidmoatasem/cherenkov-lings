@@ -324,9 +324,21 @@ impl ProxyServer {
     /// Runs the proxy server loop until a message is received on `shutdown_rx`.
     pub async fn run(
         &self,
-        mut shutdown_rx: oneshot::Receiver<()>,
+        shutdown_rx: oneshot::Receiver<()>,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let listener = TcpListener::bind(self.config.listen_addr).await?;
+        self.serve(listener, shutdown_rx).await
+    }
+
+    /// Accepts on an already-bound listener until `shutdown_rx` fires.
+    ///
+    /// Split out from [`ProxyServer::run`] so that [`ProxyServer::spawn_background`]
+    /// can bind before it hands control back to its caller.
+    async fn serve(
+        &self,
+        listener: TcpListener,
+        mut shutdown_rx: oneshot::Receiver<()>,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let config = Arc::clone(&self.config);
         let rng = Arc::clone(&self.rng);
 
@@ -365,8 +377,16 @@ impl ProxyServer {
         let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
         let server = Self::new(config);
 
+        // Bind here rather than inside the task. Callers connect to the address
+        // the instant this future resolves, and a bind that happens after the
+        // return is a race they lose whenever the runtime schedules the task
+        // late — which is exactly what a loaded CI runner does. Binding first
+        // also turns a port conflict into the `Err` the CLI already prints,
+        // instead of a proxy that reports itself active and is not listening.
+        let listener = TcpListener::bind(server.config.listen_addr).await?;
+
         let handle = tokio::spawn(async move {
-            let _ = server.run(shutdown_rx).await;
+            let _ = server.serve(listener, shutdown_rx).await;
         });
 
         Ok((handle, shutdown_tx))
