@@ -55,6 +55,11 @@ jobs:
         # ruff is pinned: an unpinned install changes rule sets between releases,
         # so the same commit can lint clean one day and fail the next.
         pip install ruff==0.15.12 pytest pytest-asyncio pytest-json-report
+        # starlette.testclient needs an HTTP client and this job installed none,
+        # so every suite here died at collection with "requires the httpx2
+        # package". Which client starlette asks for moves between releases, so
+        # install both rather than chase it; whichever is unused is inert.
+        pip install requests httpx httpx2
 
     - name: Lint Backend Code
       run: ruff check crucible/ tests/

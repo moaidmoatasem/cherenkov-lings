@@ -314,6 +314,30 @@ fn test_extract_drill_id_from_path_robustness() {
 }
 
 #[test]
+fn test_extract_drill_id_is_platform_independent() {
+    // A .cherenkov-progress.json written on Windows is read back on Linux (and
+    // in CI), so separator handling cannot depend on the host. Before the
+    // separator normalisation, Path on Unix treated a backslash path as one
+    // component and handed back the whole string instead of the drill id.
+    let windows = r"exercises\04_perf_k6_js\06_rps_spike\solution.js";
+    let unix = "exercises/04_perf_k6_js/06_rps_spike/solution.js";
+    let mixed = r"exercises\04_perf_k6_js/06_rps_spike\solution.js";
+
+    assert_eq!(extract_drill_id_from_path(windows), "06_rps_spike");
+    assert_eq!(extract_drill_id_from_path(unix), "06_rps_spike");
+    assert_eq!(
+        extract_drill_id_from_path(mixed),
+        "06_rps_spike",
+        "a path assembled across both conventions must still resolve"
+    );
+    assert_eq!(
+        extract_drill_id_from_path(windows),
+        extract_drill_id_from_path(unix),
+        "the same drill must not get two different ids by host"
+    );
+}
+
+#[test]
 fn test_dashboard_with_lings_toml_file_integration() {
     let cfg = config::load_config("lings.toml").expect("lings.toml must load cleanly");
     let state = GamificationState::default();
