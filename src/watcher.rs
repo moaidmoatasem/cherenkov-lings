@@ -1,5 +1,7 @@
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::Path;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::channel;
 use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
@@ -64,6 +66,12 @@ pub async fn watch_exercises(
 
     // The debounce loop runs in a blocking thread so we don't starve the tokio executor
     let tx_clone = tx.clone();
+    // Blocking tasks cannot be cancelled, and dropping the runtime waits for the
+    // ones still running. Without a way to tell this loop to stop, its only exit
+    // was a failed send — which needs a file event that may never come — so the
+    // process hung on shutdown after Ctrl+C had already printed its goodbye.
+    let running = Arc::new(AtomicBool::new(true));
+    let running_loop = Arc::clone(&running);
     tokio::task::spawn_blocking(move || {
         // Keep watcher alive in this thread
         let _watcher = watcher;
@@ -71,7 +79,7 @@ pub async fn watch_exercises(
         let mut last_path: Option<String> = None;
         let debounce_window = Duration::from_millis(50);
 
-        loop {
+        while running_loop.load(Ordering::Relaxed) {
             match std_rx.recv_timeout(debounce_window) {
                 Ok(Ok(event)) => {
                     if (event.kind.is_modify() || event.kind.is_create())
@@ -105,6 +113,9 @@ pub async fn watch_exercises(
 
     // Wait for Ctrl+C to exit gracefully
     tokio::signal::ctrl_c().await?;
+    // Release the debounce loop before returning: it polls on the same 50ms
+    // window, so it observes this well before the runtime is dropped.
+    running.store(false, Ordering::Relaxed);
     println!("\n👋  Cherenkov-lings exiting. Keep learning!");
 
     Ok(())
