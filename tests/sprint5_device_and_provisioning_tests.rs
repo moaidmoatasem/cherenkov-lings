@@ -56,16 +56,24 @@ fn missing_emulator_binary_is_an_error_not_a_panic() {
             assert_eq!(binary, "cherenkov-emulator-that-does-not-exist");
         }
         Err(other) => panic!("expected SpawnFailed, got {other:?}"),
-        Ok(pid) => panic!("a nonexistent binary somehow spawned pid {pid}"),
+        Ok(mut child) => {
+            // Should be unreachable, but never leave a stray process behind.
+            let _ = child.kill();
+            panic!("a nonexistent binary somehow spawned pid {}", child.id());
+        }
     }
 }
 
 #[test]
 fn spawn_failure_message_names_the_binary_and_points_at_path() {
     let dm = DeviceManager::with_emulator_binary("cherenkov-emulator-that-does-not-exist");
-    let err = dm
-        .start_android_emulator("Pixel_6_Pro_API_33")
-        .expect_err("binary does not exist");
+    let err = match dm.start_android_emulator("Pixel_6_Pro_API_33") {
+        Err(e) => e,
+        Ok(mut child) => {
+            let _ = child.kill();
+            panic!("binary should not exist");
+        }
+    };
 
     let rendered = err.to_string();
     assert!(
@@ -83,10 +91,14 @@ fn empty_avd_name_fails_before_any_process_is_spawned() {
     let dm = DeviceManager::new();
     // Validation must precede the spawn, otherwise a real `emulator` on PATH
     // would be launched with a garbage AVD on a machine that has the SDK.
-    assert_eq!(
-        dm.start_android_emulator(""),
-        Err(DeviceError::EmptyAvdName)
-    );
+    // Child is neither PartialEq nor Debug-comparable, so match on the error.
+    match dm.start_android_emulator("") {
+        Err(e) => assert_eq!(e, DeviceError::EmptyAvdName),
+        Ok(mut child) => {
+            let _ = child.kill();
+            panic!("an empty AVD name reached the spawn");
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
