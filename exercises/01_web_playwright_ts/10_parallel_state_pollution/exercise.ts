@@ -14,7 +14,7 @@ let globalUserToken = 'shared_admin_token_default';
 
 test.describe.parallel('User Profile Mutations (SHARED STATE POLLUTION)', () => {
   test('worker A updates username to Alice', async ({ page }) => {
-    await page.goto('http://localhost:8080/profile');
+    await page.goto('/profile');
     // Uses shared mutable global state
     await page.evaluate((token) => localStorage.setItem('auth_token', token), globalUserToken);
 
@@ -26,7 +26,7 @@ test.describe.parallel('User Profile Mutations (SHARED STATE POLLUTION)', () => 
   });
 
   test('worker B updates username to Bob', async ({ page }) => {
-    await page.goto('http://localhost:8080/profile');
+    await page.goto('/profile');
     // Collides with worker A's token update
     await page.evaluate((token) => localStorage.setItem('auth_token', token), globalUserToken);
 

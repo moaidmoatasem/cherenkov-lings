@@ -24,5 +24,5 @@ await page.route('**/products*', async (route) => {
 +     body: JSON.stringify({ total: 3, products: [...] }),
 +   });
 + });
-  await page.goto('http://localhost:8080/products');
+  await page.goto('/products');
 ```

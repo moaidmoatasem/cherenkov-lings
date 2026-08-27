@@ -9,7 +9,7 @@ import { test, expect } from '@playwright/test';
 // Anti-pattern: Clicking directly with mouse without testing Tab key focus sequence
 // TODO: Assert sequential keyboard Tab navigation across interactive form fields
 test('tests form without keyboard navigation', async ({ page }) => {
-  await page.goto('http://localhost:8080/transfer');
+  await page.goto('/transfer');
   await page.fill('#recipient', 'ACC-002');
   await page.click('#transfer-btn');
 });

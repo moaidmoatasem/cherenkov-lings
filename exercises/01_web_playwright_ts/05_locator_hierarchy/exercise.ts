@@ -13,7 +13,7 @@ import { test, expect } from "@playwright/test";
 // TODO: Replace the fragile CSS selector with a semantic getByRole locator.
 
 test("checkout button is clickable", async ({ page }) => {
-  await page.goto("http://localhost:8080/checkout");
+  await page.goto("/checkout");
 
   // Anti-pattern: tightly coupled to CSS implementation detail
   // Breaks when: class renamed, element moved, CSS-in-JS changes hash

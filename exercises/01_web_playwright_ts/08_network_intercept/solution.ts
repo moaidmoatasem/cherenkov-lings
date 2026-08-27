@@ -31,7 +31,7 @@ test('display catalog items with network interception stub (RESILIENT)', async (
     });
   });
 
-  await page.goto('http://localhost:8080/products');
+  await page.goto('/products');
 
   const productList = page.getByTestId('product-item').or(page.locator('.product-card'));
   // Fast and deterministic response without external network dependence

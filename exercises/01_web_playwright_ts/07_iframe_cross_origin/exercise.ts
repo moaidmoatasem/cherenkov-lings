@@ -12,7 +12,7 @@ import { test, expect } from '@playwright/test';
 // TODO: Use page.frameLocator() to target elements inside the sandboxed payment iframe
 
 test('submit payment through sandboxed payment gateway (BRITTLE)', async ({ page }) => {
-  await page.goto('http://localhost:8080/payment');
+  await page.goto('/payment');
 
   // Fails because the input is inside an iframe (e.g. <iframe id="stripe-frame" ...>)
   const cardInput = page.locator('#card-number');

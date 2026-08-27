@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test';
  * frame reloading, lifecycle events, and cross-origin security contexts.
  */
 test('submit payment through sandboxed payment gateway (RESILIENT)', async ({ page }) => {
-  await page.goto('http://localhost:8080/payment');
+  await page.goto('/payment');
 
   // Scope locators to the payment iframe
   const paymentFrame = page.frameLocator('iframe[name="payment-gateway"], iframe#stripe-frame, iframe.payment-frame');

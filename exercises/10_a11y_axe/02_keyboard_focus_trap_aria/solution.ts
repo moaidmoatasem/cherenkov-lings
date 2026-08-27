@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('asserts full keyboard Tab navigation and focus visibility', async ({ page }) => {
-  await page.goto('http://localhost:8080/transfer');
+  await page.goto('/transfer');
 
   const recipientInput = page.getByLabel('Recipient Account ID:');
   await recipientInput.focus();

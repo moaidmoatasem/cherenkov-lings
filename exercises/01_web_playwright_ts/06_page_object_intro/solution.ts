@@ -25,7 +25,7 @@ export class CheckoutPage {
   }
 
   async goto() {
-    await this.page.goto('http://localhost:8080/checkout');
+    await this.page.goto('/checkout');
   }
 
   async fillOrder(itemId: string, quantity: number) {
