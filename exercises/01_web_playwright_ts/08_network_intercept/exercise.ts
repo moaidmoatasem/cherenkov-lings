@@ -12,7 +12,7 @@ import { test, expect } from '@playwright/test';
 
 test('display catalog items from slow backend (FLAWED)', async ({ page }) => {
   // Test attempts to load products from a slow endpoint that takes 4000ms+ or fails under chaos
-  await page.goto('http://localhost:8080/products');
+  await page.goto('/products');
 
   // Short timeout fails because network is delayed
   const productList = page.getByTestId('product-item');

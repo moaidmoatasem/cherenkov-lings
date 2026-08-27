@@ -14,7 +14,7 @@ import { test, expect } from "@playwright/test";
 // TODO: Add an expect() call to verify the page title or a key element is visible.
 
 test("homepage loads successfully", async ({ page }) => {
-  await page.goto("http://localhost:8080");
+  await page.goto("/");
   // Right now we go to the page but never check anything.
   // Add: await expect(page).toHaveTitle(/Cherenkov|SDET|checkout/i);
   // Or:  await expect(page.getByRole("main")).toBeVisible();

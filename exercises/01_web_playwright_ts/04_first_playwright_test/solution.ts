@@ -5,9 +5,9 @@ import { test, expect } from "@playwright/test";
 
 test("homepage loads and displays main content", async ({ page }) => {
   // ACT: go to the app
-  await page.goto("http://localhost:8080");
+  await page.goto("/");
 
   // ASSERT: verify the page actually rendered something meaningful
-  await expect(page).toHaveURL(/localhost:8080/);
+  await expect(page).toHaveURL("/");
   await expect(page.getByRole("main")).toBeVisible();
 });

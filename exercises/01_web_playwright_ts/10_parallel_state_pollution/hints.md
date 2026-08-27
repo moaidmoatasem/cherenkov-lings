@@ -13,7 +13,7 @@ Use Playwright's `browser.newContext({ storageState: ... })` or separate test wo
 + const context = await browser.newContext({
 +   storageState: {
 +     cookies: [{ name: 'session_id', value: `sess_worker_${workerIndex}`, domain: 'localhost', path: '/' }],
-+     origins: [{ origin: 'http://localhost:8080', localStorage: [{ name: 'auth_token', value: `token_${workerIndex}` }] }],
++     origins: [{ origin: APP_ORIGIN, localStorage: [{ name: 'auth_token', value: `token_${workerIndex}` }] }],
 +   },
 + });
 ```

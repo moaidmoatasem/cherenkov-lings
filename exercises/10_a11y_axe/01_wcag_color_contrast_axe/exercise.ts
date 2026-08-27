@@ -9,7 +9,7 @@ import { test, expect } from '@playwright/test';
 // Anti-pattern: Verifying only visual layout without accessibility tree assertions
 // TODO: Assert accessible element names and contrast compliance
 test('verifies checkout button accessibility', async ({ page }) => {
-  await page.goto('http://localhost:8080/checkout');
+  await page.goto('/checkout');
   
   // Brittle check: Only asserts element is present in DOM
   const btn = page.locator('#checkout-btn');
