@@ -969,9 +969,16 @@ pub struct NextDrillRecommendation {
     pub command: String,
 }
 
-/// Extract drill identifier from arbitrary file path or folder
+/// Extract drill identifier from arbitrary file path or folder.
+///
+/// Accepts either separator regardless of the host OS. The watcher hands this
+/// function backslash paths on Windows, but `Path` only treats `\` as a
+/// separator when compiled for Windows — so on Linux the whole string came back
+/// as one component and the drill id was the entire path. Normalising first
+/// makes the result depend on the path, not on where the code happens to run.
 pub fn extract_drill_id_from_path(path_str: &str) -> String {
-    let p = Path::new(path_str);
+    let normalised = path_str.replace('\\', "/");
+    let p = Path::new(&normalised);
 
     // Check if filename is exercise.* or solution.* or hints.md or theory.md
     if let Some(file_name) = p.file_name().and_then(|n| n.to_str()) {

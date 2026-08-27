@@ -55,6 +55,11 @@ jobs:
         # ruff is pinned: an unpinned install changes rule sets between releases,
         # so the same commit can lint clean one day and fail the next.
         pip install ruff==0.15.12 pytest pytest-asyncio pytest-json-report
+        # starlette.testclient needs an HTTP client, and which one depends on the
+        # starlette version pip resolves: older releases import httpx, newer ones
+        # import httpx2. fastapi is unpinned here, so install both rather than
+        # let the same commit collect fine one day and fail the next.
+        pip install httpx httpx2
 
     - name: Lint Backend Code
       run: ruff check crucible/ tests/
@@ -157,7 +162,9 @@ jobs:
         # and drive it through fastapi's TestClient, which needs httpx; the
         # foundations and tool-decisions solutions import requests.
         pip install -r crucible/backend/requirements.txt
-        pip install pytest pytest-json-report requests httpx
+        # httpx2 alongside httpx for the same reason as above: the devsecops and
+        # contract-pact solutions drive the app through fastapi's TestClient.
+        pip install pytest pytest-json-report requests httpx httpx2
 
     # Several drills call the live Crucible on :8081 rather than a fake — that is
     # the lesson in 00_foundations/04_dont_test_the_mock, and 05_one_thing_per_test,
