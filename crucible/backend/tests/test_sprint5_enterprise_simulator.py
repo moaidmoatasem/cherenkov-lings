@@ -20,7 +20,7 @@ from crucible.backend.ai_generator import (
     generate_pytest_from_openapi,
 )
 from crucible.backend.app import app
-from crucible.backend.chaos import parse_chaos_header
+from crucible.backend.chaos import DB_BACKED_PATHS, is_db_backed, parse_chaos_header
 from crucible.backend.tracing import TracingMiddleware
 
 
@@ -86,6 +86,77 @@ def test_db_timeout_false_does_not_trigger_the_failure(client: TestClient) -> No
     res = client.get("/search", params={"q": "python"}, headers={"X-Chaos": "db_timeout=false"})
 
     assert res.status_code == 200
+
+
+@pytest.mark.parametrize(
+    ("method", "path"),
+    [
+        ("get", "/search"),
+        ("get", "/checkout"),
+        ("get", "/balance"),
+        ("get", "/products"),
+        ("post", "/checkout"),
+        ("post", "/transfer"),
+    ],
+)
+def test_db_timeout_takes_down_every_datastore_backed_endpoint(
+    client: TestClient, method: str, path: str
+) -> None:
+    # The flag used to be wired into /search alone, so a drill that pointed at
+    # the ledger or the catalog saw a healthy 200 while claiming to simulate a
+    # database outage.
+    res = client.request(method, path, headers={"X-Chaos": "db_timeout=true"}, json={})
+
+    assert res.status_code == 504, f"{method.upper()} {path} ignored db_timeout"
+    assert res.json()["status"] == "error"
+
+
+def test_db_timeout_answers_api_prefixed_aliases_identically(client: TestClient) -> None:
+    # /checkout is mounted twice; a drill written against either spelling must
+    # see the same outage.
+    bare = client.get("/checkout", headers={"X-Chaos": "db_timeout=true"})
+    aliased = client.get("/api/checkout", headers={"X-Chaos": "db_timeout=true"})
+
+    assert bare.status_code == aliased.status_code == 504
+
+
+def test_db_timeout_leaves_the_health_probe_green(client: TestClient) -> None:
+    # Deliberate: a liveness probe that answers 200 through a database outage is
+    # the point of the drill, not an oversight.
+    assert client.get("/health", headers={"X-Chaos": "db_timeout=true"}).status_code == 200
+    assert client.get("/", headers={"X-Chaos": "db_timeout=true"}).status_code == 200
+
+
+def test_db_timeout_does_not_touch_unrelated_endpoints(client: TestClient) -> None:
+    res = client.post(
+        "/auth/login",
+        json={"username": "user1", "password": "pass1"},
+        headers={"X-Chaos": "db_timeout=true"},
+    )
+
+    assert res.status_code != 504
+
+
+@pytest.mark.parametrize("path", sorted(DB_BACKED_PATHS))
+def test_every_declared_db_path_is_recognised_bare_and_prefixed(path: str) -> None:
+    assert is_db_backed(path)
+    assert is_db_backed(f"/api{path}")
+    assert is_db_backed(f"{path}/")
+
+
+def test_is_db_backed_rejects_lookalike_paths() -> None:
+    for path in ["/health", "/", "/searching", "/checkout/confirm", "/api", "/apisearch"]:
+        assert not is_db_backed(path), f"{path} should not be treated as datastore-backed"
+
+
+def test_db_timeout_is_answered_before_the_endpoint_runs(client: TestClient) -> None:
+    # /products supports pagination; a 504 must not depend on the query being
+    # valid, because the datastore is what failed, not the request.
+    res = client.get(
+        "/products", params={"page": "not-a-number"}, headers={"X-Chaos": "db_timeout=true"}
+    )
+
+    assert res.status_code == 504
 
 
 # ---------------------------------------------------------------------------

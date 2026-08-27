@@ -7,7 +7,7 @@ from typing import Any
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import JSONResponse, Response
 
 
 def parse_duration_ms(val_str: str) -> float:
@@ -32,6 +32,10 @@ def parse_chaos_header(header_val: str | None) -> dict[str, Any]:
       - idempotency_conflict=true: triggers 409 Conflict on checkout
       - drop_partial=true: triggers partial upload failure (HTTP 400)
       - drop_after=<n>: drops SSE stream after N emitted events
+      - db_timeout=true: datastore outage; every path in DB_BACKED_PATHS
+        answers 504 before its endpoint runs, while /health stays green
+      - dast_xss=true: reflects an unescaped <script> payload built from the
+        caller's own query into the /search results
     """
     if not header_val:
         return {}
@@ -68,6 +72,37 @@ def parse_chaos_header(header_val: str | None) -> dict[str, Any]:
     return directives
 
 
+# Endpoints served out of the simulated datastore. `db_timeout=true` takes
+# exactly these down.
+#
+# /health is deliberately NOT here. A liveness probe that answers 200 while
+# every query behind it times out is its own lesson: the drill is meant to show
+# a green health check sitting on top of a dead database, which is why so much
+# real monitoring misses an outage entirely.
+DB_BACKED_PATHS = frozenset(
+    {
+        "/checkout",
+        "/balance",
+        "/transfer",
+        "/products",
+        "/search",
+    }
+)
+
+
+def is_db_backed(path: str) -> bool:
+    """True when `path` reads or writes the simulated datastore.
+
+    Several endpoints are mounted under both `/x` and `/api/x`; both spellings
+    have to answer the same way or a drill passes on one URL and fails on the
+    other.
+    """
+    normalized = path[4:] if path.startswith("/api/") else path
+    if len(normalized) > 1:
+        normalized = normalized.rstrip("/")
+    return normalized in DB_BACKED_PATHS
+
+
 class ChaosMiddleware(BaseHTTPMiddleware):
     """Middleware injecting artificial latency, jitter, and response mutations."""
 
@@ -87,6 +122,15 @@ class ChaosMiddleware(BaseHTTPMiddleware):
                 actual_delay_ms += random.uniform(-jitter_ms, jitter_ms)
             actual_delay_ms = max(0.0, actual_delay_ms)
             await asyncio.sleep(actual_delay_ms / 1000.0)
+
+        # A database outage is answered before the endpoint runs: the handler
+        # would otherwise do its work (and burn its own latency simulation)
+        # only to have the result thrown away.
+        if chaos.get("db_timeout") and is_db_backed(request.url.path):
+            return JSONResponse(
+                status_code=504,
+                content={"error": "Database query timeout", "status": "error"},
+            )
 
         response = await call_next(request)
 

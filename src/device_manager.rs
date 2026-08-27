@@ -9,7 +9,7 @@
 //! pure and separated from the spawning halves on purpose: they are what the
 //! tests assert against, without launching anything.
 
-use std::process::Command;
+use std::process::{Child, Command};
 use thiserror::Error;
 
 /// Browser images the mock node supports. Anything else is a caller mistake
@@ -34,6 +34,7 @@ pub enum DeviceError {
     },
 }
 
+#[derive(Debug, Clone)]
 pub struct DeviceManager {
     emulator_binary: String,
 }
@@ -71,19 +72,22 @@ impl DeviceManager {
         ])
     }
 
-    /// Launch an Android emulator and return the spawned process id.
+    /// Launch an Android emulator and hand back the child process.
+    ///
+    /// The handle is returned rather than dropped: a dropped `Child` leaves the
+    /// emulator running with nobody to reap it, and the caller is the only one
+    /// that knows when the device is finished with.
     ///
     /// A missing `emulator` binary is the common case on a CI runner or a
-    /// laptop without the Android SDK, so it is reported as an error the caller
-    /// can degrade on — never a panic that takes the whole CLI session down.
-    pub fn start_android_emulator(&self, avd_name: &str) -> Result<u32, DeviceError> {
+    /// laptop without the Android SDK, so it is reported as a typed error the
+    /// caller can degrade on — never a panic that takes the CLI session down.
+    pub fn start_android_emulator(&self, avd_name: &str) -> Result<Child, DeviceError> {
         let argv = self.emulator_command(avd_name)?;
         println!("Starting Android emulator: {}", avd_name);
 
         Command::new(&argv[0])
             .args(&argv[1..])
             .spawn()
-            .map(|child| child.id())
             .map_err(|e| DeviceError::SpawnFailed {
                 binary: self.emulator_binary.clone(),
                 source_message: e.to_string(),

@@ -427,9 +427,7 @@ async def post_reset() -> ResetResponse:
 async def get_search(request: Request, q: str = "") -> Any:
     """Debounced search autocomplete with out-of-order latency simulation."""
     chaos = getattr(request.state, "chaos", {})
-    if chaos.get("db_timeout"):
-        return JSONResponse(status_code=504, content={"error": "Database query timeout", "status": "error"})
-
+    # db_timeout is handled by ChaosMiddleware for every datastore-backed path.
     query = q.strip()
     if not query:
         return SearchResponse(query=q, results=[], count=0)

@@ -24,7 +24,7 @@ import subprocess
 import time
 import json
 import argparse
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 import atexit
 import signal
 import threading
