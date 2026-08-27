@@ -314,6 +314,8 @@ class AutomatedExerciseVerifier:
         track_cfg = self._tracks_config.get(track_name, {})
         track_ext = track_cfg.get("extension", ".py")
         runner = track_cfg.get("runner", "python")
+        # The helpers below exist precisely so this is not pinned: a flat tier
+        # reports XP totals the engine never actually awards.
         track_id = track_cfg.get("id", track_name)
         tier = _tier_for_track_or_drill(track_id, drill_name)
         exercise_file, solution_file = self._find_exercise_solution(drill_dir, track_ext)

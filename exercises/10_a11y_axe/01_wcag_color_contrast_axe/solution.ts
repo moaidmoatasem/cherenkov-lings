@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('asserts button has accessible name, role, and passes semantic checks', async ({ page }) => {
-  await page.goto('http://localhost:8080/checkout');
+  await page.goto('/checkout');
 
   // Semantic accessibility locator verifying role and accessible name
   const checkoutBtn = page.getByRole('button', { name: 'Confirm Purchase' });

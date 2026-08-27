@@ -7,7 +7,7 @@ import { test, expect } from '@playwright/test';
  * prevents false-positive visual test breaks while preserving layout regression catching.
  */
 test('verify dashboard visual layout with masks and tolerance (RESILIENT)', async ({ page }) => {
-  await page.goto('http://localhost:8080/dashboard');
+  await page.goto('/dashboard');
 
   // Identify volatile dynamic locators
   const dynamicClock = page.getByTestId('live-clock').or(page.locator('.timestamp'));

@@ -11,7 +11,7 @@ import { test, expect } from '@playwright/test';
 // TODO: Refactor using a Page Object Model (POM) class that encapsulates locators and actions
 
 test('complete checkout flow without page object encapsulation (BRITTLE)', async ({ page }) => {
-  await page.goto('http://localhost:8080/checkout');
+  await page.goto('/checkout');
 
   // Step 1: Fill item info using brittle selector
   await page.locator('div.checkout-container input#item-id').fill('item-1');

@@ -11,7 +11,7 @@ import { test, expect } from '@playwright/test';
 // TODO: Add maxDiffPixelRatio tolerance and mask dynamic elements (clocks, badges, session tokens)
 
 test('verify dashboard visual layout without masks (FLAWED)', async ({ page }) => {
-  await page.goto('http://localhost:8080/dashboard');
+  await page.goto('/dashboard');
 
   // Anti-pattern: Strict 0% diff comparison fails when live clock or dynamic session ID updates
   await expect(page).toHaveScreenshot('dashboard-baseline.png');

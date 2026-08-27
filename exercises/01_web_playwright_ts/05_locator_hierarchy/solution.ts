@@ -6,7 +6,7 @@ import { test, expect } from "@playwright/test";
 // It also tests accessibility as a side-effect.
 
 test("checkout button is clickable", async ({ page }) => {
-  await page.goto("http://localhost:8080/checkout");
+  await page.goto("/checkout");
 
   // Semantic locator: finds the button by its accessible role and name
   // Survives any CSS or DOM structure changes
