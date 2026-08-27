@@ -1,0 +1,17 @@
+# PRODUCTION STORY:
+# Aadhaar mAadhaar Localization Failures (2018)
+# Text-based selectors validate one locale. Accessibility identifiers validate
+# the control.
+
+appId: com.example.app
+---
+- launchApp
+- tapOn: "Username"
+- inputText: "user1"
+- tapOn: "Password"
+- inputText: "pass1"
+- tapOn: "Login"
+# A flow that taps without asserting is a macro, not a test: every command
+# above still succeeds on an "Invalid credentials" screen. Assert on something
+# only the authenticated state renders.
+- assertVisible: "Welcome"

@@ -8,6 +8,9 @@ pub use parser::{
     StepDefinition, StrategyDefinition, TriggerConfig, WorkflowDefinition, parse_workflow_file,
     parse_workflow_str,
 };
+pub use provisioning::{
+    PROVISIONING_TOOLS, ProvisioningStep, provisioning_steps, simulate_provisioning,
+};
 pub use runner::{
     JobRunResult, JobStatus, LogEntry, LogLevel, PipelineRunOptions, PipelineRunResult,
     StepRunResult, StepStatus, render_pipeline_summary, run_pipeline, run_workflow,

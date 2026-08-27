@@ -57,7 +57,8 @@ from crucible.backend.pipeline import simulate_pipeline_run, validate_workflow_y
 from crucible.backend.reports import generate_chaos_dataset, render_html_report_string, summarize_dataset
 from crucible.backend.review import apply_review_fix, run_code_review
 from crucible.backend.triage import evaluate_triage_submission
-from crucible.backend.ai_generator import generate_pytest_from_openapi
+from crucible.backend.ai_generator import generate_pytest_from_spec
+from crucible.backend.tracing import TracingMiddleware
 
 # JWT configuration
 import os as _os
@@ -326,9 +327,10 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["X-Chaos-Stale-DOM", "X-Chaos"],
+    expose_headers=["X-Chaos-Stale-DOM", "X-Chaos", "X-Trace-Id"],
 )
 app.add_middleware(ChaosMiddleware)
+app.add_middleware(TracingMiddleware)
 
 
 @app.get("/", response_model=HealthResponse)
@@ -773,10 +775,16 @@ async def get_events_stream(request: Request) -> StreamingResponse:
 
 
 @app.post("/api/generate-tests")
-async def generate_tests() -> JSONResponse:
-    """Auto-generates basic Pytest endpoint validation tests."""
-    code = generate_pytest_from_openapi("http://localhost:8081/openapi.json")
-    return JSONResponse(content={"status": "success", "code": code})
+async def generate_tests(request: Request) -> JSONResponse:
+    """Auto-generate Pytest endpoint validation tests from this app's OpenAPI spec.
+
+    The spec is read in-process via app.openapi() rather than fetched over HTTP:
+    a self-referential request would deadlock under a single-threaded test client
+    and would hardcode a port the app may not actually be served on.
+    """
+    base_url = str(request.base_url).rstrip("/")
+    code = generate_pytest_from_spec(app.openapi(), base_url=base_url)
+    return JSONResponse(content={"status": "success", "base_url": base_url, "code": code})
 
 @app.post("/graphql")
 async def post_graphql(req: GraphQLRequest) -> JSONResponse:

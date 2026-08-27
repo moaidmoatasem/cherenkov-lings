@@ -6,7 +6,9 @@ pub struct DeviceManager;
 
 impl DeviceManager {
     pub fn new() -> Self {
-        DeviceManager
+        DeviceManager {
+            emulator_binary: "emulator".to_string(),
+        }
     }
 
     /// Launches an AVD and hands back the child process.

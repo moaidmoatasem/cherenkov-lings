@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Header, Sidebar, TabRow } from './components/Shell';
 import { TodayScreen } from './screens/TodayScreen';
 import { ModuleScreen } from './screens/ModuleScreen';
@@ -9,6 +9,7 @@ import { RecordScreen } from './screens/RecordScreen';
 import { DrillScreen } from './screens/DrillScreen';
 import { HomePage } from '../pages/HomePage';
 import { useLearnerProgress } from './useLearnerProgress';
+import { useCurriculumTracks } from './useCurriculum';
 import type { CurriculumModule, ScreenId, SelectedDrill, StepId, Track } from './types';
 import './learn.css';
 
@@ -32,7 +33,17 @@ export const LearnApp: React.FC<{ initialScreen?: ScreenId; onExit?: () => void 
   /** Non-null when the learner opened a manifest-backed drill from the catalog. */
   const [drill, setDrill] = useState<SelectedDrill | null>(null);
 
+  // App keeps this component mounted across /learn and /sandbox, so
+  // initialScreen alone only ever applied on first mount: navigating here from
+  // inside the Learn shell left the previous screen on display under the new
+  // URL. Follow the prop when the route changes it.
+  useEffect(() => {
+    setScreen(initialScreen);
+    setDrill(null);
+  }, [initialScreen]);
+
   const progress = useLearnerProgress();
+  const catalog = useCurriculumTracks();
   const [crumbRaw, headingRaw, noteRaw] = HEADS[screen];
 
   // The catalog heading counts what the manifest actually declares rather than
@@ -40,7 +51,10 @@ export const LearnApp: React.FC<{ initialScreen?: ScreenId; onExit?: () => void 
   let crumb = crumbRaw;
   let heading = headingRaw;
   if (screen === 'tracks') {
-    heading = `${progress.tracksTotal} tracks, ${progress.modulesTotal} modules`;
+    // Counted from the catalog rendered below, not from a seeded literal:
+    // /api/progress carries no track list, so the old source silently fell
+    // back to a hardcoded 12 and drifted the moment a track landed.
+    heading = `${catalog.length} tracks, ${catalog.reduce((n, t) => n + t.total, 0)} modules`;
   } else if (screen === 'module' && drill) {
     crumb = drill.trackName;
     heading = drill.title;
@@ -126,14 +140,14 @@ export const LearnApp: React.FC<{ initialScreen?: ScreenId; onExit?: () => void 
           {screen === 'device' && <DeviceLabScreen />}
 
           {screen === 'tracks' && (
-            <AllModulesScreen onOpenModule={openCatalogModule} />
+            <AllModulesScreen onOpenModule={openCatalogModule} tracks={catalog} />
           )}
 
           {screen === 'progress' && <RecordScreen kpis={progress.kpis} />}
 
           {screen === 'sandbox' && (
             <div style={{ padding: '24px' }}>
-              <HomePage onNavigate={(path) => {
+              <HomePage onNavigate={(path: string) => {
                 if (onExit) onExit();
                 window.history.pushState({}, '', path);
                 window.dispatchEvent(new PopStateEvent('popstate'));
