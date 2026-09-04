@@ -14,11 +14,22 @@ import type { CurriculumModule, ScreenId, SelectedDrill, StepId, Track } from '.
 import './learn.css';
 
 /** Breadcrumb, title and the contextual note in the header, per screen. */
+/** The actual day and time of day, rather than a fixed "Monday, week 3". */
+const todayCrumb = (): string =>
+  new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+const greeting = (): string => {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
+};
+
 const HEADS: Record<ScreenId, [string, string, string]> = {
-  today: ['Monday, week 3', 'Good evening, Moaid', 'one session left today'],
-  module: ['Web Automation · module 4 of 10', 'Waiting without sleeping', 'read · watch · practice · build'],
-  lab: ['Web Automation · module 4 · build', 'The lab', 'your code, a real browser, a bad network'],
-  device: ['Mobile UI · module 1 · build', 'The device lab', 'a real handset, in a bad mood'],
+  today: [todayCrumb(), `${greeting()}, Moaid`, ''],
+  module: ['Web Automation', 'Waiting without sleeping', 'a worked example of the loop'],
+  lab: ['Web Automation · build', 'The lab', 'a worked example of the loop'],
+  device: ['Mobile UI · build', 'The device lab', 'a worked example of the loop'],
   tracks: ['Everything there is', '', ''],
   progress: ['Your record', 'What you can prove', 'evidence, not badges'],
   sandbox: ['Sandbox Environment', 'Micro-Crucible Sandbox', 'broken apps for automation testing'],
@@ -60,7 +71,11 @@ export const LearnApp: React.FC<{ initialScreen?: ScreenId; onExit?: () => void 
     heading = drill.title;
   }
   let note = noteRaw;
-  if (screen === 'tracks') note = `${progress.modulesBuilt} built so far`;
+  if (screen === 'today')
+    note = progress.live
+      ? `${progress.modulesBuilt} of ${progress.modulesTotal} modules built`
+      : '';
+  else if (screen === 'tracks') note = `${progress.modulesBuilt} built so far`;
   else if (screen === 'module' && drill) note = 'theory and hints, straight from the repository';
 
   const openModule = (nextStep: StepId) => {
@@ -100,6 +115,8 @@ export const LearnApp: React.FC<{ initialScreen?: ScreenId; onExit?: () => void 
         onNavigate={setScreen}
         modulesBuilt={progress.modulesBuilt}
         modulesTotal={progress.modulesTotal}
+        levelName={progress.levelName}
+        streakDays={progress.streakDays}
         onExit={onExit}
       />
 
@@ -119,7 +136,13 @@ export const LearnApp: React.FC<{ initialScreen?: ScreenId; onExit?: () => void 
         {/* Keyed so screen content remounts and the rise animation replays. */}
         <div className="l-page" key={screen}>
           {screen === 'today' && (
-            <TodayScreen onOpenLab={() => setScreen('lab')} onOpenModule={openModule} />
+            <TodayScreen
+              onOpenLab={() => setScreen('lab')}
+              onOpenModule={openModule}
+              onOpenCatalogModule={openCatalogModule}
+              progress={progress}
+              tracks={catalog}
+            />
           )}
 
           {screen === 'module' &&
@@ -143,7 +166,7 @@ export const LearnApp: React.FC<{ initialScreen?: ScreenId; onExit?: () => void 
             <AllModulesScreen onOpenModule={openCatalogModule} tracks={catalog} />
           )}
 
-          {screen === 'progress' && <RecordScreen kpis={progress.kpis} />}
+          {screen === 'progress' && <RecordScreen progress={progress} tracks={catalog} />}
 
           {screen === 'sandbox' && (
             <div style={{ padding: '24px' }}>

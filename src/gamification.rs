@@ -5,6 +5,17 @@ use std::fs;
 use std::path::Path;
 
 pub const PROGRESS_FILE: &str = ".cherenkov-progress.json";
+
+/// Where learner progress lives when no explicit path is given.
+///
+/// Honours `CHERENKOV_PROGRESS_FILE` so a test run, or any tool that must not
+/// touch a real learner's record, can redirect it. The Python backend reads the
+/// same variable, so both halves of the platform agree on the target.
+pub fn default_progress_path() -> std::path::PathBuf {
+    std::env::var_os("CHERENKOV_PROGRESS_FILE")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| std::path::PathBuf::from(PROGRESS_FILE))
+}
 pub const BASE_XP: f64 = 100.0;
 pub const DEFAULT_BASELINE_DURATION_MS: u64 = 1000;
 
@@ -134,6 +145,9 @@ pub struct DrillRunContext {
     pub correctness_score: f64,
     pub flakiness_score: f64,
     pub locator_score: f64,
+    /// False when the drill has no locators to judge (every Python, k6 and
+    /// JMeter drill). Such a run must not count toward locator credit.
+    pub locator_applies: bool,
     pub speed_score: f64,
     pub passed_iterations: u32,
     pub iterations: u32,
@@ -154,6 +168,7 @@ impl Default for DrillRunContext {
             correctness_score: 0.0,
             flakiness_score: 0.0,
             locator_score: 0.0,
+            locator_applies: false,
             speed_score: 0.0,
             passed_iterations: 0,
             iterations: 1,
@@ -376,9 +391,10 @@ pub fn current_utc_iso_timestamp() -> String {
 
 /// Load gamification state from JSON file (or return default state if file does not exist)
 pub fn load_progress<P: AsRef<Path>>(path: Option<P>) -> Result<GamificationState, std::io::Error> {
+    let fallback = default_progress_path();
     let target_path = match path {
         Some(ref p) => p.as_ref(),
-        None => Path::new(PROGRESS_FILE),
+        None => fallback.as_path(),
     };
 
     if !target_path.exists() {
@@ -399,9 +415,10 @@ pub fn save_progress<P: AsRef<Path>>(
     state: &GamificationState,
     path: Option<P>,
 ) -> Result<(), std::io::Error> {
+    let fallback = default_progress_path();
     let target_path = match path {
         Some(ref p) => p.as_ref(),
-        None => Path::new(PROGRESS_FILE),
+        None => fallback.as_path(),
     };
 
     if let Some(parent) = target_path
@@ -590,8 +607,10 @@ impl GamificationState {
             self.flakiness_100_streak = 0;
         }
 
-        // Update perfect locator count
-        if ctx.locator_score >= 99.9 {
+        // Update perfect locator count -- only where locators were actually
+        // judged, so a pure-Python drill stops earning the "Perfect Locator"
+        // badge for having no locators at all.
+        if ctx.locator_applies && ctx.locator_score >= 99.9 {
             self.perfect_locator_count = self.perfect_locator_count.saturating_add(1);
         }
 
@@ -1721,6 +1740,7 @@ mod tests {
                 passed: true,
                 total_score: 100.0,
                 locator_score: 100.0,
+                locator_applies: true,
                 tier: 1,
                 ..Default::default()
             };

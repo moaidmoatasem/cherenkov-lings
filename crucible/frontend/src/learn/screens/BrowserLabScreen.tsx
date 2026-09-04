@@ -35,6 +35,15 @@ export const BrowserLabScreen: React.FC<BrowserLabScreenProps> = ({
     <div className="l-col" style={{ gap: 20 }}>
       <div className="l-lab-intro">
         <p>{LAB_INTRO}</p>
+        {/* Said plainly, once. The code below is not an editor and nothing on
+            this screen executes: it is a worked example of a run. The loop it
+            depicts is real, and runs from the watcher. */}
+        <p className="l-meta" style={{ lineHeight: 1.6 }}>
+          <strong style={{ color: 'var(--l-ink)' }}>A worked example.</strong> Nothing
+          on this page runs. To do it for real, open the drill in your editor and
+          start the watcher — it re-runs on save and scores the result:{' '}
+          <code>cherenkov-lings watch --track=playwright-ts</code>
+        </p>
         <div style={{ display: 'flex', gap: 7 }}>
           {(['pass', 'fail'] as const).map((id) => (
             <button
@@ -55,10 +64,7 @@ export const BrowserLabScreen: React.FC<BrowserLabScreenProps> = ({
         <div className="l-panel-bar">
           <span className="l-panel-file">{SPEC_FILE}</span>
           <span className="l-spacer" />
-          <span className="l-panel-status">saved · watching for changes</span>
-          <button type="button" className="l-panel-run">
-            Run 5×
-          </button>
+          <span className="l-panel-status">example run · 5 iterations</span>
         </div>
 
         <div className="l-lab-split">
