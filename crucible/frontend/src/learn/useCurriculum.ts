@@ -110,8 +110,52 @@ const synthesise = (track: ApiTrack, completed: Set<string>): Track => {
   };
 };
 
+/**
+ * A curated track keeps its hand-written copy, but its progress comes from the
+ * learner's record.
+ *
+ * The curated entries in `content.ts` carry designed completion states -- five
+ * of five Foundations built, four of ten Web Automation -- and returning them
+ * unchanged meant the catalog and the record screen reported a history nobody
+ * had, next to a live "modules built" count that disagreed. The manifest
+ * supplies the module list, ids and paths; the record supplies what is done;
+ * the curated entry supplies only the writing.
+ */
+const mergeCurated = (track: ApiTrack, hand: Track, completed: Set<string>): Track => {
+  const real = synthesise(track, completed);
+
+  const modules: CurriculumModule[] = real.modules.map((module, i) => {
+    const copy = hand.modules[i];
+    if (!copy) return module;
+    // The curated entry keeps its identity and its writing -- including the
+    // absent `path` that routes it to the hand-written module screen. Only
+    // completion comes from the learner's record.
+    return { ...copy, state: module.state };
+  });
+
+  return {
+    ...real,
+    name: hand.name,
+    meta: hand.meta,
+    skills: hand.skills,
+    modules,
+  };
+};
+
+/**
+ * The curated tracks with their designed completion stripped out, for the
+ * moment before the API answers. Showing `done: 5` there would be a claim about
+ * the learner, not a placeholder.
+ */
+const UNSTARTED: Track[] = TRACKS.map((track) => ({
+  ...track,
+  done: 0,
+  state: 'not started',
+  modules: track.modules.map((m, i) => ({ ...m, state: i === 0 ? 'now' : 'todo' })),
+}));
+
 export function useCurriculumTracks(): Track[] {
-  const [tracks, setTracks] = useState<Track[]>(TRACKS);
+  const [tracks, setTracks] = useState<Track[]>(UNSTARTED);
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -133,7 +177,12 @@ export function useCurriculumTracks(): Track[] {
       const curated = new Map(TRACKS.map((t) => [t.id, t]));
 
       setTracks(
-        apiTracks.map((apiTrack) => curated.get(apiTrack.id) ?? synthesise(apiTrack, completed))
+        apiTracks.map((apiTrack) => {
+          const hand = curated.get(apiTrack.id);
+          return hand
+            ? mergeCurated(apiTrack, hand, completed)
+            : synthesise(apiTrack, completed);
+        })
       );
     };
 

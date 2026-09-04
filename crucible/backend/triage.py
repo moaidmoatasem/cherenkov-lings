@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -19,7 +20,23 @@ from crucible.backend.models import (
 )
 from crucible.backend.reports import generate_chaos_dataset
 
-PROGRESS_FILE_PATH = Path(".cherenkov-progress.json")
+DEFAULT_PROGRESS_FILENAME = ".cherenkov-progress.json"
+
+
+def progress_file_path() -> Path:
+    """Where learner progress lives.
+
+    Resolved per call rather than at import so a test run -- or any tool that
+    must not touch a real learner's record -- can redirect it by setting
+    CHERENKOV_PROGRESS_FILE. Submitting a triage awards XP and badges, so
+    without this the project's own test suite inflated the rank of whoever
+    happened to run it.
+    """
+    return Path(os.environ.get("CHERENKOV_PROGRESS_FILE", DEFAULT_PROGRESS_FILENAME))
+
+
+# Kept for callers that import the module-level default directly.
+PROGRESS_FILE_PATH = Path(DEFAULT_PROGRESS_FILENAME)
 
 
 def normalize_category(cat: str | None) -> str:
@@ -193,8 +210,10 @@ def score_suggested_fix(
     return min(50, score), reasons
 
 
-def load_gamification_progress(file_path: Path = PROGRESS_FILE_PATH) -> dict[str, Any]:
+def load_gamification_progress(file_path: Path | None = None) -> dict[str, Any]:
     """Load existing gamification progress or return default state."""
+    if file_path is None:
+        file_path = progress_file_path()
     if file_path.exists():
         try:
             return json.loads(file_path.read_text(encoding="utf-8"))
@@ -213,8 +232,10 @@ def load_gamification_progress(file_path: Path = PROGRESS_FILE_PATH) -> dict[str
     }
 
 
-def save_gamification_progress(state: dict[str, Any], file_path: Path = PROGRESS_FILE_PATH) -> None:
+def save_gamification_progress(state: dict[str, Any], file_path: Path | None = None) -> None:
     """Save gamification state back to JSON file."""
+    if file_path is None:
+        file_path = progress_file_path()
     try:
         file_path.write_text(json.dumps(state, indent=2), encoding="utf-8")
     except Exception:
@@ -228,7 +249,7 @@ def evaluate_triage_submission(
 ) -> TriageResultResponse:
     """Evaluate triage hypothesis, compute rewards, update progress, and return response."""
     if progress_file is None:
-        progress_file = PROGRESS_FILE_PATH
+        progress_file = progress_file_path()
     if dataset is None:
         dataset = generate_chaos_dataset()
 

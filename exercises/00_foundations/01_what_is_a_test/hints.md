@@ -9,5 +9,5 @@ The Python `assert` statement works like this:
 If the condition is True, the test passes silently. If False, pytest marks it as FAILED and shows you the values.
 
 ## Hint 3 (Code Diff)
-Replace: pass
+Replace: assert False, "TODO: assert the checkout total"
 With:    assert total == 33.0, f"Expected 33.0 but got {total}"

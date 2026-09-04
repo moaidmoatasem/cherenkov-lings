@@ -32,6 +32,7 @@ fn test_direct_check_achievements_function() {
         total_score: 100.0,
         flakiness_score: 100.0,
         locator_score: 100.0,
+        locator_applies: true,
         tier: 1,
         ..Default::default()
     };
@@ -298,6 +299,7 @@ fn test_achievement_all_8_badges_unlocking() {
             passed: true,
             total_score: 100.0,
             locator_score: 100.0,
+            locator_applies: true,
             tier: 1,
             ..Default::default()
         };
@@ -359,6 +361,7 @@ fn test_persistence_full_lifecycle_and_serialization() {
         correctness_score: 100.0,
         flakiness_score: 100.0,
         locator_score: 85.0,
+        locator_applies: true,
         speed_score: 90.0,
         passed_iterations: 5,
         iterations: 5,

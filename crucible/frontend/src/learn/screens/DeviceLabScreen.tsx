@@ -27,15 +27,18 @@ export const DeviceLabScreen: React.FC = () => {
         <p style={{ fontSize: 14.5, color: 'var(--l-ink-body)', lineHeight: 1.65, maxWidth: '64ch' }}>
           {DEVICE_INTRO}
         </p>
+        <p className="l-meta" style={{ lineHeight: 1.6, maxWidth: '64ch' }}>
+          <strong style={{ color: 'var(--l-ink)' }}>A worked example.</strong> Nothing
+          on this page runs. The Maestro drills run against a real device or
+          emulator through the watcher:{' '}
+          <code>cherenkov-lings watch --track=maestro-mobile</code>
+        </p>
 
         <section className="l-panel">
           <div className="l-panel-bar">
             <span className="l-panel-file">{DEVICE_FILE}</span>
             <span className="l-spacer" />
             <span className="l-panel-status">{DEVICE_COPY.hardware}</span>
-            <button type="button" className="l-panel-run">
-              {DEVICE_COPY.play}
-            </button>
           </div>
           <div className="l-code" style={{ padding: '14px 0', borderRight: 'none' }}>
             {DEVICE_YAML.map((line) => (

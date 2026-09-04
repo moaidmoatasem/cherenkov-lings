@@ -41,7 +41,7 @@ const inline = (text: string): React.ReactNode[] =>
 type Block =
   | { kind: 'heading'; level: number; text: string }
   | { kind: 'code'; text: string }
-  | { kind: 'list'; ordered: boolean; items: string[] }
+  | { kind: 'list'; ordered: boolean; items: string[]; start: number }
   | { kind: 'quote'; text: string }
   | { kind: 'para'; text: string };
 
@@ -82,10 +82,15 @@ const parse = (source: string): Block[] => {
     }
 
     const bullet = /^\s*[-*+]\s+(.*)$/.exec(line);
-    const numbered = /^\s*\d+[.)]\s+(.*)$/.exec(line);
+    const numbered = /^\s*(\d+)[.)]\s+(.*)$/.exec(line);
     if (bullet || numbered) {
       flushParagraph(paragraph);
       const ordered = Boolean(numbered);
+      // Where the run starts in the source. A numbered run interrupted by a
+      // paragraph or a code block becomes a second <ol>, and without this every
+      // such list restarted at 1 -- theory documents that step 1., 2., 3. all
+      // rendered as "1.".
+      const start = numbered ? Number.parseInt(numbered[1], 10) || 1 : 1;
       const items: string[] = [];
       while (i < lines.length) {
         const next = ordered
@@ -95,7 +100,7 @@ const parse = (source: string): Block[] => {
         items.push(next[1].trim());
         i += 1;
       }
-      blocks.push({ kind: 'list', ordered, items });
+      blocks.push({ kind: 'list', ordered, items, start });
       continue;
     }
 
@@ -136,7 +141,7 @@ export const Markdown: React.FC<{ source: string }> = ({ source }) => (
           );
         case 'list':
           return block.ordered ? (
-            <ol key={index}>
+            <ol key={index} start={block.start}>
               {block.items.map((item, j) => (
                 <li key={j}>{inline(item)}</li>
               ))}

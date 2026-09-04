@@ -828,9 +828,16 @@ pub fn evaluate_feedback(
     };
 
     // 3. Locator Quality Dimension (0.15)
+    //
+    // A drill with no locators (every Python, k6 and JMeter track) has nothing
+    // to judge here. Reporting a default 100 and then weighting it at 15% paid
+    // out a sixth of the score for work the learner never did, which is part of
+    // why non-UI drills all landed on a flat 100. Such a drill is now scored on
+    // the dimensions that actually apply -- see the weight redistribution below.
+    let locator_applies = !ast.locators.is_empty();
     let locator_score = ast.locator_quality_score;
     let locator_detail = if ast.locators.is_empty() {
-        "No locators detected in source (Default: 100)".to_string()
+        "No locators in this drill — not scored".to_string()
     } else {
         let roles = ast
             .locators
@@ -870,12 +877,22 @@ pub fn evaluate_feedback(
         response.total_duration_ms, avg_duration_ms, baseline_duration_ms
     );
 
-    // Total Composite Score
+    // Total Composite Score.
+    //
+    // When locator quality does not apply, its weight is spread across the
+    // three dimensions that do, in their existing proportions, so the total
+    // still runs 0..100 and still means "how well did this drill go" rather
+    // than "how much of the rubric happened to be free".
     let weighted_c = correctness_score * WEIGHT_CORRECTNESS;
     let weighted_f = flakiness_score * WEIGHT_FLAKINESS;
     let weighted_l = locator_score * WEIGHT_LOCATOR_QUALITY;
     let weighted_s = speed_score * WEIGHT_SPEED;
-    let total_score = weighted_c + weighted_f + weighted_l + weighted_s;
+    let total_score = if locator_applies {
+        weighted_c + weighted_f + weighted_l + weighted_s
+    } else {
+        let scored_weight = WEIGHT_CORRECTNESS + WEIGHT_FLAKINESS + WEIGHT_SPEED;
+        (weighted_c + weighted_f + weighted_s) / scored_weight
+    };
 
     let passed = total_score >= pass_threshold && response.passed && !ast.has_wait_for_timeout;
 
@@ -953,8 +970,14 @@ pub fn evaluate_feedback(
         diagnostics.push(format!("✗ Runner Error: {}", err));
     }
 
-    // Load progressive hint if available
-    let hint = if let Some(ph) = ProgressiveHints::load_from_exercise_path(&ast.file_path) {
+    // Load progressive hint if available.
+    //
+    // Only when the drill did not pass. A learner who just solved it was being
+    // handed "HINT (1/3): You already know how to test manually..." underneath
+    // a green scorecard, which reads as though something is still wrong.
+    let hint = if passed {
+        None
+    } else if let Some(ph) = ProgressiveHints::load_from_exercise_path(&ast.file_path) {
         ph.get_hint_for_score(total_score)
             .map(|(num, total, text)| format!("💡 HINT ({}/{}):\n{}", num, total, text))
     } else if !ast.anti_patterns.is_empty() {
@@ -993,8 +1016,14 @@ pub fn evaluate_feedback(
         locator_quality: DimensionScore {
             name: "Locator Quality",
             score: locator_score,
-            weight: WEIGHT_LOCATOR_QUALITY,
-            weighted_score: weighted_l,
+            // Reported as the weight it actually carried: zero when the drill
+            // has no locators, rather than 15% of a score it did not earn.
+            weight: if locator_applies {
+                WEIGHT_LOCATOR_QUALITY
+            } else {
+                0.0
+            },
+            weighted_score: if locator_applies { weighted_l } else { 0.0 },
             passed: locator_score >= 80.0,
             detail: locator_detail,
         },
@@ -1074,21 +1103,42 @@ pub fn render_scorecard(card: &Scorecard) -> String {
     // Dimension Scores
     out.push_str(&format!(" {}\n", "DIMENSION SCORES:".bold().bright_cyan()));
 
+    // The weight each dimension actually carried in this score, not a literal.
+    // Locator Quality drops to 0% on a drill with no locators, and its share is
+    // spread over the rest -- printing a flat 15% there described a rubric that
+    // was not the one applied.
     let dimensions = [
-        (&card.correctness, "35%"),
-        (&card.flakiness, "35%"),
-        (&card.locator_quality, "15%"),
-        (&card.speed, "15%"),
+        &card.correctness,
+        &card.flakiness,
+        &card.locator_quality,
+        &card.speed,
     ];
+    let live_weight: f64 = dimensions.iter().map(|d| d.weight).sum();
 
-    for (dim, weight_str) in dimensions {
+    for dim in dimensions {
+        let weight_str = if dim.weight <= f64::EPSILON {
+            "n/a".to_string()
+        } else {
+            format!("{:.0}%", dim.weight / live_weight * 100.0)
+        };
         let mark = if dim.passed {
             "✓".green()
         } else {
             "✗".red()
         };
-        let bar = render_progress_bar(dim.score, 10);
-        let score_fmt = format!("{:5.1} / 100", dim.score);
+        // A dimension that did not apply shows no score. Printing "100.0 / 100"
+        // next to "not scored" was the reason non-UI drills looked perfect.
+        let applies = dim.weight > f64::EPSILON;
+        let bar = if applies {
+            render_progress_bar(dim.score, 10)
+        } else {
+            "[░░░░░░░░░░]".dimmed().to_string()
+        };
+        let score_fmt = if applies {
+            format!("{:5.1} / 100", dim.score)
+        } else {
+            format!("{:>11}", "—")
+        };
 
         out.push_str(&format!(
             " {} {:<21} {} {} (Weight: {})  {}\n",
@@ -1096,7 +1146,7 @@ pub fn render_scorecard(card: &Scorecard) -> String {
             dim.name.bright_white(),
             bar,
             score_fmt.bold(),
-            weight_str.dimmed(),
+            weight_str.as_str().dimmed(),
             dim.detail
         ));
     }

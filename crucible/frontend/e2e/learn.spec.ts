@@ -7,10 +7,14 @@ test.describe('Learn environment — read, watch, practice, build', () => {
   });
 
   test('shell loads with header, sidebar and a11y toggles', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Good evening, Moaid' })).toBeVisible();
-    await expect(page.locator('.l-h1')).toContainText('Good evening, Moaid');
-    await expect(page.locator('.l-crumb')).toContainText('Monday, week 3');
-    await expect(page.locator('.l-header-note')).toContainText('one session left today');
+    // The greeting and date come from the clock, so assert the shape rather
+    // than a literal that was true only when it was written.
+    await expect(page.locator('.l-h1')).toHaveText(/Good (morning|afternoon|evening), Moaid/);
+    await expect(page.locator('.l-crumb')).toHaveText(
+      /^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday), \w+ \d+$/
+    );
+    // The note reports the record, once /api/progress has answered.
+    await expect(page.locator('.l-header-note')).toHaveText(/^(\d+ of \d+ modules built)?$/);
     await expect(page.getByRole('navigation', { name: 'Sections' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Today' })).toHaveAttribute('aria-current', 'page');
     await expect(page.getByRole('button', { name: 'Cherenkov — back to the sandbox' })).toBeVisible();
@@ -36,7 +40,7 @@ test.describe('Learn environment — read, watch, practice, build', () => {
 
   test('navigates all six screens via sidebar', async ({ page }) => {
     const nav = [
-      { label: 'Today', heading: 'Good evening, Moaid' },
+      { label: 'Today', heading: /Good (morning|afternoon|evening), Moaid/ },
       { label: 'This module', heading: 'Waiting without sleeping' },
       { label: 'Browser lab', heading: 'The lab' },
       { label: 'Device lab', heading: 'The device lab' },
@@ -51,31 +55,35 @@ test.describe('Learn environment — read, watch, practice, build', () => {
     }
   });
 
-  test('Today screen shows continue, schedule, streak and recall', async ({ page }) => {
-    await expect(page.getByText('Continue where you stopped')).toBeVisible();
+  test('Today screen shows only figures the record can support', async ({ page }) => {
+    // The guided module is labelled as a walkthrough, not as the learner's own
+    // half-finished progress, and its steps carry no completion ticks.
+    await expect(page.getByText('How a module works')).toBeVisible();
+    await expect(page.getByText('Continue where you stopped')).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'Waiting without sleeping' })).toBeVisible();
-    await expect(page.locator('.l-continue-lede')).toContainText("You've read it and watched the trace.");
-    await expect(page.locator('.l-loop-label').filter({ hasText: 'Read it' })).toBeVisible();
-    await expect(page.locator('.l-loop-label').filter({ hasText: 'Watch the trace' })).toBeVisible();
-    await expect(page.locator('.l-loop-label').filter({ hasText: 'Answer five questions' })).toBeVisible();
+    await expect(page.locator('.l-continue-lede')).toContainText('A walkthrough of one module');
+    await expect(page.locator('.l-loop-row[data-state="done"]')).toHaveCount(0);
+    await expect(page.locator('.l-loop-label').filter({ hasText: 'Read the failure' })).toBeVisible();
     await expect(page.locator('.l-loop-label').filter({ hasText: 'Build it in the lab' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Open the lab and build it' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Re-read the page first' })).toBeVisible();
-    await expect(page.getByText('Your day')).toBeVisible();
-    await expect(page.locator('.l-block').first()).toBeVisible();
-    await expect(page.getByText('14:00')).toBeVisible();
-    await expect(page.locator('.l-block-time').filter({ hasText: '18:30' })).toBeVisible();
-    await expect(page.getByText('20:00')).toBeVisible();
-    await expect(page.getByText("Why you're here")).toBeVisible();
-    await expect(page.getByText('Stop being the person whose tests everyone reruns.')).toBeVisible();
+
+    // "Next up" replaces the invented 14:00/18:30/20:00 schedule. There is no
+    // scheduler behind the product, and its Reschedule button did nothing.
+    await expect(page.getByText('Next up')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Reschedule' })).toHaveCount(0);
+    await expect(page.getByText('14:00')).toHaveCount(0);
+
+    // The streak strip is exactly as long as the streak.
     await expect(page.getByText('Kept it up')).toBeVisible();
-    await expect(page.locator('.l-dot')).toHaveCount(21);
-    await expect(page.getByText('Earned this week')).toBeVisible();
-    await expect(page.getByText('620')).toBeVisible();
-    await expect(page.getByText('of 900 points')).toBeVisible();
-    await expect(page.getByText('Two more built modules and the Web Automation certificate is yours.')).toBeVisible();
-    await expect(page.getByText('7 questions from mistakes you actually made')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Start recall' })).toBeVisible();
+    const streak = await page.locator('.l-next-session-when').innerText();
+    const days = Number.parseInt(streak, 10);
+    await expect(page.locator('.l-dot')).toHaveCount(Math.max(days, 1));
+
+    // Points are the learner's real total, not a weekly target nobody set.
+    await expect(page.getByText('Points earned')).toBeVisible();
+    await expect(page.getByText('of 900 points')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Start recall' })).toHaveCount(0);
   });
 
   test('Module screen read step renders article and diff', async ({ page }) => {
@@ -115,7 +123,12 @@ test.describe('Learn environment — read, watch, practice, build', () => {
   test('Module screen practice step shows question and answers', async ({ page }) => {
     await page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'This module' }).click();
     await expect(page.getByRole('tab', { name: /Practice/ })).toHaveAttribute('aria-selected', 'true');
-    await expect(page.getByText('Question 3 of 5 · nothing is graded')).toBeVisible();
+    // The screen states plainly that this is one fixed illustration, not the
+    // learner's own quiz progress -- and there is no real 5-question sequence
+    // behind it, so the position claim is gone too.
+    await expect(page.locator('.l-meta').filter({ hasText: 'A worked example.' })).toBeVisible();
+    await expect(page.getByText('A worked question · nothing is graded')).toBeVisible();
+    await expect(page.getByText(/Question \d+ of \d+/)).toHaveCount(0);
     await expect(page.getByText('This passes on your laptop and fails one CI run in five. What actually fixes it?')).toBeVisible();
     await expect(page.locator('.l-snippet-line[data-kind="bad"]')).toContainText('waitForTimeout');
     await expect(page.getByRole('button', { name: /Raise the wait to three seconds/ })).toBeVisible();
@@ -135,7 +148,11 @@ test.describe('Learn environment — read, watch, practice, build', () => {
     await expect(page.getByText('Make the search test hold up five times in a row')).toBeVisible();
     await expect(page.getByRole('button', { name: 'passing run' })).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('.l-panel-file')).toContainText('search.spec.ts');
-    await expect(page.locator('.l-panel-run')).toContainText('Run 5×');
+    // The dead "Run 5x" control is gone -- nothing on this screen executes.
+    await expect(page.locator('.l-panel-run')).toHaveCount(0);
+    await expect(page.locator('.l-panel-status')).toContainText('example run');
+    await expect(page.locator('.l-lab-intro')).toContainText('A worked example.');
+    await expect(page.locator('.l-lab-intro')).toContainText('cherenkov-lings watch');
     await expect(page.locator('.l-code-row').first()).toBeVisible();
     await expect(page.locator('.l-code-text', { hasText: "getByRole('searchbox'" }).first()).toBeVisible();
     await expect(page.locator('.l-preview-url')).toContainText('localhost:8080/search');
@@ -174,8 +191,9 @@ test.describe('Learn environment — read, watch, practice, build', () => {
     await expect(page.locator('.l-h1')).toContainText('The device lab');
     await expect(page.getByText("Face ID isn't available after a restart.")).toBeVisible();
     await expect(page.locator('.l-panel-file')).toContainText('biometric_fallback.yaml');
+    await expect(page.locator('.l-panel-run')).toHaveCount(0);
     await expect(page.getByText('Pixel 7 · Android 14')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Play on device' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Play on device' })).toHaveCount(0);
     await expect(page.locator('.l-code-row')).toContainText(['appId: dev.cherenkov.bank']);
     await expect(page.getByText('Make it harder')).toBeVisible();
     await expect(page.locator('.l-cond')).toHaveCount(4);
@@ -222,28 +240,46 @@ test.describe('Learn environment — read, watch, practice, build', () => {
     await expect(page.getByRole('button', { name: 'Everything' })).toHaveAttribute('aria-pressed', 'true');
   });
 
-  test('My record shows KPIs, skills, certificate and page', async ({ page }) => {
+  test('My record shows only earned evidence', async ({ page }) => {
     await page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'My record' }).click();
     await expect(page.locator('.l-h1')).toContainText('What you can prove');
+
+    // Every KPI is measured. "Kept sessions" and "Time spent" are gone: the
+    // platform records neither, and they used to sit beside a real count they
+    // contradicted.
     await expect(page.locator('.l-kpi')).toHaveCount(4);
-    await expect(page.locator('.l-kpi-value').first()).toBeVisible();
     await expect(page.getByText('Modules built')).toBeVisible();
-    await expect(page.getByText('Kept sessions')).toBeVisible();
-    await expect(page.locator('.l-prove-head').getByText('What you can prove')).toBeVisible();
-    await expect(page.getByText('read about it → answered questions → made it work under chaos')).toBeVisible();
-    await expect(page.getByText('Waiting and assertions')).toBeVisible();
-    await expect(page.locator('.l-skill-seg')).not.toHaveCount(0);
-    await expect(page.getByText('Modern Web Automation, proven under chaos')).toBeVisible();
-    await expect(page.locator('.l-cert-pip')).toHaveCount(10);
-    await expect(page.locator('.l-cert-pip[data-on="true"]')).toHaveCount(4);
-    await expect(page.getByText('4 of 10 built · around Sep 6')).toBeVisible();
-    await expect(page.getByText('Foundations')).toBeVisible();
-    await expect(page.getByText('cherenkov.dev/moaid')).toBeVisible();
-    const copy = page.getByRole('button', { name: /Copy|Copied/ });
-    await expect(copy).toBeVisible();
-    await copy.click();
-    await expect(page.getByRole('button', { name: /Copy|Copied/ })).toBeVisible();
-    await expect(page.getByText('cherenkov.dev/moaid')).toBeVisible();
+    await expect(page.getByText('Tracks started')).toBeVisible();
+    await expect(page.getByText('Day streak')).toBeVisible();
+    await expect(page.getByText('Kept sessions')).toHaveCount(0);
+    await expect(page.getByText('Time spent')).toHaveCount(0);
+
+    // Modules built agrees with the per-track rows. Polled, because the count
+    // and the track list arrive from two independent requests.
+    await expect
+      .poll(async () => {
+        const built = Number.parseInt(
+          await page
+            .locator('.l-kpi')
+            .filter({ hasText: 'Modules built' })
+            .locator('.l-kpi-value')
+            .innerText(),
+          10
+        );
+        const perTrack = await page.locator('.l-skill-stage').allInnerTexts();
+        const summed = perTrack.reduce((n, t) => n + (Number.parseInt(t, 10) || 0), 0);
+        return summed === built;
+      })
+      .toBe(true);
+
+    // The certificate reflects a real track, with no invented delivery date.
+    await expect(page.locator('.l-cert-pip')).not.toHaveCount(0);
+    await expect(page.getByText('around Sep 6')).toHaveCount(0);
+
+    // Badges are the ones the engine actually unlocked, and the fabricated
+    // public profile URL is gone.
+    await expect(page.getByText('Already yours')).toBeVisible();
+    await expect(page.getByText('cherenkov.dev/moaid')).toHaveCount(0);
   });
 
   test('brand wordmark exits back to sandbox', async ({ page }) => {
@@ -263,7 +299,7 @@ test.describe('Learn environment — read, watch, practice, build', () => {
     await expect(page.getByTestId('nav-learn')).toBeVisible();
     await page.getByTestId('nav-learn').click();
     await expect(page).toHaveURL(/\/learn/);
-    await expect(page.getByRole('heading', { name: 'Good evening, Moaid' })).toBeVisible();
+    await expect(page.locator('.l-h1')).toHaveText(/Good (morning|afternoon|evening), Moaid/);
     await expect(page.locator('.learn-root')).toBeVisible();
     await expect(page.locator('.site-footer')).toHaveCount(0);
   });
@@ -271,9 +307,8 @@ test.describe('Learn environment — read, watch, practice, build', () => {
   test('root now serves latest Learn UI', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveURL('/');
-    await expect(page.getByRole('heading', { name: 'Good evening, Moaid' })).toBeVisible();
     await expect(page.locator('.learn-root')).toBeVisible();
-    await expect(page.locator('.l-h1')).toContainText('Good evening, Moaid');
+    await expect(page.locator('.l-h1')).toHaveText(/Good (morning|afternoon|evening), Moaid/);
     await expect(page.locator('.site-footer')).toHaveCount(0);
   });
   test('Navbar overview entry reaches the sandbox home page', async ({ page }) => {

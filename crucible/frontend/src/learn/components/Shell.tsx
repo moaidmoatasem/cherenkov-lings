@@ -1,6 +1,6 @@
 import React from 'react';
 import { ProgressRing } from './Primitives';
-import { LEARNER, NEXT_SESSION } from '../content';
+import { LEARNER } from '../content';
 import type { ScreenId } from '../types';
 
 export interface NavEntry {
@@ -10,8 +10,10 @@ export interface NavEntry {
 }
 
 export const NAV: NavEntry[] = [
-  { id: 'today', label: 'Today', meta: '2 left' },
-  { id: 'module', label: 'This module', meta: '3 of 4' },
+  // No counts here that the platform cannot measure. "2 left" and "3 of 4"
+  // were fixed strings that stayed put no matter what the learner did.
+  { id: 'today', label: 'Today', meta: '' },
+  { id: 'module', label: 'This module', meta: '' },
   { id: 'lab', label: 'Browser lab', meta: '' },
   { id: 'device', label: 'Device lab', meta: '' },
   { id: 'tracks', label: 'All modules', meta: '' },
@@ -23,6 +25,9 @@ interface SidebarProps {
   onNavigate: (id: ScreenId) => void;
   modulesBuilt: number;
   modulesTotal: number;
+  /** Rank from the learner's record, e.g. "Trainee". */
+  levelName: string;
+  streakDays: number;
   /** Leaves the learning environment for the sandbox app on the same origin. */
   onExit?: () => void;
 }
@@ -32,6 +37,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onNavigate,
   modulesBuilt,
   modulesTotal,
+  levelName,
+  streakDays,
   onExit,
 }) => {
   const fraction = modulesTotal > 0 ? modulesBuilt / modulesTotal : 0;
@@ -62,7 +69,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <span className="l-side-progress-meta">
             {modulesBuilt} of {modulesTotal} modules
             <br />
-            Web Automation, module 4
+            {levelName}
           </span>
         </div>
       </div>
@@ -87,9 +94,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       <div className="l-side-foot">
         <div className="l-next-session">
-          <span className="l-label">Next session</span>
-          <span className="l-next-session-when">{NEXT_SESSION.when}</span>
-          <span className="l-next-session-note">{NEXT_SESSION.note}</span>
+          <span className="l-label">Streak</span>
+          <span className="l-next-session-when">
+            {streakDays} {streakDays === 1 ? 'day' : 'days'}
+          </span>
+          <span className="l-next-session-note">
+            A day counts once a drill passes under chaos.
+          </span>
         </div>
       </div>
     </aside>

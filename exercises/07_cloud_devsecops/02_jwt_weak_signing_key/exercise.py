@@ -1,8 +1,9 @@
 """
 PRODUCTION STORY:
-Capital One AWS S3 Cloud Security Breach (2019)
-Misconfigured token verification routines accepting unsigned or weakly-signed tokens ('none' algorithm)
-allowed adversaries to forge administrative identities and exfiltrate over 100 million customer records.
+The 'alg: none' bypass in JWT libraries (disclosed 2015)
+Libraries across several languages let the token name the algorithm used to verify it. Setting the
+header to {"alg": "none"} and dropping the signature produced a token those servers accepted as valid,
+so any claim -- including {"role": "admin"} -- could be forged without knowing a key.
 """
 
 import pytest

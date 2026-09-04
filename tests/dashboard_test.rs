@@ -203,6 +203,7 @@ fn test_render_dashboard_sdet_master_state() {
                 total_score: 100.0,
                 flakiness_score: 100.0,
                 locator_score: 100.0,
+                locator_applies: true,
                 tier: 3,
                 timestamp: Some("2026-08-24T12:00:00Z".to_string()),
                 ..Default::default()

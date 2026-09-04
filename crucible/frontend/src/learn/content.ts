@@ -44,22 +44,36 @@ export const CURRENT_MODULE = {
   trackTotal: 10,
   title: 'Waiting without sleeping',
   lede:
-    "You've read it and watched the trace. What's left is the part that sticks: make a real test survive a slow, jittery network.",
-  minutesLeft: 'about 25 minutes left',
+    'A walkthrough of one module end to end, so the shape of the loop is clear before you start: read the failure, watch the trace, answer for yourself, then make a real test survive a slow, jittery network.',
+  minutesLeft: 'about 40 minutes end to end',
 };
 
+/**
+ * The four steps of a module, as an illustration of the loop.
+ *
+ * These carried `state: 'done'` ticks, which read as the learner's own history
+ * on a record that had none. The walkthrough shows the shape of a module; it
+ * does not claim anyone finished part of it.
+ */
 export const LOOP_STEPS: ModuleStep[] = [
-  { id: 'read', label: 'Read it', detail: '6 min', state: 'done' },
-  { id: 'watch', label: 'Watch the trace', detail: '9 min', state: 'done' },
-  { id: 'practice', label: 'Answer five questions', detail: '3 of 5', state: 'now' },
+  { id: 'read', label: 'Read the failure', detail: '6 min', state: 'todo' },
+  { id: 'watch', label: 'Watch the trace', detail: '9 min', state: 'todo' },
+  { id: 'practice', label: 'Answer five questions', detail: '5 questions', state: 'todo' },
   { id: 'build', label: 'Build it in the lab', detail: '25 min', state: 'todo' },
 ];
 
 /** The step switcher at the top of a module. `build` routes to the lab. */
+/**
+ * The step tabs for the worked-example module. These carried two ticks
+ * (`state: 'done'` on Read and Watch), which claimed the viewer had already
+ * completed part of a walkthrough they had just opened. None of the four
+ * steps are marked done here -- this screen is a fixed illustration, not a
+ * per-learner progress tracker.
+ */
 export const STEP_TABS: ModuleStep[] = [
-  { id: 'read', label: 'Read', detail: '6 min', state: 'done' },
-  { id: 'watch', label: 'Watch', detail: '9 min', state: 'done' },
-  { id: 'practice', label: 'Practice', detail: '3 of 5', state: 'now' },
+  { id: 'read', label: 'Read', detail: '6 min', state: 'todo' },
+  { id: 'watch', label: 'Watch', detail: '9 min', state: 'todo' },
+  { id: 'practice', label: 'Practice', detail: '', state: 'now' },
   { id: 'build', label: 'Build', detail: 'lab', state: 'todo' },
 ];
 
@@ -161,7 +175,10 @@ export const CHAPTERS: Chapter[] = [
 // ─── Module: practice ──────────────────────────────────────────────────────
 
 export const PRACTICE = {
-  kicker: 'Question 3 of 5 · nothing is graded',
+  // "Question 3 of 5" described a position in a five-question sequence that
+  // does not exist here -- there is exactly one worked question. Framed
+  // instead as what it is: one example, ungraded either way.
+  kicker: 'A worked question · nothing is graded',
   question: 'This passes on your laptop and fails one CI run in five. What actually fixes it?',
   snippet: [
     { text: "await input.fill('playwright');", bad: false },
@@ -184,9 +201,15 @@ export const ANSWERS: PracticeAnswer[] = [
   { key: 'D', label: 'Run the suite one test at a time', correct: false },
 ];
 
+/**
+ * "The five" panel beside the worked question. Two entries carried a
+ * permanent checkmark, which is a claim about the viewer's own history that
+ * a fixed walkthrough cannot make -- it showed the same two ticks to every
+ * learner regardless of what they had actually answered.
+ */
 export const CHECKPOINTS: Checkpoint[] = [
-  { label: 'What the browser waits for', state: 'done' },
-  { label: 'One match, or none', state: 'done' },
+  { label: 'What the browser waits for', state: 'todo' },
+  { label: 'One match, or none', state: 'todo' },
   { label: 'Sleep against assertion', state: 'now' },
   { label: 'Timeouts worth setting', state: 'todo' },
   { label: 'Reading a flaky trace', state: 'todo' },
@@ -195,7 +218,7 @@ export const CHECKPOINTS: Checkpoint[] = [
 // ─── Browser lab ───────────────────────────────────────────────────────────
 
 export const LAB_INTRO =
-  'Make the search test hold up five times in a row with 200 ms of delay and 75 ms of jitter. Change the code, hit run, watch it happen.';
+  'The task: make the search test hold up five times in a row with 200 ms of delay and 75 ms of jitter. Below is what that looks like when it works — the spec, the page it drives, and the scorecard the run produces.';
 
 export const SPEC_FILE = 'search.spec.ts';
 
@@ -424,7 +447,7 @@ export const CERTIFICATE: Certificate = {
   trackName: 'Modern Web Automation',
   title: 'Modern Web Automation, proven under chaos',
   copy:
-    "Issued when all ten modules have been built and held up — not when they've been watched. It links to the runs, including the ones that failed first, so anyone can check it.",
+    "Issued when every module in the track has been built and held up — not when they've been watched. It links to the runs, including the ones that failed first, so anyone can check it.",
   modulesBuilt: 4,
   modulesTotal: 10,
   projectedOn: '4 of 10 built · around Sep 6',
