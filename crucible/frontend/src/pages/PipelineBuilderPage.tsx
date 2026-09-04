@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { runPipeline } from '../lib/pipelineApi';
 
 export interface PipelineStage {
   id: string;
@@ -116,10 +117,11 @@ export const PipelineBuilderPage: React.FC = () => {
   const [simProgress, setSimProgress] = useState<number>(0);
   const [runnerJobs, setRunnerJobs] = useState<RunnerJob[]>([]);
   const [selectedRunnerId, setSelectedRunnerId] = useState<string | null>(null);
-  const simulationTimerRef = useRef<number | null>(null);
+  const replayTimerRef = useRef<number | null>(null);
+
   useEffect(() => {
     return () => {
-      if (simulationTimerRef.current !== null) window.clearInterval(simulationTimerRef.current);
+      if (replayTimerRef.current !== null) window.clearInterval(replayTimerRef.current);
     };
   }, []);
 
@@ -327,10 +329,10 @@ export const PipelineBuilderPage: React.FC = () => {
     };
   }, [stages]);
 
-  const showToast = (msg: string) => {
+  const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
-  };
+  }, []);
 
   // Drag and Drop Handlers for Visual Stages
   const handleDragStart = (index: number) => {
@@ -367,18 +369,132 @@ export const PipelineBuilderPage: React.FC = () => {
     setStages((prev) => prev.map((s) => (s.id === id ? { ...s, enabled: !s.enabled } : s)));
   };
 
-  // Run CI Pipeline Simulation
-  const handleStartSimulation = () => {
+  // Run CI Pipeline — calls POST /api/pipeline/run, then replays the real
+  // results step-by-step so the learner sees the pipeline "execute".  Falls
+  // back to a lightweight local simulation when the backend is unreachable.
+  const handleStartSimulation = useCallback(async () => {
     if (isSimulating) return;
     setActiveTab('simulation');
     setIsSimulating(true);
     setSimProgress(0);
 
+    // --- Try the real backend first -----------------------------------------
+    try {
+      const result = await runPipeline(yamlCode, {
+        parallel: true,
+        verbose: true,
+      });
+
+
+      // Map backend jobs → the UI's RunnerJob shape
+      const runners: RunnerJob[] = result.jobs.map((job, i) => {
+        const os = job.matrixCombination['os'] ?? 'ubuntu-latest';
+        const shard = job.matrixCombination['shard'] ?? `${i + 1}/${result.jobs.length}`;
+        return {
+          id: job.jobId || `runner-${i + 1}`,
+          runnerName: job.runnerName || `Matrix Runner #${i + 1}`,
+          os,
+          shard,
+          status: 'running',
+          currentStepIndex: 0,
+          steps: job.steps.map((s) => ({
+            name: s.name,
+            status: 'pending' as const,
+            durationMs: s.durationMs,
+          })),
+          logs: [
+            `[${new Date().toISOString()}] Initializing container runner on ${os}...`,
+            `[${new Date().toISOString()}] Provisioning virtual environment (Shard ${shard})...`,
+          ],
+        };
+      });
+
+      // If the backend returned zero jobs (e.g. invalid YAML), show that.
+      if (runners.length === 0) {
+        setIsSimulating(false);
+        setSimProgress(100);
+        showToast(result.success
+          ? '⚠️ Pipeline returned 0 jobs — check your YAML.'
+          : `❌ Pipeline failed: ${result.validation?.summary ?? 'unknown error'}`);
+        return;
+      }
+
+      setRunnerJobs(runners);
+      setSelectedRunnerId(runners[0].id);
+
+      // Progressive replay: reveal each step with a short delay, using the
+      // real backend data.  The step names, durations, and statuses are all
+      // from the engine — only the pacing is theatrical.
+      const maxSteps = Math.max(...runners.map((r) => r.steps.length));
+      let stepIndex = 0;
+
+      const interval = window.setInterval(() => {
+        const pct = Math.min(100, Math.round(((stepIndex + 1) / maxSteps) * 100));
+        setSimProgress(pct);
+
+        setRunnerJobs((prev) =>
+          prev.map((runner, ri) => {
+            const backendJob = result.jobs[ri];
+            const updatedSteps = runner.steps.map((step, idx) => {
+              if (idx < stepIndex) return { ...step, status: 'success' as const };
+              if (idx === stepIndex) return { ...step, status: 'running' as const };
+              return step;
+            });
+
+            const currentBackendStep = backendJob?.steps[stepIndex];
+            const newLogs = [...runner.logs];
+            if (currentBackendStep) {
+              const statusLabel = currentBackendStep.status === 'failed' ? 'FAILED' : 'SUCCESS';
+              newLogs.push(
+                `[${new Date().toISOString()}] Step: ${currentBackendStep.name} -> ${statusLabel} (${currentBackendStep.durationMs}ms)`,
+              );
+              if (currentBackendStep.output) {
+                newLogs.push(`[${new Date().toISOString()}]   ${currentBackendStep.output}`);
+              }
+            }
+
+            const isFinal = stepIndex >= runner.steps.length - 1;
+            const finalStatus = backendJob
+              ? backendJob.status === 'failed' ? 'failed' as const : 'success' as const
+              : 'success' as const;
+
+            return {
+              ...runner,
+              steps: updatedSteps,
+              currentStepIndex: stepIndex,
+              status: isFinal ? finalStatus : ('running' as const),
+              logs: newLogs,
+            };
+          }),
+        );
+
+        stepIndex++;
+
+        if (stepIndex >= maxSteps) {
+          window.clearInterval(interval);
+          setIsSimulating(false);
+          setSimProgress(100);
+
+          const failedCount = result.jobs.filter((j) => j.status === 'failed').length;
+          if (result.success) {
+            showToast(`🎉 All ${result.jobs.length} Matrix Runners Finished Successfully (0 Failures)`);
+          } else {
+            showToast(`⚠️ Pipeline completed with ${failedCount} failure${failedCount === 1 ? '' : 's'}`);
+          }
+        }
+      }, 600);
+
+      replayTimerRef.current = interval;
+      return;
+    } catch {
+      // Backend unreachable — fall through to local offline simulation
+    }
+
+    // --- Offline fallback (no backend) --------------------------------------
     const matrixStage = stages.find((s) => s.type === 'matrix' && s.enabled);
     const osList = matrixStage?.config.osList || ['ubuntu-latest'];
     const shards = matrixStage?.config.shards || ['1/2', '2/2'];
 
-    // Generate Runners based on matrix dimensions
     const runners: RunnerJob[] = [];
     let runnerCount = 1;
     osList.forEach((os) => {
@@ -396,12 +512,12 @@ export const PipelineBuilderPage: React.FC = () => {
             { name: 'L4/L7 Chaos Proxy Daemon (200ms)', status: 'pending', durationMs: 300 },
             { name: `Playwright Test Shard (${shard})`, status: 'pending', durationMs: 2400 },
             { name: 'Generate Allure Telemetry', status: 'pending', durationMs: 600 },
-            { name: 'Upload Artifacts (traces/report)', status: 'pending', durationMs: 500 }
+            { name: 'Upload Artifacts (traces/report)', status: 'pending', durationMs: 500 },
           ],
           logs: [
             `[${new Date().toISOString()}] Initializing container runner on ${os}...`,
-            `[${new Date().toISOString()}] Provisioning virtual environment (Shard ${shard})...`
-          ]
+            `[${new Date().toISOString()}] Provisioning virtual environment (Shard ${shard})...`,
+          ],
         });
       });
     });
@@ -428,9 +544,6 @@ export const PipelineBuilderPage: React.FC = () => {
           const newLogs = [...runner.logs];
           if (currentStep) {
             newLogs.push(`[${new Date().toISOString()}] Step: ${currentStep.name} -> EXECUTION SUCCESS (${currentStep.durationMs}ms)`);
-            if (currentStep.name.includes('Playwright')) {
-              newLogs.push(`[${new Date().toISOString()}]   ✓ 15 tests passed on Shard ${runner.shard} against Chaos Proxy`);
-            }
           }
 
           const isFinal = stepIndex >= runner.steps.length - 1;
@@ -440,7 +553,7 @@ export const PipelineBuilderPage: React.FC = () => {
             steps: updatedSteps,
             currentStepIndex: stepIndex,
             status: isFinal ? ('success' as const) : ('running' as const),
-            logs: newLogs
+            logs: newLogs,
           };
         });
       });
@@ -451,12 +564,12 @@ export const PipelineBuilderPage: React.FC = () => {
         window.clearInterval(interval);
         setIsSimulating(false);
         setSimProgress(100);
-        showToast('🎉 All Parallel Matrix Runners Finished Successfully (0 Failures)');
+        showToast('🎉 All Parallel Matrix Runners Finished Successfully (offline mode)');
       }
     }, 1100);
 
-    simulationTimerRef.current = interval;
-  };
+    replayTimerRef.current = interval;
+  }, [isSimulating, yamlCode, stages, showToast]);
 
   const selectedRunner = useMemo(() => {
     return runnerJobs.find((r) => r.id === selectedRunnerId) || runnerJobs[0];
@@ -630,6 +743,7 @@ export const PipelineBuilderPage: React.FC = () => {
                           type="checkbox"
                           checked={stage.enabled}
                           onChange={() => toggleStage(stage.id)}
+                          aria-label={`Toggle ${stage.title}`}
                         />
                         <span className="toggle-slider"></span>
                       </label>

@@ -5,3 +5,12 @@ The 'none' algorithm in JWT allows an attacker to bypass signature verification 
 
 ## Hint 2 (Code Diff)
 Remove 'none' from the allowed algorithms list.
+
+## Hint 3 (Full Solution Diff)
+```diff
+  jwt_config = {
+      'secret': 'super_secret',
+-     'algorithms': ['HS256', 'none']
++     'algorithms': ['HS256']
+  }
+```

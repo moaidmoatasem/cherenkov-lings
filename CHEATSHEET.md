@@ -8,7 +8,6 @@
 
 ```bash
 # 1. Start learning on any track
-cherenkov-lings watch --track=getting-started
 cherenkov-lings watch --track=foundations
 cherenkov-lings watch --track=api-pytest
 cherenkov-lings watch --track=playwright-ts

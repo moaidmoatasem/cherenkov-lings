@@ -114,6 +114,7 @@ cherenkov-lings dashboard
 
 # Start watching any curriculum track
 cherenkov-lings watch --track=foundations
+cherenkov-lings watch --track=api-pytest
 cherenkov-lings watch --track=playwright-ts
 cherenkov-lings watch --track=restassured-java
 cherenkov-lings watch --track=maestro-mobile

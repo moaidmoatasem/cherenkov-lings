@@ -5,3 +5,12 @@ Mounting /var/run/docker.sock into a container gives the container full root acc
 
 ## Hint 2 (Code Diff)
 Remove the docker.sock mount from the 'volumes' array.
+
+## Hint 3 (Full Solution Diff)
+```diff
+  container_def = {
+      'image': 'ubuntu:latest',
+-     'volumes': ['/var/run/docker.sock:/var/run/docker.sock']
++     'volumes': ['/app/data:/app/data']
+  }
+```

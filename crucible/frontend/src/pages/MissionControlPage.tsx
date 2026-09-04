@@ -212,7 +212,7 @@ export const MissionControlPage: React.FC = () => {
             </div>
             <div style={{ textAlign: 'center', background: 'rgba(15, 23, 42, 0.6)', padding: '12px 18px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>🧪 Total Drills</div>
-              <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--accent-cyan)' }}>{totalDrillsCount || 60}</div>
+              <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--accent-cyan)' }}>{totalDrillsCount || 68}</div>
             </div>
           </div>
         </div>
@@ -396,7 +396,7 @@ export const MissionControlPage: React.FC = () => {
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
           <div>
-            <h2 className="card-title" style={{ margin: 0 }}>📚 60-Drill Polyglot Curriculum Catalog</h2>
+            <h2 className="card-title" style={{ margin: 0 }}>📚 {totalDrillsCount || 68}-Drill Polyglot Curriculum Catalog</h2>
             <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '4px' }}>
               Click any drill to read its Real-World Production Story, failure mechanism, and progressive hints.
             </p>
@@ -529,6 +529,7 @@ export const MissionControlPage: React.FC = () => {
               </div>
               <button
                 onClick={closeDrillModal}
+                aria-label="Close modal"
                 style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '22px', cursor: 'pointer' }}
               >
                 &times;
