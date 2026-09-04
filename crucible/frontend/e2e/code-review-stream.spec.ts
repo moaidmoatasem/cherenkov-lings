@@ -44,14 +44,15 @@ test.describe('Code Review — embedded stream viewer', () => {
     await expect(page.getByTestId('stream-viewer')).toBeVisible();
   });
 
-  test('stream viewer renders its live header and placeholder body', async ({ page }) => {
+  test('stream viewer renders its header and placeholder body honestly', async ({ page }) => {
     const viewer = page.getByTestId('stream-viewer');
 
     await expect(viewer.locator('.stream-title')).toContainText('NoVNC/WebRTC');
     await expect(viewer.locator('.stream-content')).toContainText(
       'Mocking live device emulation stream',
     );
-    await expect(viewer.getByRole('status')).toContainText('LIVE');
+    // The badge used to claim "LIVE" over text admitting the stream is mocked.
+    await expect(viewer.getByRole('status')).toContainText('SIMULATED');
   });
 
   test('the live indicator actually animates', async ({ page }) => {

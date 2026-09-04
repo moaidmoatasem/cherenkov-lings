@@ -46,6 +46,86 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
         'Tests eventual consistency. Ledger transfers are submitted with dynamic X-Chaos: kafka_lag headers and require polling /balance until settled.',
       actionLabel: 'Open Transfer Page',
     },
+    {
+      id: 'catalog_response_stubbing',
+      path: '/products',
+      title: 'Product Catalog',
+      badge: 'Response Stubbing',
+      badgeClass: 'info',
+      description:
+        'A paginated catalog backed by GET /products. Automation drills intercept this route to stub responses and verify rendering decoupled from backend availability.',
+      actionLabel: 'Open Catalog Page',
+    },
+    {
+      id: 'operations_dashboard',
+      path: '/dashboard',
+      title: 'Operations Dashboard',
+      badge: 'Visual Regression',
+      badgeClass: 'purple',
+      description:
+        'A deterministic layout with intentionally volatile widgets (live clock, session id, chaos indicator). Visual drills must mask dynamic regions and apply pixel tolerance.',
+      actionLabel: 'Open Dashboard Page',
+    },
+    {
+      id: 'user_profile_isolation',
+      path: '/profile',
+      title: 'User Profile',
+      badge: 'Storage Isolation',
+      badgeClass: 'warning',
+      description:
+        'Browser-storage-backed profile state. Parallel workers must isolate cookies and localStorage per context to avoid cross-test pollution.',
+      actionLabel: 'Open Profile Page',
+    },
+    {
+      id: 'payment_frame_boundary',
+      path: '/payment',
+      title: 'Secure Payment Gateway',
+      badge: 'Iframe Boundary',
+      badgeClass: 'danger',
+      description:
+        'Card details are collected inside a sandboxed iframe to simulate a third-party payment provider. Tests must scope locators with frameLocator instead of reaching across the frame boundary.',
+      actionLabel: 'Open Payment Page',
+    },
+    {
+      id: 'mobile_biometric_fallback',
+      path: '/mobile-test',
+      title: 'Cherenkov Bank (Mobile)',
+      badge: 'Mobile Flows',
+      badgeClass: 'info',
+      description:
+        'A mobile banking flow: biometric check falls back to a PIN, a deep link lands on a specific account balance, and a long product list scrolls -- mobile automation patterns without a device farm.',
+      actionLabel: 'Open Mobile Test Page',
+    },
+    {
+      id: 'code_review_mentor',
+      path: '/code-review',
+      title: 'Code Review & Senior QA Mentor',
+      badge: 'AST Review Engine',
+      badgeClass: 'purple',
+      description:
+        'Runs test automation code against the backend AST review engine, surfaces anti-patterns with Socratic critiques, and can apply a suggested fix back into the editor.',
+      actionLabel: 'Open Code Review',
+    },
+    {
+      id: 'pipeline_builder',
+      path: '/pipeline-builder',
+      title: 'CI/CD Pipeline Simulator & Workflow Builder',
+      badge: 'CI/CD Simulator',
+      badgeClass: 'warning',
+      description:
+        'Design a parallel test-matrix GitHub Actions workflow, validate it against enterprise SDET rules, and run it against the real pipeline backend.',
+      actionLabel: 'Open Pipeline Builder',
+    },
+    {
+      id: 'allure_triage',
+      path: '/allure-triage',
+      title: 'Enterprise Allure Reports & Triage Station',
+      badge: 'Root-Cause Triage',
+      badgeClass: 'danger',
+      description:
+        'Correlate failing tests against proxy logs, tell a product defect from flaky infrastructure, and submit a root-cause hypothesis for the backend to grade.',
+      actionLabel: 'Open Allure Triage',
+    },
   ];
 
   return (
