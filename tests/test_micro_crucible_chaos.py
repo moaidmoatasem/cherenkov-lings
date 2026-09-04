@@ -1,3 +1,4 @@
+import base64
 import json
 import time
 from fastapi.testclient import TestClient
@@ -5,6 +6,16 @@ from crucible.backend.app import app
 from crucible.backend.chaos import parse_chaos_header, parse_duration_ms
 
 client = TestClient(app)
+
+
+def _make_alg_none_token(payload: dict) -> str:
+    """Hand-craft an unsigned JWT with header {"alg": "none"} -- the 2015 disclosure's forgery shape."""
+    def b64url(data: bytes) -> str:
+        return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
+
+    header = b64url(json.dumps({"alg": "none", "typ": "JWT"}).encode())
+    body = b64url(json.dumps(payload).encode())
+    return f"{header}.{body}."
 
 def test_parse_duration_ms():
     assert parse_duration_ms("500ms") == 500.0
@@ -473,6 +484,37 @@ def test_security_cors_origin_validation():
     resp_trusted = client.get("/api/security/cors-sensitive", headers={"Origin": "http://localhost:8080"})
     assert resp_trusted.status_code == 200
     assert resp_trusted.json()["email"] == "lead-sdet@cherenkov.dev"
+
+
+def test_security_docker_socket_mount_rejected():
+    """Verify deploy-config validation rejects a /var/run/docker.sock bind mount."""
+    resp_safe = client.post(
+        "/api/security/validate-deploy-config",
+        json={"image": "cherenkov/worker:latest", "volumes": ["/app/data:/app/data"]},
+    )
+    assert resp_safe.status_code == 200
+    assert resp_safe.json()["status"] == "valid"
+
+    resp_unsafe = client.post(
+        "/api/security/validate-deploy-config",
+        json={"image": "ubuntu:latest", "volumes": ["/var/run/docker.sock:/var/run/docker.sock"]},
+    )
+    assert resp_unsafe.status_code == 403
+    assert resp_unsafe.json()["error"] == "DOCKER_SOCKET_MOUNT_FORBIDDEN"
+
+
+def test_security_jwt_rejects_forged_alg_none_token():
+    """Verify /auth/me rejects a forged alg=none token even with a legitimate-looking payload."""
+    login_resp = client.post("/auth/login", json={"username": "sdet_student", "password": "any"})
+    assert login_resp.status_code == 200
+    real_token = login_resp.json()["access_token"]
+
+    real_resp = client.get("/auth/me", headers={"Authorization": f"Bearer {real_token}"})
+    assert real_resp.status_code == 200
+
+    forged_token = _make_alg_none_token({"sub": "attacker", "role": "admin"})
+    forged_resp = client.get("/auth/me", headers={"Authorization": f"Bearer {forged_token}"})
+    assert forged_resp.status_code == 401
 
 
 def test_pact_orders_endpoint():

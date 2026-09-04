@@ -918,6 +918,28 @@ async def get_cors_sensitive(request: Request) -> JSONResponse:
     )
 
 
+@app.post("/api/security/validate-deploy-config")
+async def post_validate_deploy_config(req: dict[str, Any]) -> JSONResponse:
+    """Security drill endpoint demonstrating rejection of Docker socket bind mounts."""
+    volumes = req.get("volumes", [])
+    has_docker_sock_mount = any("/var/run/docker.sock" in str(volume) for volume in volumes)
+
+    if has_docker_sock_mount:
+        return JSONResponse(
+            status_code=403,
+            content={
+                "status": "rejected",
+                "error": "DOCKER_SOCKET_MOUNT_FORBIDDEN",
+                "message": "Mounting /var/run/docker.sock grants the container root-equivalent control of the host and is forbidden.",
+            },
+        )
+
+    return JSONResponse(
+        status_code=200,
+        content={"status": "valid", "image": str(req.get("image", "unknown"))},
+    )
+
+
 @app.get("/api/pact/orders")
 async def get_pact_orders() -> JSONResponse:
     """Consumer-Driven Contract test provider endpoint."""
