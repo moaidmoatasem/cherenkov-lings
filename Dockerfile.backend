@@ -9,6 +9,12 @@ COPY crucible/ ./crucible/
 COPY lings.toml .
 COPY .cherenkov-progress.json* .
 
+# GET /api/drill/theory reads theory.md and hints.md straight off disk, and both
+# the Learn drill screen and Mission Control call it. Without the drill tree in
+# the image every one of those requests 404s, so the curriculum reads as empty
+# in a container while working fine from a checkout.
+COPY exercises/ ./exercises/
+
 EXPOSE 8081
 
 CMD ["python", "-m", "uvicorn", "crucible.backend.app:app", "--host", "0.0.0.0", "--port", "8081"]

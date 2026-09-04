@@ -3194,3 +3194,20 @@ body {
     animation: none;
   }
 }
+
+/* Names the scanner behind the violation list — the local scan knows fewer
+   rules than the review engine, and a shorter list must not read as cleaner. */
+.ast-source {
+  margin-left: 10px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+}
+
+.ast-source[data-live='true'] {
+  color: var(--accent-green, #3fb950);
+  border-color: currentColor;
+}

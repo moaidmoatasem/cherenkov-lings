@@ -80,12 +80,18 @@ static RE_RUST_SLEEP: LazyLock<Regex> = LazyLock::new(|| {
 
 // 2. Fragile locators
 static RE_ABSOLUTE_XPATH: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"['"`](?:/html/body(?:/[a-zA-Z0-9_-]+(?:\[\d+\])?)+|//(?:div|span|section|main|ul|li|form|table|tbody|tr|td)/div(?:\[\d+\])?(?:/[a-zA-Z0-9_-]+(?:\[\d+\])?)+)['"`]"#)
+    // Covers `/html/body/...`, the `//tag/...` descendant form, and Playwright's
+    // explicit `xpath=` engine prefix. The last of these appears in the
+    // curriculum's own fragile-locator drill and was going unreported.
+    Regex::new(r#"['"`](?:xpath=)?(?:/html/body(?:/[a-zA-Z0-9_-]+(?:\[[^\]]+\])?)+|//[a-zA-Z][a-zA-Z0-9_-]*(?:\[[^\]]+\])?(?:/[a-zA-Z0-9_-]+(?:\[[^\]]+\])?)+)['"`]"#)
         .expect("Valid regex")
 });
 
 static RE_DEEP_CSS_CHAIN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"['"`]\s*(?:div\s*>\s*div\s*>\s*(?:span|button|input|a)|(?:[.#:]?[a-zA-Z0-9_-]+(?:\([^\)]*\))?\s*>\s*){3,}[.#:]?[a-zA-Z0-9_-]+(?:\([^\)]*\))?|[.#]?[a-zA-Z0-9_-]+\s*>\s*:nth-child\(\d+\)(?:\s*>\s*[.#:]?[a-zA-Z0-9_-]+(?:\([^\)]*\))?)+)\s*['"`]"#)
+    // The final alternative catches a stack of four or more style classes
+    // (`.btn.btn-primary.submit-large.theme-blue`), which breaks on any restyle
+    // just as surely as a descendant chain does.
+    Regex::new(r#"['"`]\s*(?:div\s*>\s*div\s*>\s*(?:span|button|input|a)|(?:[.#:]?[a-zA-Z0-9_-]+(?:\([^\)]*\))?\s*>\s*){3,}[.#:]?[a-zA-Z0-9_-]+(?:\([^\)]*\))?|[.#]?[a-zA-Z0-9_-]+\s*>\s*:nth-child\(\d+\)(?:\s*>\s*[.#:]?[a-zA-Z0-9_-]+(?:\([^\)]*\))?)+|(?:\.[a-zA-Z][a-zA-Z0-9_-]*){4,})\s*['"`]"#)
         .expect("Valid regex")
 });
 
