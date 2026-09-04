@@ -312,8 +312,7 @@ fn test_flakiness_matrix_permutations() {
         } else {
             expected_raw_flake
         };
-        let expected_total =
-            ((0.35 * expected_c) + (0.35 * expected_raw_flake) + 15.0) / 0.85;
+        let expected_total = ((0.35 * expected_c) + (0.35 * expected_raw_flake) + 15.0) / 0.85;
         assert!((card_clean.total_score - expected_total).abs() < 0.001);
 
         if passed_count == 5 {

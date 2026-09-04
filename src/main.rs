@@ -567,10 +567,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             locator_score: scorecard.locator_quality.score,
                                             // Zero weight means the drill had
                                             // no locators to judge.
-                                            locator_applies: scorecard
-                                                .locator_quality
-                                                .weight
-                                                > 0.0,
+                                            locator_applies: scorecard.locator_quality.weight > 0.0,
                                             speed_score: scorecard.speed.score,
                                             passed_iterations: response.passed_iterations,
                                             iterations: response.iterations,
