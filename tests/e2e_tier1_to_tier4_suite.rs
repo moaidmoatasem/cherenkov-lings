@@ -8,9 +8,35 @@ use std::net::SocketAddr;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
+
+/// How long any single socket read in these tests may block.
+///
+/// libtest has no per-test timeout, so an async test waiting on a socket that
+/// never answers waits forever: the job burns its whole allowance and reports
+/// nothing at all. A ceiling turns "the proxy went quiet" into a failure with a
+/// message attached.
+const IO_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// `AsyncReadExt::read` with [`IO_TIMEOUT`] over it. Read errors still surface as
+/// `Err` so call sites keep the handling they already had; only a block that
+/// never resolves is turned into a panic.
+async fn read_bounded(stream: &mut TcpStream, buf: &mut [u8]) -> std::io::Result<usize> {
+    match tokio::time::timeout(IO_TIMEOUT, stream.read(buf)).await {
+        Ok(result) => result,
+        Err(_) => panic!("read blocked for {IO_TIMEOUT:?}: the peer never answered"),
+    }
+}
+
+/// `Receiver::recv` with [`IO_TIMEOUT`] over it, for the same reason.
+async fn recv_bounded(rx: &mut tokio::sync::mpsc::Receiver<String>) -> Option<String> {
+    match tokio::time::timeout(IO_TIMEOUT, rx.recv()).await {
+        Ok(received) => received,
+        Err(_) => panic!("upstream received nothing within {IO_TIMEOUT:?}"),
+    }
+}
 
 /// Helper: Spawns a mock HTTP server on an OS-assigned ephemeral port (`127.0.0.1:0`).
 /// Returns the bound `SocketAddr` and an MPSC receiver for inspected raw request strings.
@@ -88,14 +114,18 @@ async fn test_tier1_proxy_routing_default_ports() {
     client.flush().await.unwrap();
 
     let mut resp_buf = vec![0u8; 2048];
-    let n = client.read(&mut resp_buf).await.expect("read response");
+    let n = read_bounded(&mut client, &mut resp_buf)
+        .await
+        .expect("read response");
     assert!(n > 0);
 
     let resp_str = String::from_utf8_lossy(&resp_buf[..n]);
     assert!(resp_str.contains("200 OK"));
     assert!(resp_str.contains("mock upstream ready"));
 
-    let received_req = req_rx.recv().await.expect("upstream received request");
+    let received_req = recv_bounded(&mut req_rx)
+        .await
+        .expect("upstream received request");
     assert!(received_req.starts_with("GET /health HTTP/1.1"));
 
     let _ = shutdown_tx.send(());
@@ -126,7 +156,7 @@ async fn test_tier1_proxy_l4_tcp_connection_drops() {
         client.flush().await.unwrap();
 
         let mut buf = vec![0u8; 1024];
-        let n = client.read(&mut buf).await.unwrap_or(0);
+        let n = read_bounded(&mut client, &mut buf).await.unwrap_or(0);
         assert_eq!(n, 0, "L4 Drop must close TCP stream with 0 bytes");
     }
 
@@ -141,7 +171,7 @@ async fn test_tier1_proxy_l4_tcp_connection_drops() {
         client.flush().await.unwrap();
 
         let mut buf = vec![0u8; 1024];
-        let n = client.read(&mut buf).await.unwrap_or(0);
+        let n = read_bounded(&mut client, &mut buf).await.unwrap_or(0);
         assert_eq!(n, 0, "L4 Drop via X-Chaos-Fault must return 0 bytes");
     }
 
@@ -156,7 +186,7 @@ async fn test_tier1_proxy_l4_tcp_connection_drops() {
         client.flush().await.unwrap();
 
         let mut buf = vec![0u8; 1024];
-        let n = client.read(&mut buf).await.unwrap_or(0);
+        let n = read_bounded(&mut client, &mut buf).await.unwrap_or(0);
         assert_eq!(n, 0, "L4 Drop via X-Chaos-Drop must return 0 bytes");
     }
 
@@ -188,7 +218,7 @@ async fn test_tier1_proxy_l7_fault_injection_and_jitter() {
         client.flush().await.unwrap();
 
         let mut buf = vec![0u8; 2048];
-        let n = client.read(&mut buf).await.unwrap();
+        let n = read_bounded(&mut client, &mut buf).await.unwrap();
         assert!(n > 0);
         let resp = String::from_utf8_lossy(&buf[..n]);
         assert!(resp.contains("502 Bad Gateway"));
@@ -206,7 +236,7 @@ async fn test_tier1_proxy_l7_fault_injection_and_jitter() {
         client.flush().await.unwrap();
 
         let mut buf = vec![0u8; 2048];
-        let n = client.read(&mut buf).await.unwrap();
+        let n = read_bounded(&mut client, &mut buf).await.unwrap();
         assert!(n > 0);
         let resp = String::from_utf8_lossy(&buf[..n]);
         assert!(resp.contains("504 Gateway Timeout"));
@@ -225,7 +255,7 @@ async fn test_tier1_proxy_l7_fault_injection_and_jitter() {
         client.flush().await.unwrap();
 
         let mut buf = vec![0u8; 2048];
-        let n = client.read(&mut buf).await.unwrap();
+        let n = read_bounded(&mut client, &mut buf).await.unwrap();
         let elapsed = start.elapsed();
         assert!(n > 0);
         assert!(
@@ -473,7 +503,9 @@ async fn test_tier2_proxy_unreachable_upstream_returns_502_bad_gateway() {
     client.flush().await.unwrap();
 
     let mut buf = vec![0u8; 2048];
-    let n = client.read(&mut buf).await.expect("read 502 response");
+    let n = read_bounded(&mut client, &mut buf)
+        .await
+        .expect("read 502 response");
     assert!(n > 0);
 
     let resp_str = String::from_utf8_lossy(&buf[..n]);
@@ -505,7 +537,7 @@ async fn test_tier2_proxy_malformed_packets_and_non_http_data() {
 
     // Stream should close or handle without crashing the server
     let mut buf = vec![0u8; 512];
-    let _ = client.read(&mut buf).await;
+    let _ = read_bounded(&mut client, &mut buf).await;
     drop(client);
 
     // Verify proxy is still alive after receiving binary garbage
@@ -520,7 +552,9 @@ async fn test_tier2_proxy_malformed_packets_and_non_http_data() {
     healthy_client.flush().await.unwrap();
 
     let mut resp_buf = vec![0u8; 1024];
-    let n = healthy_client.read(&mut resp_buf).await.unwrap();
+    let n = read_bounded(&mut healthy_client, &mut resp_buf)
+        .await
+        .unwrap();
     assert!(n > 0);
     assert!(String::from_utf8_lossy(&resp_buf[..n]).contains("200 OK"));
 
@@ -583,7 +617,7 @@ async fn test_tier3_proxy_micro_crucible_chaos_end_to_end() {
     client.flush().await.unwrap();
 
     let mut resp_buf = vec![0u8; 2048];
-    let n = client.read(&mut resp_buf).await.unwrap();
+    let n = read_bounded(&mut client, &mut resp_buf).await.unwrap();
     assert!(n > 0);
 
     let resp_str = String::from_utf8_lossy(&resp_buf[..n]);
@@ -591,7 +625,7 @@ async fn test_tier3_proxy_micro_crucible_chaos_end_to_end() {
     assert!(resp_str.contains("ORD-9021"));
 
     // Verify upstream received the exact application chaos headers
-    let upstream_req = req_rx.recv().await.expect("upstream received");
+    let upstream_req = recv_bounded(&mut req_rx).await.expect("upstream received");
     assert!(upstream_req.contains("Idempotency-Key: key-999"));
     assert!(upstream_req.contains("idempotency_conflict=true"));
     assert!(upstream_req.contains("kafka_lag=1000ms"));
@@ -623,7 +657,7 @@ async fn test_tier3_watch_lifecycle_and_background_proxy_management() {
     client.flush().await.unwrap();
 
     let mut buf = vec![0u8; 1024];
-    let n = client.read(&mut buf).await.unwrap();
+    let n = read_bounded(&mut client, &mut buf).await.unwrap();
     assert!(n > 0);
 
     // Trigger graceful shutdown
@@ -920,7 +954,7 @@ async fn test_tier4_high_volume_chaos_proxy_stress_scenario() {
             client.flush().await.unwrap();
 
             let mut buf = vec![0u8; 1024];
-            let n = client.read(&mut buf).await.unwrap_or(0);
+            let n = read_bounded(&mut client, &mut buf).await.unwrap_or(0);
 
             if i % 3 == 0 {
                 if n > 0 && String::from_utf8_lossy(&buf[..n]).contains("200 OK") {

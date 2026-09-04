@@ -6,6 +6,24 @@ use std::time::{Duration, Instant};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 
+/// How long any single socket read in these tests may block.
+///
+/// libtest has no per-test timeout, so an async test waiting on a socket that
+/// never answers waits forever: the job burns its whole allowance and reports
+/// nothing at all. A ceiling turns "the proxy went quiet" into a failure with a
+/// message attached.
+const IO_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// `AsyncReadExt::read` with [`IO_TIMEOUT`] over it. Read errors still surface as
+/// `Err` so call sites keep the handling they already had; only a block that
+/// never resolves is turned into a panic.
+async fn read_bounded(stream: &mut TcpStream, buf: &mut [u8]) -> std::io::Result<usize> {
+    match tokio::time::timeout(IO_TIMEOUT, stream.read(buf)).await {
+        Ok(result) => result,
+        Err(_) => panic!("read blocked for {IO_TIMEOUT:?}: the peer never answered"),
+    }
+}
+
 /// Helper: starts a mock HTTP echo/response server on an OS-assigned ephemeral port.
 async fn spawn_echo_upstream() -> SocketAddr {
     let listener = TcpListener::bind("127.0.0.1:0")
@@ -122,7 +140,7 @@ async fn test_stress_high_concurrency_burst_100_requests() {
             client.flush().await.unwrap();
 
             let mut resp_buf = vec![0u8; 2048];
-            let n = client.read(&mut resp_buf).await.unwrap_or(0);
+            let n = read_bounded(&mut client, &mut resp_buf).await.unwrap_or(0);
             if n > 0 {
                 let resp_str = String::from_utf8_lossy(&resp_buf[..n]);
                 if resp_str.contains("200 OK") && resp_str.contains("echo_ok") {
@@ -203,7 +221,7 @@ async fn test_stress_concurrent_mixed_workload() {
             client.flush().await.unwrap();
 
             let mut resp_buf = vec![0u8; 2048];
-            let n = client.read(&mut resp_buf).await.unwrap_or(0);
+            let n = read_bounded(&mut client, &mut resp_buf).await.unwrap_or(0);
 
             match i % 4 {
                 0 => {
@@ -361,7 +379,7 @@ async fn test_proxy_handles_malformed_header_requests_without_panic() {
         client.flush().await.unwrap();
 
         let mut resp_buf = vec![0u8; 2048];
-        let n = client.read(&mut resp_buf).await.unwrap_or(0);
+        let n = read_bounded(&mut client, &mut resp_buf).await.unwrap_or(0);
         assert!(
             n > 0,
             "Proxy must not crash on malformed header: {}",
@@ -410,7 +428,7 @@ async fn test_proxy_survives_upstream_sudden_termination() {
         client.flush().await.unwrap();
 
         let mut resp_buf = vec![0u8; 1024];
-        let _ = client.read(&mut resp_buf).await;
+        let _ = read_bounded(&mut client, &mut resp_buf).await;
         // The connection terminates abruptly from upstream, proxy should cleanly handle it without panicking
     }
 
@@ -462,7 +480,9 @@ async fn test_proxy_handles_client_premature_disconnect() {
     healthy_client.flush().await.unwrap();
 
     let mut resp_buf = vec![0u8; 1024];
-    let n = healthy_client.read(&mut resp_buf).await.unwrap();
+    let n = read_bounded(&mut healthy_client, &mut resp_buf)
+        .await
+        .unwrap();
     assert!(n > 0);
     assert!(String::from_utf8_lossy(&resp_buf[..n]).contains("200 OK"));
 
@@ -504,7 +524,7 @@ async fn test_rapid_proxy_start_stop_supervisor_cycles() {
         client.flush().await.unwrap();
 
         let mut resp_buf = vec![0u8; 1024];
-        let n = client.read(&mut resp_buf).await.unwrap();
+        let n = read_bounded(&mut client, &mut resp_buf).await.unwrap();
         assert!(n > 0, "Iteration {} must receive response", i);
 
         // Immediate shutdown
@@ -592,7 +612,7 @@ async fn test_proxy_streaming_large_payload_5mb() {
     client.flush().await.unwrap();
 
     let mut resp_buf = vec![0u8; 2048];
-    let n = client.read(&mut resp_buf).await.unwrap();
+    let n = read_bounded(&mut client, &mut resp_buf).await.unwrap();
     assert!(n > 0);
     let resp_str = String::from_utf8_lossy(&resp_buf[..n]);
     assert!(resp_str.contains("200 OK"));
@@ -624,7 +644,7 @@ async fn test_proxy_drops_oversized_headers_exceeding_64kb() {
 
     // Proxy must cut off stream and close connection without hanging
     let mut resp_buf = vec![0u8; 1024];
-    let n = client.read(&mut resp_buf).await.unwrap_or(0);
+    let n = read_bounded(&mut client, &mut resp_buf).await.unwrap_or(0);
     assert_eq!(
         n, 0,
         "Oversized headers > 64KB should result in closed connection"

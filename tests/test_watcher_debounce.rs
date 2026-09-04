@@ -6,6 +6,20 @@ use std::sync::mpsc::channel;
 use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 
+/// The debounce window this test drives its own loop with.
+///
+/// Deliberately wider than the 50ms `src/watcher.rs` ships. The loop polls on a
+/// 20ms `recv_timeout`, so at 50ms a single descheduled poll -- routine on a
+/// shared CI runner -- pushes `t.elapsed()` past the window mid-burst and the
+/// debouncer emits twice. The test would then be reporting on the scheduler
+/// rather than on coalescing. The property under test is that a burst well
+/// inside the window collapses to one event; the width is what buys the margin
+/// to measure it. Five writes 8ms apart span 40ms, comfortably inside 300ms.
+const DEBOUNCE_WINDOW: Duration = Duration::from_millis(300);
+
+/// How long to wait for the debouncer to emit: the full window plus margin.
+const SETTLE: Duration = Duration::from_millis(600);
+
 /// A scratch path unique to this test-binary run.
 ///
 /// These tests previously shared fixed paths under the system temp directory and
@@ -18,6 +32,22 @@ fn unique_temp_path(label: &str) -> std::path::PathBuf {
         .map(|d| d.as_nanos())
         .unwrap_or(0);
     std::env::temp_dir().join(format!("{}_{}_{}", label, std::process::id(), nanos))
+}
+
+/// Stops the debounce loop when the test scope unwinds.
+///
+/// `spawn_blocking` tasks cannot be cancelled, and dropping a runtime waits for
+/// the ones already running. So a failed assertion below used to hang the whole
+/// test binary rather than report: the panic skipped the line that clears the
+/// flag, the loop kept spinning, and the runtime's drop waited on it forever.
+/// That is exactly what happened on ubuntu, where this assertion is timing
+/// sensitive -- CI sat on one test for five hours and reported nothing.
+struct StopOnDrop(Arc<AtomicBool>);
+
+impl Drop for StopOnDrop {
+    fn drop(&mut self) {
+        self.0.store(false, Ordering::Relaxed);
+    }
 }
 
 #[tokio::test]
@@ -37,15 +67,21 @@ async fn test_watcher_debouncing_coalesces_rapid_events() {
 
     let running = Arc::new(AtomicBool::new(true));
     let running_clone = running.clone();
+    // Covers the panic path only; the happy path still stops the loop explicitly
+    // before awaiting the handle, because this guard drops after that await.
+    let _stop_on_panic = StopOnDrop(running.clone());
 
     let tx_clone = tx.clone();
     let thread_handle = tokio::task::spawn_blocking(move || {
         let _watcher = watcher;
         let mut last_event_time: Option<Instant> = None;
         let mut last_path: Option<String> = None;
-        let debounce_window = Duration::from_millis(50);
+        let debounce_window = DEBOUNCE_WINDOW;
+        // Backstop in case the flag is ever lost: an unbounded loop in a
+        // blocking task is what turns a test failure into a hung CI job.
+        let deadline = Instant::now() + Duration::from_secs(30);
 
-        while running_clone.load(Ordering::Relaxed) {
+        while running_clone.load(Ordering::Relaxed) && Instant::now() < deadline {
             match std_rx.recv_timeout(Duration::from_millis(20)) {
                 Ok(Ok(event)) => {
                     if (event.kind.is_modify() || event.kind.is_create())
@@ -73,7 +109,7 @@ async fn test_watcher_debouncing_coalesces_rapid_events() {
     });
 
     // Allow watcher to initialize
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    tokio::time::sleep(Duration::from_millis(200)).await;
 
     // Rapidly write to the file 5 times within 40ms (each 8ms apart)
     for i in 1..=5 {
@@ -81,8 +117,8 @@ async fn test_watcher_debouncing_coalesces_rapid_events() {
         tokio::time::sleep(Duration::from_millis(8)).await;
     }
 
-    // Wait for the 50ms debounce window + margin
-    tokio::time::sleep(Duration::from_millis(150)).await;
+    // Wait for the debounce window to close, plus margin
+    tokio::time::sleep(SETTLE).await;
 
     // Collect all events received
     let mut received_events = Vec::new();
@@ -102,13 +138,13 @@ async fn test_watcher_debouncing_coalesces_rapid_events() {
     assert_eq!(
         received_events.len(),
         1,
-        "Expected exactly 1 coalesced event from 5 rapid saves within 50ms, got {}",
+        "Expected exactly 1 coalesced event from 5 rapid saves inside one window, got {}",
         received_events.len()
     );
 
     // Now do a second write after the debounce window has closed
     fs::write(&test_file, "// second edit after pause").unwrap();
-    tokio::time::sleep(Duration::from_millis(150)).await;
+    tokio::time::sleep(SETTLE).await;
 
     let mut second_events = Vec::new();
     while let Ok(path) = rx.try_recv() {
