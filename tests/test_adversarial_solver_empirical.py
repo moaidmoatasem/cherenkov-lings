@@ -21,8 +21,12 @@ Comprehensive Empirical Scenarios:
 import sys
 import os
 import hashlib
+import shutil
 import subprocess
+import urllib.request
 from pathlib import Path
+
+import pytest
 
 # Reconfigure stdout for UTF-8
 if sys.stdout and hasattr(sys.stdout, "reconfigure"):
@@ -311,8 +315,45 @@ def run_empirical_suite() -> tuple[int, int]:
 
     return passed_scenarios, total_scenarios
 
+# The drills hardcode this host -- 04_dont_test_the_mock and 05_one_thing_per_test
+# call the real Crucible rather than a fake, which is the whole lesson -- so probe
+# exactly what they will dial rather than inventing a configurable base URL.
+CRUCIBLE_HEALTH_URL = "http://localhost:8081/health"
+
+def missing_preconditions() -> list[str]:
+    """Reports the prerequisites this suite needs but cannot provide for itself.
+
+    Scenarios 1-6 drive drills 04 and 05 against a live backend, and 9-10 shell
+    out to cargo. When either is absent the run dies three process levels down,
+    inside a pytest subprocess spawned by verify_all_exercises.py, so the real
+    cause never reaches the summary line -- it reads as a code regression.
+    """
+    missing: list[str] = []
+    try:
+        with urllib.request.urlopen(CRUCIBLE_HEALTH_URL, timeout=5) as resp:
+            if resp.status != 200:
+                missing.append(f"{CRUCIBLE_HEALTH_URL} answered HTTP {resp.status}, not 200")
+    except Exception as exc:
+        missing.append(
+            f"no Crucible backend on {CRUCIBLE_HEALTH_URL} ({exc.__class__.__name__}: {exc}); "
+            "start one with: python -m uvicorn crucible.backend.app:app --host 127.0.0.1 --port 8081"
+        )
+    if shutil.which("cargo") is None:
+        missing.append("cargo is not on PATH; scenarios 9 and 10 drive the Rust learning engine")
+    return missing
+
 def test_suite():
     """pytest entry point: every empirical scenario must pass."""
+    unmet = missing_preconditions()
+    if unmet:
+        detail = "\n  - ".join([""] + unmet)
+        # CI provisions both prerequisites on purpose, so a gap there is a real
+        # failure. Skipping it would quietly restore the green-no-matter-what
+        # behaviour this suite was rewritten to stop.
+        if os.environ.get("CI"):
+            raise AssertionError(f"empirical suite prerequisites are missing in CI:{detail}")
+        pytest.skip(f"empirical suite prerequisites are missing:{detail}")
+
     passed_scenarios, total_scenarios = run_empirical_suite()
     assert passed_scenarios == total_scenarios, (
         f"{total_scenarios - passed_scenarios} of {total_scenarios} empirical adversarial "
@@ -320,5 +361,10 @@ def test_suite():
     )
 
 if __name__ == "__main__":
+    unmet = missing_preconditions()
+    if unmet:
+        for item in unmet:
+            print(f"[PRECONDITION] {item}")
+        sys.exit(2)
     passed, total = run_empirical_suite()
     sys.exit(0 if passed == total else 1)

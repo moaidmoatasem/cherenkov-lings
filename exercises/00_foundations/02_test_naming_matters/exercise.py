@@ -9,15 +9,18 @@ def apply_discount(price: float, discount_pct: float) -> float:
     return price * (1 - discount_pct / 100)
 
 def test_1():
-    # TODO: Rename to test_discount_reduces_price_by_percentage
+    # TODO: rename this to say what it proves -- a percentage discount brings
+    #       the price down. Follow the formula in the header.
     assert apply_discount(100.0, 20.0) == 80.0
 
 def test_2():
-    # TODO: Rename to test_zero_discount_returns_original_price
+    # TODO: rename this one. It proves a discount of zero leaves the price
+    #       exactly as it was.
     assert apply_discount(50.0, 0.0) == 50.0
 
 def test_3():
-    # TODO: Rename to test_negative_discount_raises_value_error
+    # TODO: rename this one. It proves an out-of-range discount is refused
+    #       rather than quietly applied.
     try:
         apply_discount(100.0, -5.0)
         assert False, "Should have raised ValueError"

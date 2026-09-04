@@ -136,7 +136,7 @@ Open any `exercise.*` file in your favorite editor, write your fix, and hit **Sa
 | Track | Stack | Drills | Core Concepts & Incident Case Studies |
 |---|---|:---:|---|
 | **0. Foundations** | Python / Pytest | 5 | AAA pattern, assertions as documentation, avoiding mock traps, single-responsibility |
-| **0a. API Validation Fundamentals** | Python / Pytest | 1 | Direct HTTP contract validation: status code assertions, vacuous test detection, reading a response before parsing it |
+| **0b. API Validation** | Python / Pytest | 1 | Status codes, response bodies and schema shape as a first API assertion |
 | **1. Web UI** | Playwright TS | 10 | React hydration click drops, closed Shadow DOM piercing, debounced race conditions, Page Object Model, cross-origin payment iframes, network request intercepts, visual regression thresholds, worker storageState isolation |
 | **2. API Resilience** | REST Assured Java | 7 | HTTP 409 idempotency collisions, transparent JWT 401 interceptors, Kafka lag polling, multi-page pagination loops, JSON schema contracts, aliased GraphQL queries, `RequestSpecBuilder` reuse |
 | **3. Mobile UI** | Maestro YAML | 6 | Biometric auth fallback flows, deep link cold starts, activity recreation & screen rotation UI state, dynamic list `scrollUntilVisible`, OS permission dialog handlers |

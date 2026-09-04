@@ -6,15 +6,14 @@
 # overflows and race conditions because preparation, mutation, and validation were interleaved.
 #
 # Your Goal:
-# Refactor the tangled test below into two clean AAA tests:
-# 1. test_successful_payment_returns_masked_card_and_amount()
-#    - # ARRANGE: set amount = 99.99, currency = "USD", card_last4 = "4242"
-#    - # ACT: result = process_payment(amount, currency, card_last4)
-#    - # ASSERT: check status, amount, currency, masked_card ("****4242")
-# 2. test_zero_amount_returns_error_status()
-#    - # ARRANGE: set amount = 0.0
-#    - # ACT: result = process_payment(amount, "USD", "1234")
-#    - # ASSERT: check status == "error"
+# The test below checks two unrelated behaviours in one tangled block. Split it
+# into two tests, each covering one behaviour of process_payment:
+#   - the successful path, where a positive amount is charged
+#   - the rejected path, where an amount of zero is refused
+#
+# Structure each one with explicit # ARRANGE, # ACT and # ASSERT sections, and
+# name it after the behaviour it proves. On the successful path, assert on
+# everything the caller is promised -- including how the card is masked.
 
 def process_payment(amount: float, currency: str, card_last4: str) -> dict:
     if amount <= 0:
@@ -22,9 +21,9 @@ def process_payment(amount: float, currency: str, card_last4: str) -> dict:
     return {"status": "success", "amount": amount, "currency": currency, "masked_card": f"****{card_last4}"}
 
 def test_payment_procedural_mess():
-    # Anti-pattern: Interleaved state setup and assertion spaghetti without clear AAA structure
-    # TODO: Refactor into test_successful_payment_returns_masked_card_and_amount with # ARRANGE, # ACT, # ASSERT
-    # TODO: Add test_zero_amount_returns_error_status
+    # Anti-pattern: setup, call and checks interleaved in one block, covering
+    # two behaviours at once. When this fails, you cannot tell which one broke.
+    # TODO: replace this with the two AAA-structured tests described above.
     res = process_payment(99.99, "USD", "4242")
     assert res["status"] == "success"
-    assert False, "TODO: Restructure into AAA pattern and separate tests"
+    assert False, "TODO: split into two tests, each with ARRANGE / ACT / ASSERT"

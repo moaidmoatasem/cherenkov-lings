@@ -56,7 +56,10 @@ from crucible.backend.models import (
 from crucible.backend.pipeline import simulate_pipeline_run, validate_workflow_yaml
 from crucible.backend.reports import generate_chaos_dataset, render_html_report_string, summarize_dataset
 from crucible.backend.review import apply_review_fix, run_code_review
-from crucible.backend.triage import evaluate_triage_submission
+from crucible.backend.triage import (
+    evaluate_triage_submission,
+    load_gamification_progress,
+)
 from crucible.backend.ai_generator import generate_pytest_from_spec
 from crucible.backend.tracing import TracingMiddleware
 
@@ -928,24 +931,13 @@ async def get_pact_orders() -> JSONResponse:
 @app.get("/api/progress")
 async def get_progress() -> JSONResponse:
     """Retrieve learner progress, XP, level, streak, and achievements."""
-    progress_file = Path(".cherenkov-progress.json")
-    if progress_file.exists():
-        try:
-            data = json.loads(progress_file.read_text(encoding="utf-8"))
-            return JSONResponse(status_code=200, content=data)
-        except Exception:
-            pass
-
-    default_progress = {
-        "total_xp": 0,
-        "completed_drills": [],
-        "unlocked_achievements": [],
-        "streak_days": 0,
-        "last_activity_date": None,
-        "consecutive_perfect_flakiness": 0,
-        "perfect_locator_count": 0,
-    }
-    return JSONResponse(status_code=200, content=default_progress)
+    # One shape, whether or not the learner has a record yet. The empty state
+    # used to invent its own field names (unlocked_achievements,
+    # last_activity_date, completed_drills as a list), so a client written
+    # against a real record saw undefined for every one of them on a fresh
+    # install. load_gamification_progress owns the schema the Rust engine
+    # writes, so defer to it.
+    return JSONResponse(status_code=200, content=load_gamification_progress())
 
 
 @app.get("/api/curriculum")

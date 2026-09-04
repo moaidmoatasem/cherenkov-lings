@@ -20,6 +20,17 @@ interface ModuleScreenProps {
 
 export const ModuleScreen: React.FC<ModuleScreenProps> = ({ step, onStep, onOpenLab }) => (
   <div className="l-col" style={{ gap: 22 }}>
+    {/* Said plainly, once: this is a fixed illustration of one module, not the
+        learner's own place in it. The Read/Watch/Practice content here does
+        not change per learner or per drill -- for a drill with real theory
+        and hints behind it, open it from the catalog instead. */}
+    <p className="l-meta" style={{ lineHeight: 1.6 }}>
+      <strong style={{ color: 'var(--l-ink)' }}>A worked example.</strong> One module,
+      shown end to end, so the shape of read → watch → practice → build is clear
+      before you start. A drill opened from All modules shows its own theory and
+      hints instead.
+    </p>
+
     <div className="l-steps" role="tablist" aria-label="Module steps">
       {STEP_TABS.map((tab) => (
         <button

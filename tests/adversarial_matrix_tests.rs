@@ -384,21 +384,25 @@ fn test_flakiness_penalty_cap_at_40_on_wait_for_timeout() {
         1000,
     );
 
-    // Dimension breakdown:
-    // Correctness: 100.0 * 0.35 = 35.0
-    // Flakiness: CAPPED AT 40.0 * 0.35 = 14.0
-    // Locator: 100.0 * 0.15 = 15.0
-    // Speed: 100.0 * 0.15 = 15.0
-    // Total Score: 35.0 + 14.0 + 15.0 + 15.0 = 79.0
+    // This report declares no locators, so Locator Quality does not apply and
+    // its 15% is redistributed over the dimensions that do:
+    //   Correctness: 100.0 * 0.35 = 35.0
+    //   Flakiness:   CAPPED AT 40.0 * 0.35 = 14.0
+    //   Speed:       100.0 * 0.15 = 15.0
+    //   Total: (35.0 + 14.0 + 15.0) / 0.85 = 75.294...
     assert_eq!(scorecard.correctness.score, 100.0);
     assert_eq!(scorecard.flakiness.score, 40.0);
-    assert_eq!(scorecard.locator_quality.score, 100.0);
     assert_eq!(scorecard.speed.score, 100.0);
+    assert_eq!(
+        scorecard.locator_quality.weight, 0.0,
+        "no locators declared -> the dimension carries no weight"
+    );
 
-    assert_eq!(scorecard.total_score, 79.0);
+    let expected_total = (35.0 + 14.0 + 15.0) / 0.85;
+    assert!((scorecard.total_score - expected_total).abs() < 0.001);
     assert!(
         scorecard.total_score < 85.0,
-        "Total score (79.0) must be below the 85.0 passing threshold"
+        "Total score must stay below the 85.0 passing threshold"
     );
     assert!(
         !scorecard.passed,

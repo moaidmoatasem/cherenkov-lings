@@ -302,13 +302,17 @@ fn test_flakiness_matrix_permutations() {
         let expected_raw_flake = (passed_count as f64 / 5.0) * 100.0;
         assert_eq!(card_clean.flakiness.score, expected_raw_flake);
 
-        // Expected total score = (0.35 * correctness) + (0.35 * flakiness) + (0.15 * locator: 100) + (0.15 * speed: 100)
+        // A REST Assured drill has no locators, so Locator Quality does not
+        // apply and its 15% is redistributed across the three dimensions that
+        // do. Previously it paid out a flat 15 points for having nothing to
+        // judge, which is why every API drill trended to 100.
+        //   total = (0.35*correctness + 0.35*flakiness + 0.15*speed) / 0.85
         let expected_c = if passed_count == 5 {
             100.0
         } else {
             expected_raw_flake
         };
-        let expected_total = (0.35 * expected_c) + (0.35 * expected_raw_flake) + 15.0 + 15.0;
+        let expected_total = ((0.35 * expected_c) + (0.35 * expected_raw_flake) + 15.0) / 0.85;
         assert!((card_clean.total_score - expected_total).abs() < 0.001);
 
         if passed_count == 5 {

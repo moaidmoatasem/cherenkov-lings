@@ -24,17 +24,30 @@ RE_RUST_SLEEP = re.compile(
     r"(?:std::thread::sleep|thread::sleep|tokio::time::sleep)\s*\(\s*(?:std::time::Duration::from_[a-z]+\s*\(\s*\d+\s*\)|Duration::from_[a-z]+\s*\(\s*\d+\s*\))\s*\)"
 )
 
+# Absolute or DOM-positional XPath. Covers `/html/body/...`, the `//tag/...`
+# descendant form, and Playwright's explicit `xpath=` engine prefix — the
+# checkout template uses the last of these, and it was going unreported.
 RE_ABSOLUTE_XPATH = re.compile(
-    r"""['"`](?:/html/body(?:/[a-zA-Z0-9_-]+(?:\[\d+\])?)+|//(?:div|span|section|main|ul|li|form|table|tbody|tr|td)/div(?:\[\d+\])?(?:/[a-zA-Z0-9_-]+(?:\[\d+\])?)+)['"`]"""
+    r"""['"`](?:xpath=)?(?:/html/body(?:/[a-zA-Z0-9_-]+(?:\[[^\]]+\])?)+"""
+    r"""|//[a-zA-Z][a-zA-Z0-9_-]*(?:\[[^\]]+\])?(?:/[a-zA-Z0-9_-]+(?:\[[^\]]+\])?)+)['"`]"""
 )
 RE_DEEP_CSS_CHAIN = re.compile(
-    r"""['"`](?:div\s*>\s*div\s*>\s*(?:span|button|input|a)|[a-z0-9_-]+(?:\s*>\s*[a-z0-9_-]+){3,}|[.#][a-zA-Z0-9_-]+\s*>\s*:nth-child\(\d+\)\s*>\s*[.#][a-zA-Z0-9_-]+)['"`]"""
+    r"""['"`](?:div\s*>\s*div\s*>\s*(?:span|button|input|a)|[a-z0-9_-]+(?:\s*>\s*[a-z0-9_-]+){3,}"""
+    r"""|[.#][a-zA-Z0-9_-]+\s*>\s*:nth-child\(\d+\)\s*>\s*[.#][a-zA-Z0-9_-]+"""
+    # Four or more chained style classes: `.btn.btn-primary.submit-large.theme-blue`
+    # breaks on any restyle just as surely as a descendant chain does.
+    r"""|(?:\.[a-zA-Z][a-zA-Z0-9_-]*){4,})['"`]"""
 )
 RE_AUTO_GENERATED_ID = re.compile(
     r"""['"`](?:#input-[0-9a-fA-F]{6,}|#ember\d+|#react-[a-zA-Z0-9_]{6,}|\[id\^=['"]auto_[^'"]+['"]\]|\[id\*=['"]random_[^'"]+['"]\])['"`]"""
 )
 
 RE_RUST_UNWRAP = re.compile(r"\.(?:unwrap|expect)\s*\(\s*(?:&?\"[^\"]*\")?\s*\)")
+
+# TypeScript's non-null assertion is the same promise as Rust's unwrap: "trust
+# me, this is never null". On a nullable API payload it turns a clear assertion
+# failure into a TypeError thrown from library code.
+RE_TS_NON_NULL_ASSERTION = re.compile(r"[A-Za-z0-9_\)\]]\!\s*(?:;|\)|,|$)")
 
 RE_GH_TOKEN = re.compile(r"ghp_[A-Za-z0-9]{36}")
 RE_GL_TOKEN = re.compile(r"glpat-[A-Za-z0-9\-]{20,}")
@@ -192,7 +205,27 @@ def scan_content(file_path: str, content: str, language: str | None = None) -> l
                 )
             )
 
-        # 3. Floating unawaited promises
+        # 3. Unsafe unwraps in TypeScript, which has no `.unwrap()` but does have
+        #    the non-null assertion. Skipped inside comments so a line that only
+        #    describes the anti-pattern is not reported as committing it.
+        if lang in ("typescript", "javascript") and not stripped.startswith("//"):
+            if RE_TS_NON_NULL_ASSERTION.search(stripped):
+                violations.append(
+                    AstViolation(
+                        rule_id="UNSAFE_UNWRAP",
+                        severity="warning",
+                        file_path=file_path,
+                        line_number=idx,
+                        message=(
+                            "Non-null assertion (!) silences the type checker; a null at runtime "
+                            "throws from library code instead of failing the assertion you wrote."
+                        ),
+                        code_snippet=stripped,
+                        suggested_fix="expect(payload?.data?.orders?.[0]?.receipt?.transactionId).toBeDefined();",
+                    )
+                )
+
+        # 4. Floating unawaited promises
         if lang in ("typescript", "javascript"):
             if RE_FLOATING_PROMISE.search(line) or RE_FLOATING_LOCATOR_ACTION.search(line):
                 violations.append(
