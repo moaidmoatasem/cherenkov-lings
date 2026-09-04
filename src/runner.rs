@@ -16,6 +16,15 @@ pub enum RunnerError {
     ProcessExited(String),
     WorkerError(String),
     Timeout(Duration),
+    /// The Node worker's startup handshake did not complete in time.
+    ///
+    /// Carries a diagnosis of *where* the budget went, because the handshake
+    /// spans three separately-slow things -- `spawn`, interpreter boot, and the
+    /// first ping/pong -- and a bare `Timeout(5s)` cannot tell them apart.
+    HandshakeTimeout {
+        waited: Duration,
+        diagnosis: String,
+    },
     ProtocolError(String),
     ScriptNotFound(PathBuf),
 }
@@ -28,6 +37,11 @@ impl std::fmt::Display for RunnerError {
             Self::ProcessExited(msg) => write!(f, "Worker process exited: {}", msg),
             Self::WorkerError(msg) => write!(f, "Worker error: {}", msg),
             Self::Timeout(dur) => write!(f, "Runner operation timed out after {:?}", dur),
+            Self::HandshakeTimeout { waited, diagnosis } => write!(
+                f,
+                "Node worker handshake timed out after {:?} ({})",
+                waited, diagnosis
+            ),
             Self::ProtocolError(msg) => write!(f, "IPC Protocol error: {}", msg),
             Self::ScriptNotFound(p) => write!(f, "Worker script not found at {:?}", p),
         }
@@ -75,6 +89,52 @@ fn default_iterations() -> u32 {
 
 fn default_timeout_ms() -> u64 {
     30000
+}
+
+/// Default ceiling on the Node worker's startup handshake: `spawn`, node's own
+/// boot, and the first ping/pong round trip.
+///
+/// A warm Windows box completes all three in ~80ms, so the 5s this used to be
+/// looked like 60x headroom -- and it still expired on `windows-latest`. The
+/// budget does not only cover the work; it has to absorb a cold `node.exe`
+/// being scanned on its first spawn and the runner's four vCPUs being shared
+/// with every other test in the binary. A ceiling like this exists to fail a
+/// *hung* worker, not to assert startup speed, so it is sized against the worst
+/// plausible cold start rather than the observed warm one. Thirty seconds is
+/// still an order of magnitude below the job's own runtime, so a genuinely
+/// broken worker is reported long before CI notices.
+const DEFAULT_HANDSHAKE_TIMEOUT_MS: u64 = 30_000;
+
+/// Default ceiling on a ping to an *already running* worker. Cheaper than the
+/// handshake -- node has booted and the read loop is live -- but still exposed
+/// to scheduler delay on a loaded runner, so it gets real margin too.
+const DEFAULT_PING_TIMEOUT_MS: u64 = 15_000;
+
+/// Read a duration override from the environment, falling back to `default_ms`.
+///
+/// Lets a slower host widen a budget without a recompile; an unparseable or
+/// zero value is ignored rather than silently disabling the ceiling.
+fn env_timeout(var: &str, default_ms: u64) -> Duration {
+    let ms = std::env::var(var)
+        .ok()
+        .and_then(|v| v.trim().parse::<u64>().ok())
+        .filter(|ms| *ms > 0)
+        .unwrap_or(default_ms);
+    Duration::from_millis(ms)
+}
+
+/// Budget for [`NodeRunner::start`]'s handshake. Override with
+/// `CHERENKOV_HANDSHAKE_TIMEOUT_MS`.
+fn handshake_timeout() -> Duration {
+    env_timeout(
+        "CHERENKOV_HANDSHAKE_TIMEOUT_MS",
+        DEFAULT_HANDSHAKE_TIMEOUT_MS,
+    )
+}
+
+/// Budget for [`NodeRunner::ping`]. Override with `CHERENKOV_PING_TIMEOUT_MS`.
+fn ping_timeout() -> Duration {
+    env_timeout("CHERENKOV_PING_TIMEOUT_MS", DEFAULT_PING_TIMEOUT_MS)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -133,12 +193,14 @@ impl NodeRunner {
             return Err(RunnerError::ScriptNotFound(script_path));
         }
 
+        let spawn_start = std::time::Instant::now();
         let mut child = Command::new("node")
             .arg(&script_path)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
             .spawn()?;
+        let spawn_elapsed = spawn_start.elapsed();
 
         let stdin = child
             .stdin
@@ -161,14 +223,33 @@ impl NodeRunner {
         stdin_writer.write_all(ping_line.as_bytes()).await?;
         stdin_writer.flush().await?;
 
-        let handshake_timeout = Duration::from_secs(5);
-        let ping_resp = timeout(handshake_timeout, stdout_lines.next_line())
-            .await
-            .map_err(|_| RunnerError::Timeout(handshake_timeout))?
-            .map_err(RunnerError::Io)?
-            .ok_or_else(|| {
+        let budget = handshake_timeout();
+        let ping_resp = match timeout(budget, stdout_lines.next_line()).await {
+            Ok(res) => res.map_err(RunnerError::Io)?.ok_or_else(|| {
                 RunnerError::ProcessExited("Worker process terminated during handshake".into())
-            })?;
+            })?,
+            Err(_) => {
+                // A bare `Timeout(5s)` told us only the budget, never which of
+                // the three phases ate it. Ask the child what happened: still
+                // running means node booted but the worker never answered (or
+                // never got that far); an exit status means it died on us; and
+                // the spawn/wait split separates a slow process creation from a
+                // slow interpreter.
+                let child_state = match child.try_wait() {
+                    Ok(Some(status)) => format!("worker already exited with {}", status),
+                    Ok(None) => "worker still running but silent".to_string(),
+                    Err(e) => format!("could not query worker state: {}", e),
+                };
+                let _ = child.start_kill();
+                return Err(RunnerError::HandshakeTimeout {
+                    waited: budget,
+                    diagnosis: format!(
+                        "spawn took {:?}, then no pong for {:?}; {}",
+                        spawn_elapsed, budget, child_state
+                    ),
+                });
+            }
+        };
 
         let parsed: ControlMessage = serde_json::from_str(&ping_resp)?;
         if parsed.action != "pong" && parsed.ok != Some(true) {
@@ -260,7 +341,7 @@ impl NodeRunner {
         stdin.write_all(ping_line.as_bytes()).await?;
         stdin.flush().await?;
 
-        let ping_timeout = Duration::from_secs(3);
+        let ping_timeout = ping_timeout();
         let resp_line = timeout(ping_timeout, lines.next_line())
             .await
             .map_err(|_| RunnerError::Timeout(ping_timeout))?
@@ -2253,6 +2334,17 @@ impl Runner for AnyRunner {
 mod tests {
     use super::*;
 
+    /// Serialises the tests that spawn a real interpreter.
+    ///
+    /// `cargo test` runs this binary's tests on one thread per CPU, so the node,
+    /// python, maestro and jmeter tests were racing each other for a
+    /// `windows-latest` runner's four vCPUs -- each one paying a cold-start cost
+    /// while the others did the same. Holding this across the subprocess section
+    /// costs a few hundred milliseconds of wall clock and removes the
+    /// contention the flake fed on. The rest of the module still runs in
+    /// parallel.
+    static SUBPROCESS_GUARD: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
     #[test]
     fn test_drill_request_serialization() {
         let req = DrillRequest {
@@ -2322,6 +2414,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_node_runner_lifecycle_and_ping() {
+        let _guard = SUBPROCESS_GUARD.lock().await;
         let worker_path = Path::new("workers/node_worker.js");
         if !worker_path.exists() {
             eprintln!("Skipping test: workers/node_worker.js not found in current directory");
@@ -2338,6 +2431,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_node_runner_nonexistent_file() {
+        let _guard = SUBPROCESS_GUARD.lock().await;
         let worker_path = Path::new("workers/node_worker.js");
         if !worker_path.exists() {
             eprintln!("Skipping test: workers/node_worker.js not found in current directory");
@@ -2685,6 +2779,7 @@ Expected status code <200> but was <409>.
 
     #[tokio::test]
     async fn test_maestro_runner_run_drill_on_actual_drill_file() {
+        let _guard = SUBPROCESS_GUARD.lock().await;
         let runner = MaestroRunner::new();
         let file = "exercises/03_mobile_maestro/01_biometric_fallback/solution.yaml";
         if Path::new(file).exists() {
@@ -2701,6 +2796,7 @@ Expected status code <200> but was <409>.
 
     #[tokio::test]
     async fn test_maestro_runner_nonexistent_file() {
+        let _guard = SUBPROCESS_GUARD.lock().await;
         let runner = MaestroRunner::new();
         let response = runner
             .run_drill("non_existent_flow.yaml", "", 1, 5000)
@@ -2831,6 +2927,7 @@ Expected status code <200> but was <409>.
 
     #[tokio::test]
     async fn test_jmeter_runner_missing_binary_graceful_handling() {
+        let _guard = SUBPROCESS_GUARD.lock().await;
         let runner = JMeterRunner::with_jmeter_cmd("nonexistent-jmeter-bin-xyz-99999");
         let temp_dir = std::env::temp_dir();
         let test_file = temp_dir.join("test_plan_sample.jmx");
@@ -2855,6 +2952,7 @@ Expected status code <200> but was <409>.
 
     #[tokio::test]
     async fn test_jmeter_runner_nonexistent_exercise_file() {
+        let _guard = SUBPROCESS_GUARD.lock().await;
         let runner = JMeterRunner::new();
         let response = runner
             .run_drill("non_existent_plan.jmx", "", 1, 5000)
@@ -2897,15 +2995,28 @@ Expected status code <200> but was <409>.
 
     #[tokio::test]
     async fn test_pytest_runner_nonexistent_file() {
+        let _guard = SUBPROCESS_GUARD.lock().await;
         let runner = PytestRunner::new();
+        // 5s here was not a property of the drill -- it was the floor of
+        // `timeout_ms.max(5000)`, and it had to cover a cold `python` boot. When
+        // it expired the runner reported "Pytest execution timed out after
+        // 5000ms", so the assertion below failed on the *message* and read like
+        // a worker bug rather than the timeout it was. The path under test only
+        // needs python to start and stat one file, so give the start room.
         let response = runner
-            .run_drill("non_existent_exercise_file_9999.py", "", 1, 5000)
+            .run_drill("non_existent_exercise_file_9999.py", "", 1, 30_000)
             .await
             .expect("Runner execution");
         assert!(!response.ok);
         assert!(!response.passed);
-        assert!(response.error.is_some());
-        assert!(response.error.unwrap().contains("does not exist"));
+        let error = response
+            .error
+            .expect("expected an error for a missing file");
+        assert!(
+            error.contains("does not exist"),
+            "expected the worker to report the missing file, got: {}",
+            error
+        );
     }
 
     #[test]
