@@ -102,6 +102,10 @@ tier = "Tier 1 to 3 — Beginner to Advanced"
 description = "Master resilient UI automation: hydration race conditions, closed Shadow DOM, Page Object Model, frameLocator, and storageState."
 
   [[tracks.drills]]
+  id = "04_first_playwright_test"
+  name = "First Browser Test Navigation & Assertions"
+
+  [[tracks.drills]]
   id = "01_hydration_timing"
   name = "React Hydration Click Drops"
 
@@ -112,10 +116,6 @@ description = "Master resilient UI automation: hydration race conditions, closed
   [[tracks.drills]]
   id = "03_debounce_race_condition"
   name = "Handling Out-of-Order Autocomplete Search"
-
-  [[tracks.drills]]
-  id = "04_first_playwright_test"
-  name = "First Browser Test Navigation & Assertions"
 
   [[tracks.drills]]
   id = "05_locator_hierarchy"
@@ -203,6 +203,10 @@ tier = "Tier 2 to 3 — Intermediate to Advanced"
 description = "Black-box mobile automation: biometric fallback conditional flows, cold start deep links, screen rotation recreation."
 
   [[tracks.drills]]
+  id = "06_login_flow"
+  name = "Login Flow & Selector Durability"
+
+  [[tracks.drills]]
   id = "01_biometric_fallback"
   name = "Biometric Auth Failure Conditional PIN Flow"
 
@@ -221,10 +225,6 @@ description = "Black-box mobile automation: biometric fallback conditional flows
   [[tracks.drills]]
   id = "05_push_notification_handling"
   name = "Handling OS Permission & Push Dialogs"
-
-  [[tracks.drills]]
-  id = "06_login_flow"
-  name = "Login Flow & Selector Durability"
 
 # -----------------------------------------------------------------------------
 #  High-Concurrency Load Testing - k6 JavaScript

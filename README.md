@@ -139,15 +139,15 @@ Open any `exercise.*` file in your favorite editor, write your fix, and hit **Sa
 | **0b. API Validation** | Python / Pytest | 1 | Status codes, response bodies and schema shape as a first API assertion |
 | **1. Web UI** | Playwright TS | 10 | React hydration click drops, closed Shadow DOM piercing, debounced race conditions, Page Object Model, cross-origin payment iframes, network request intercepts, visual regression thresholds, worker storageState isolation |
 | **2. API Resilience** | REST Assured Java | 7 | HTTP 409 idempotency collisions, transparent JWT 401 interceptors, Kafka lag polling, multi-page pagination loops, JSON schema contracts, aliased GraphQL queries, `RequestSpecBuilder` reuse |
-| **3. Mobile UI** | Maestro YAML | 5 | Biometric auth fallback flows, deep link cold starts, activity recreation & screen rotation UI state, dynamic list `scrollUntilVisible`, OS permission dialog handlers |
-| **4. Performance (k6)** | k6 JS | 5 | Database pool starvation, 10x spike p99 latency profiling, chaos proxy SLA thresholds, Server-Sent Events continuous streams, InfluxDB / Grafana outputs |
+| **3. Mobile UI** | Maestro YAML | 6 | Biometric auth fallback flows, deep link cold starts, activity recreation & screen rotation UI state, dynamic list `scrollUntilVisible`, OS permission dialog handlers |
+| **4. Performance (k6)** | k6 JS | 6 | Database pool starvation, 10x spike p99 latency profiling, chaos proxy SLA thresholds, Server-Sent Events continuous streams, InfluxDB / Grafana outputs |
 | **5. Performance (JMeter)** | JMeter JMX | 8 | Non-GUI CI execution, response assertions, Gaussian random timers, listener memory leaks, CSRF extraction & correlation, throughput vs concurrency math, master-agent distributed load, automated JTL HTML dashboards |
 | **6. GenAI QA & LLMs** | Playwright TS | 5 | RAG semantic faithfulness, structured intent assertions, hallucination citation grounding, prompt injection red-teaming defenses, TTFT streaming latency thresholds |
 | **7. Cloud DevSecOps** | Python Pytest | 5 | Docker socket privilege escalation, JWT signature bypass, blind timing SQLi, cloud metadata SSRF blocking, CORS origin isolation |
 | **8. Tool Decisions** | Python | 4 | UI vs API layer decision matrix, k6 vs JMeter enterprise tradeoffs, Appium vs Maestro mobile strategy, Pact contract vs E2E microservice testing |
-| **9. Contract Testing** | Python / Pact | 3 | Consumer schema definition, automated provider verification gates, breaking additive vs destructive API changes |
+| **9. CI/CD Pipeline** | GitHub Actions YAML | 5 | Plaintext credentials in workflow files, single-runner coverage gaps, failure evidence lost with the ephemeral runner, unbounded job timeouts, queue starvation from superseded runs |
+| **9a. Contract Testing** | Python / Pact | 3 | Consumer schema definition, automated provider verification gates, breaking additive vs destructive API changes |
 | **10. Accessibility** | Playwright TS | 3 | WCAG semantic trees & color contrast, keyboard sequential focus traps, ARIA screen-reader live regions |
-| **11. CI/CD Pipeline** | GitHub Actions YAML | 5 | Plaintext credentials in workflow files, single-runner coverage gaps, failure evidence lost with the ephemeral runner, unbounded job timeouts, queue starvation from superseded runs |
 
 ---
 
