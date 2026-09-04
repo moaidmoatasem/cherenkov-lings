@@ -277,6 +277,10 @@ jobs:
     # red, which -- the matrix being fail-fast -- cancelled the windows leg on
     # every push.
     - name: Smoke the Backend Image
+      # NOTE: keep `exit 1` off the start of its own line. src/pipeline/runner.rs
+      # simulates a bare `exit 1` as a deliberately-failing step, and
+      # tests/pipeline_tests.rs runs this very file through that simulator and
+      # asserts it comes out green. `... && exit 1` is not matched by that heuristic.
       run: |
         docker run -d --name crucible -p 8081:8081 cherenkov-backend:ci
         ok=""
