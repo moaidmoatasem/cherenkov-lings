@@ -1,5 +1,11 @@
 # E2E Test Infra: Cherenkov-Lings QA Learning Engine
 
+> **Role of this document**: the stable test *philosophy* and gate *definitions* — what
+> each gate checks and why, not a dated pass/fail snapshot. Exact counts (drills, test
+> totals) drift as the repo grows and are stale here by design; for the current
+> point-in-time status of those counts, see [`TEST_READY.md`](TEST_READY.md), which is
+> the dated snapshot re-verified alongside each remediation pass.
+
 ## Test Philosophy
 - Opaque-box, requirement-driven, and multi-tier verification.
 - Enforces strict zero-tolerance gate pass across Rust compiler/clippy, Python backend chaos test suite, Ruff linter, Playwright browser automation, and interactive CLI dashboard rendering.

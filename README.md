@@ -100,7 +100,8 @@ docker compose up
 To point the sandbox UI at a non-default backend URL, set `VITE_API_BASE` at frontend image build time (e.g. `docker compose build --build-arg VITE_API_BASE=http://192.168.1.50:8081 frontend`).
 
 Services will be live at:
-* 🌐 **Web Sandbox & Pathology Demos**: `http://localhost:8080`
+* 🎓 **Learn UI (start here)**: `http://localhost:8080/` — the actual landing experience; see [The Learn UI](#-the-learn-ui) below
+* 🧪 **Sandbox overview & pathology demos**: `http://localhost:8080/sandbox`
 * 🏆 **Mission Control & Badges**: `http://localhost:8080/mission-control`
 * 🔬 **FastAPI Backend Swagger**: `http://localhost:8081/docs`
 
@@ -132,6 +133,33 @@ Open any `exercise.*` file in your favorite editor, write your fix, and hit **Sa
 
 ---
 
+## 🎓 The Learn UI
+
+`http://localhost:8080/` and `/learn` both open the **Learn shell** (`crucible/frontend/src/learn/LearnApp.tsx`) — the actual landing experience, not the raw pathology demo pages. It's a guided wrapper around the same CLI-driven drills and real `/api/progress` + `/api/curriculum` data:
+
+```
+┌──────────┐   ┌──────────────────────────────┐   ┌──────────┐   ┌──────────┐
+│  Today   │──▶│  Module: Read → Watch →      │──▶│   Lab    │──▶│  Record  │
+│ (home)   │   │  Practice → Build            │   │ (browser │   │ (your    │
+│          │   │  a single curriculum drill   │   │  or      │   │  proven  │
+│          │   │                              │   │  device) │   │  record) │
+└──────────┘   └──────────────────────────────┘   └──────────┘   └──────────┘
+     │                                                                  ▲
+     │                    ┌─────────────────┐                          │
+     └───────────────────▶│  All Modules    │──────────────────────────┘
+                          │  (full catalog) │
+                          └─────────────────┘
+```
+
+* **Today** — the home screen: live points/streak from `/api/progress`, and the next suggested module.
+* **Module** — a single drill walked through four steps (Read the theory, Watch a worked example, Practice, Build the real fix) before it hands off to the CLI watcher loop.
+* **Lab / Device** — in-browser (`BrowserLabScreen`) or mobile-device (`DeviceLabScreen`) practice views for tracks that need them.
+* **All Modules** — the full 13-track / 68-drill catalog, driven by the manifest (`lings.toml`), not a hardcoded list.
+* **Record** — your actual progress record: what you've proven, not a badge wall.
+* **`/sandbox`** — the raw Micro-Crucible pathology demo pages (Checkout, Shadow DOM, Search, Transfer, Catalog, Dashboard, Payment, Profile, Mobile Test) that the Playwright/API drills automate against, plus Mission Control's Code Review / Pipeline Builder / Allure Triage tabs.
+
+---
+
 ## 📚 68-Drill Curriculum Matrix (13 Tracks)
 
 | Track | Stack | Drills | Core Concepts & Incident Case Studies |
@@ -149,6 +177,27 @@ Open any `exercise.*` file in your favorite editor, write your fix, and hit **Sa
 | **9. CI/CD Pipeline** | GitHub Actions YAML | 5 | Plaintext credentials in workflow files, single-runner coverage gaps, failure evidence lost with the ephemeral runner, unbounded job timeouts, queue starvation from superseded runs |
 | **9a. Contract Testing** | Python / Pact | 3 | Consumer schema definition, automated provider verification gates, breaking additive vs destructive API changes |
 | **10. Accessibility** | Playwright TS | 3 | WCAG semantic trees & color contrast, keyboard sequential focus traps, ARIA screen-reader live regions |
+
+```
+                              ┌─────────────────────┐
+                              │   0. Foundations    │  ← start here (Python/Pytest)
+                              └──────────┬──────────┘
+                                         │
+        ┌────────────────┬──────────────┼──────────────┬────────────────┐
+        ▼                ▼              ▼               ▼                ▼
+┌───────────────┐ ┌─────────────┐ ┌───────────┐ ┌───────────────┐ ┌───────────────┐
+│ 1. Web UI     │ │ 2. API      │ │ 3. Mobile │ │ 4/5. Perf     │ │ 6. GenAI QA   │
+│ (Playwright)  │ │ (RestAssured│ │ (Maestro) │ │ (k6 / JMeter) │ │ (Playwright)  │
+└───────┬───────┘ │ + 0b Pytest)│ └───────────┘ └───────────────┘ └───────────────┘
+        │         └─────────────┘
+        ▼
+┌───────────────┐   ┌──────────────┐   ┌───────────────┐   ┌───────────────┐
+│ 7. DevSecOps  │──▶│ 8. Tool      │──▶│ 9. CI/CD +    │──▶│ 10. Axe       │
+│               │   │ Decisions    │   │ 9a. Contract  │   │ Accessibility │
+└───────────────┘   └──────────────┘   └───────────────┘   └───────────────┘
+```
+
+The `exercises/` directory prefix (`02_`, `09_`) is shared by two tracks each — `02_api_pytest` / `02_api_restassured_java`, and `09_ci_pipeline` / `09_contract_pact` — because the prefix reflects arrival order in the curriculum, not a unique per-track slot; the table above disambiguates them as `0b`/`9a`. `lings.toml`'s `[[tracks]]` array order is what actually drives presentation order, independent of directory naming.
 
 ---
 
