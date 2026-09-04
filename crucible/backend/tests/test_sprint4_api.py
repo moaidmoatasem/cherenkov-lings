@@ -437,3 +437,67 @@ def test_triage_submit_unknown_test_id():
     data = resp.json()
     assert data["correct"] is False
     assert "Unknown test ID" in data["feedback"]
+
+
+def test_review_catches_the_anti_patterns_its_own_templates_demonstrate():
+    """The review page ships templates named after specific anti-patterns.
+
+    The engine used to miss three of them — a `xpath=` prefixed selector, a long
+    stack of style classes, and TypeScript's non-null assertion — so the drill
+    titled "Unsafe Unwrap" scored 100/100 from the engine that is supposed to
+    teach it. The templates are the specification; this pins them.
+    """
+    fragile_locators = """import { test, expect } from '@playwright/test';
+
+test('submits transfer with fragile selectors', async ({ page }) => {
+  await page.goto('/transfer');
+  await page.locator('/html/body/div[2]/div[3]/table/tbody/tr[1]/td[2]/input').fill('ACC-9942');
+  await page.locator('.btn.btn-primary.submit-button-large.theme-blue').click();
+  await expect(page.locator('xpath=//div[contains(@class, "receipt")]/span[2]')).toBeVisible();
+});
+"""
+    data = client.post(
+        "/api/review", json={"code": fragile_locators, "file_path": "exercise.ts"}
+    ).json()
+    rule_ids = [v["rule_id"] for v in data["violations"]]
+
+    assert rule_ids.count("FRAGILE_LOCATOR_ABSOLUTE_XPATH") == 2, (
+        "both the /html/body form and the xpath= prefixed form are absolute XPaths: "
+        f"{rule_ids}"
+    )
+    assert "FRAGILE_LOCATOR_DEEP_CSS" in rule_ids, (
+        f"a four-deep class stack is as brittle as a descendant chain: {rule_ids}"
+    )
+
+    unsafe_unwrap = """import { test, expect } from '@playwright/test';
+
+test('parses order stream payload', async ({ request }) => {
+  const response = await request.get('/api/pact/orders');
+  const payload = (await response.json()) as any;
+  const transactionId = payload.data.orders[0].receipt.transactionId!;
+  expect(transactionId).not.toBeNull();
+});
+"""
+    data = client.post(
+        "/api/review", json={"code": unsafe_unwrap, "file_path": "exercise.ts"}
+    ).json()
+    assert "UNSAFE_UNWRAP" in [v["rule_id"] for v in data["violations"]]
+    assert data["score"] < 100, "an unsafe unwrap must not score a clean bill of health"
+
+
+def test_review_does_not_invent_violations_in_clean_code():
+    """The widened locator and unwrap rules must not fire on healthy code."""
+    clean = """import { test, expect } from '@playwright/test';
+
+test('checkout completes', async ({ page }) => {
+  await page.goto('/checkout');
+  await page.getByTestId('checkout-btn').click();
+  await page.locator('.btn.primary').click();
+  const total = await page.getByRole('status').textContent();
+  expect(total).not.toBe(null);
+  await expect(page.getByRole('status')).toHaveText('Order Confirmed');
+});
+"""
+    data = client.post("/api/review", json={"code": clean, "file_path": "solution.ts"}).json()
+    assert data["violations"] == [], f"clean code flagged: {data['violations']}"
+    assert data["score"] == 100

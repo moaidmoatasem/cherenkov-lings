@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { StreamViewer } from '../components/StreamViewer';
+import { applyReviewFix, runReview, type ReviewResult } from '../lib/reviewApi';
 
 export interface AstViolation {
   id: string;
@@ -167,13 +168,21 @@ export const CodeReviewPage: React.FC = () => {
   const [expandedSocraticId, setExpandedSocraticId] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<'Embedded' | 'Native'>('Embedded');
+  /** The engine's verdict, when it has been asked. Null means we are showing
+   *  the local scan, which knows five rules to the engine's nine. */
+  const [apiReview, setApiReview] = useState<ReviewResult | null>(null);
+  const [reviewIsLive, setReviewIsLive] = useState<boolean>(false);
 
   const activeTemplate = useMemo(() => {
     return CODE_TEMPLATES.find((t) => t.id === selectedTemplateId) || CODE_TEMPLATES[0];
   }, [selectedTemplateId]);
 
   // Client-Side AST Rule Scanner Engine
-  const { violations, score, scoreCategories } = useMemo(() => {
+  const {
+    violations: localViolations,
+    score: localScore,
+    scoreCategories,
+  } = useMemo(() => {
     const detected: AstViolation[] = [];
     const lines = code.split('\n');
 
@@ -346,6 +355,16 @@ export const CodeReviewPage: React.FC = () => {
     };
   }, [code]);
 
+  // The engine is the authority whenever it has spoken about the current code.
+  const violations = apiReview ? apiReview.violations : localViolations;
+  const score = apiReview ? apiReview.score : localScore;
+
+  // A verdict describes the code it was asked about, so editing invalidates it
+  // rather than leaving a stale score sitting next to changed source.
+  useEffect(() => {
+    setApiReview(null);
+  }, [code]);
+
   // Handle template selection
   const handleSelectTemplate = (templateId: string) => {
     setSelectedTemplateId(templateId);
@@ -363,40 +382,50 @@ export const CodeReviewPage: React.FC = () => {
   };
 
   // One-Click Automated Fix Applier
-  const handleApplyFix = (violation: AstViolation) => {
-    const lines = code.split('\n');
-    let newCode = code;
-
-    if (violation.id === 'missing-assertions-global') {
-      // Append assertion before closing brace
-      const lastIndex = lines.lastIndexOf('});');
-      if (lastIndex !== -1) {
-        lines.splice(lastIndex, 0, violation.replacement_code);
-        newCode = lines.join('\n');
-      } else {
-        newCode = code + '\n' + violation.replacement_code;
+  /**
+   * Patch through the engine that raised the violation. The local version
+   * overwrote a line with `replacement_code`, which is a suggestion rather than
+   * a patch: it discarded indentation and could not touch more than one line.
+   */
+  const handleApplyFix = async (violation: AstViolation) => {
+    try {
+      const result = await applyReviewFix(code, violation.rule_id);
+      if (!result.success || result.patchedCode === code) {
+        showToast(`The engine had no automatic patch for ${violation.rule_name}.`);
+        return;
       }
-    } else if (violation.line_number > 0 && violation.line_number <= lines.length) {
-      lines[violation.line_number - 1] = violation.replacement_code;
-      newCode = lines.join('\n');
+      // setCode clears the previous verdict through the effect above, so a score
+      // can never sit next to code it did not describe.
+      setCode(result.patchedCode);
+      setSelectedViolationForFix(null);
+      showToast(`Applied: ${result.appliedFixes.join(', ') || violation.rule_name}`);
+    } catch (err) {
+      showToast(
+        `Could not apply the fix (${err instanceof Error ? err.message : 'unknown error'}).`
+      );
     }
-
-    // Clean up '// I AM NOT DONE' if all violations resolved
-    if (violations.length <= 1) {
-      newCode = newCode.replace(/\/\/\s*I\s+AM\s+NOT\s+DONE\n?/g, '');
-    }
-
-    setCode(newCode);
-    setSelectedViolationForFix(null);
-    showToast(`Applied fix for: ${violation.rule_name} (+Score boost!)`);
   };
 
-  const handleRunASTReview = () => {
+  const handleRunASTReview = async () => {
     setIsAnalyzing(true);
-    setTimeout(() => {
+    try {
+      const result = await runReview(code, `${activeTemplate.id}.ts`);
+      setApiReview(result);
+      setReviewIsLive(true);
+      showToast(
+        `Review complete: score ${result.score}/100, ` +
+          `${result.violations.length} violation${result.violations.length === 1 ? '' : 's'}`
+      );
+    } catch (err) {
+      setReviewIsLive(false);
+      showToast(
+        `Review engine unreachable (${
+          err instanceof Error ? err.message : 'unknown error'
+        }). Showing the local scan, which knows fewer rules.`
+      );
+    } finally {
       setIsAnalyzing(false);
-      showToast(`AST Static Analysis Complete: Score ${score}/100`);
-    }, 450);
+    }
   };
 
   // Generate unified diff for wizard preview
@@ -556,6 +585,16 @@ export const CodeReviewPage: React.FC = () => {
                   {violations.length === 0
                     ? '100% Clean AST — Zero Anti-Patterns Detected'
                     : `${violations.length} AST Violation${violations.length > 1 ? 's' : ''} Identified`}
+                </span>
+                {/* Which scanner produced the list above. The local one knows
+                    five rules; the engine knows nine. Saying so beats letting a
+                    shorter list read as cleaner code. */}
+                <span className="ast-source" data-live={apiReview !== null}>
+                  {apiReview !== null
+                    ? 'review engine'
+                    : reviewIsLive
+                    ? 'local scan — run the review for the full rule set'
+                    : 'local scan'}
                 </span>
               </div>
               <span className="sentinel-badge">

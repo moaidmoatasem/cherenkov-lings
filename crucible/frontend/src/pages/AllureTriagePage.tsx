@@ -1,4 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { apiUrl } from '../lib/api';
+import { fetchTriageTests, submitTriage, type TriageVerdict } from '../lib/triageApi';
 
 export type FailureCategory = 'ProductBug' | 'FlakyInfra' | 'AntiPattern' | 'Passed';
 export type TestStatus = 'passed' | 'failed' | 'broken' | 'flaky';
@@ -196,7 +198,10 @@ const CHAOS_TEST_CASES: TestCaseResult[] = [
 ];
 
 export const AllureTriagePage: React.FC = () => {
-  const [testCases] = useState<TestCaseResult[]>(CHAOS_TEST_CASES);
+  // Seeded with the bundled cases so the page still reads offline; replaced by
+  // the backend's 70-case chaos dataset as soon as /api/triage/tests answers.
+  const [testCases, setTestCases] = useState<TestCaseResult[]>(CHAOS_TEST_CASES);
+  const [datasetIsLive, setDatasetIsLive] = useState<boolean>(false);
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('all');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -207,16 +212,39 @@ export const AllureTriagePage: React.FC = () => {
   const [chosenCategory, setChosenCategory] = useState<FailureCategory | null>(null);
   const [studentExplanation, setStudentExplanation] = useState<string>('');
   const [studentRemediation, setStudentRemediation] = useState<string>('');
-  const [triageEvaluation, setTriageEvaluation] = useState<{
-    score: number;
-    isCorrectCategory: boolean;
-    feedback: string;
-    xpEarned: number;
-    badgeUnlocked?: string;
-  } | null>(null);
+  const [triageEvaluation, setTriageEvaluation] = useState<TriageVerdict | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  const [earnedXP, setEarnedXP] = useState<number>(350);
+  const [earnedXP, setEarnedXP] = useState<number>(0);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetchTriageTests(ctrl.signal)
+      .then((cases) => {
+        if (cases.length === 0) return;
+        setTestCases(cases);
+        setDatasetIsLive(true);
+        // The seeded ids (tc-01) do not exist in the real dataset, so the
+        // selection has to move with it or every submission would 404.
+        setExpandedTestId(cases[0].id);
+        setTriageTargetTestId(cases[0].id);
+      })
+      .catch(() => {
+        // Offline: keep the seeded cases. The header says which one is showing.
+      });
+
+    // The running total is whatever the backend has persisted, not a number
+    // this page invented — it is the same figure Mission Control shows.
+    fetch(apiUrl('/api/progress'), { signal: ctrl.signal })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (typeof data?.total_xp === 'number') setEarnedXP(data.total_xp);
+      })
+      .catch(() => {});
+
+    return () => ctrl.abort();
+  }, []);
 
   // Filtered Test Cases
   const filteredTestCases = useMemo(() => {
@@ -267,52 +295,39 @@ export const AllureTriagePage: React.FC = () => {
   }, [testCases, triageTargetTestId]);
 
   // Submit Triage Hypothesis Evaluator Engine
-  const handleEvaluateTriage = () => {
+  const handleEvaluateTriage = async () => {
     if (!chosenCategory) {
       showToast('⚠️ Please select a failure category before submitting.');
       return;
     }
 
-    const isCategoryMatch = chosenCategory === activeTriageTest.category;
-    let score = 0;
+    setIsSubmitting(true);
+    try {
+      // The backend owns the scoring model AND persists the award, so the XP
+      // shown here is the same XP Mission Control reads back.
+      const verdict = await submitTriage({
+        testId: triageTargetTestId,
+        category: chosenCategory,
+        explanation: studentExplanation,
+        fix: studentRemediation,
+      });
 
-    // 1. Category accuracy (50 pts)
-    if (isCategoryMatch) score += 50;
-
-    // 2. Depth and keyword relevance of root cause explanation (30 pts)
-    const expLower = studentExplanation.toLowerCase();
-    const groundTruthExp = activeTriageTest.groundTruthExplanation.toLowerCase();
-    const keywords = ['sleep', 'hydration', '504', 'timeout', 'lock', 'isolation', 'promise', 'await', 'kafka', 'injection', 'race'];
-    const matchedKeywords = keywords.filter((k) => expLower.includes(k) && groundTruthExp.includes(k));
-
-    if (studentExplanation.length > 20) score += 15;
-    if (matchedKeywords.length > 0) score += 15;
-
-    // 3. Depth and validity of remediation fix (20 pts)
-    if (studentRemediation.length > 15) score += 10;
-    const fixKeywords = ['expect', 'locator', 'assertion', 'retry', 'backoff', 'update', 'parameterized', 'await'];
-    const matchedFix = fixKeywords.filter((k) => studentRemediation.toLowerCase().includes(k));
-    if (matchedFix.length > 0) score += 10;
-
-    const xpAwarded = score >= 70 ? 150 : 50;
-    setEarnedXP((prev) => prev + xpAwarded);
-
-    let badge: string | undefined = undefined;
-    if (score >= 85) {
-      badge = 'Triage Detective (Tier 1)';
+      setTriageEvaluation(verdict);
+      setEarnedXP(verdict.totalXp ?? ((prev) => prev + verdict.xpEarned)(earnedXP));
+      showToast(
+        `Triage evaluated: +${verdict.xpEarned} XP, saved to your record`
+      );
+    } catch (err) {
+      // Never silently score it locally instead — a number that does not persist
+      // is worse than an honest failure.
+      showToast(
+        `Could not reach the triage service (${
+          err instanceof Error ? err.message : 'unknown error'
+        }). Nothing was recorded.`
+      );
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setTriageEvaluation({
-      score,
-      isCorrectCategory: isCategoryMatch,
-      feedback: isCategoryMatch
-        ? `Spot-on diagnosis! You correctly identified this failure as a ${chosenCategory}. Your remediation aligns with senior SDET triage criteria.`
-        : `Category mismatch: You diagnosed this as ${chosenCategory}, but the telemetry indicates it was actually a ${activeTriageTest.category}. Check the correlated Chaos Proxy logs for clues.`,
-      xpEarned: xpAwarded,
-      badgeUnlocked: badge
-    });
-
-    showToast(`Triage Evaluated: Score ${score}/100 (+${xpAwarded} XP)`);
   };
 
   return (
@@ -345,7 +360,11 @@ export const AllureTriagePage: React.FC = () => {
             <span className="xp-icon">🏆</span>
             <div className="xp-details">
               <span className="xp-val">{earnedXP} XP</span>
-              <span className="xp-label">Triage Detective Rank</span>
+              <span className="xp-label" data-live={datasetIsLive}>
+                {datasetIsLive
+                  ? `Triage Detective Rank · ${testCases.length} live cases`
+                  : 'Triage Detective Rank · offline sample'}
+              </span>
             </div>
           </div>
         </div>
@@ -732,9 +751,13 @@ export const AllureTriagePage: React.FC = () => {
 
           {/* Submit Action */}
           <div className="triage-submit-row">
-            <button className="primary-btn submit-hypothesis-btn" onClick={handleEvaluateTriage}>
+            <button
+              className="primary-btn submit-hypothesis-btn"
+              onClick={handleEvaluateTriage}
+              disabled={isSubmitting}
+            >
               <span className="btn-icon">⚡</span>
-              <span>Submit Hypothesis & Evaluate</span>
+              <span>{isSubmitting ? 'Evaluating…' : 'Submit Hypothesis & Evaluate'}</span>
             </button>
           </div>
 
@@ -742,7 +765,7 @@ export const AllureTriagePage: React.FC = () => {
           {triageEvaluation && (
             <div
               className={`evaluation-result-card ${
-                triageEvaluation.score >= 70 ? 'passed' : 'needs-improvement'
+                triageEvaluation.isCorrectCategory ? 'passed' : 'needs-improvement'
               }`}
             >
               <div className="eval-header">
@@ -750,11 +773,11 @@ export const AllureTriagePage: React.FC = () => {
                   <span className="score-circle">{triageEvaluation.score}</span>
                   <div className="eval-title-wrap">
                     <h4>
-                      {triageEvaluation.score >= 85
+                      {!triageEvaluation.isCorrectCategory
+                        ? '⚠️ Wrong Category — Review Telemetry'
+                        : triageEvaluation.score >= 140
                         ? '🏆 Master SDET Diagnosis'
-                        : triageEvaluation.score >= 70
-                        ? '✅ Valid Hypothesis Accepted'
-                        : '⚠️ Partial Match — Review Telemetry'}
+                        : '✅ Valid Hypothesis Accepted'}
                     </h4>
                     <span className="xp-earned-badge">+{triageEvaluation.xpEarned} XP Earned</span>
                   </div>
@@ -780,7 +803,19 @@ export const AllureTriagePage: React.FC = () => {
                     </div>
                     <div className="contrast-col">
                       <span className="contrast-label">Recommended Remediation:</span>
-                      <p className="contrast-text">{activeTriageTest.groundTruthRemediation}</p>
+                      {/* The evaluator returns its reasoning; the bundled cases
+                          carry a written remediation. Show whichever exists. */}
+                      {triageEvaluation.detailedReasons.length > 0 ? (
+                        <ul className="contrast-text">
+                          {triageEvaluation.detailedReasons.map((reason, i) => (
+                            <li key={i}>{reason}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="contrast-text">
+                          {activeTriageTest.groundTruthRemediation || 'No remediation recorded.'}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>

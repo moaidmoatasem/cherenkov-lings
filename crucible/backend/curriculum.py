@@ -4,9 +4,10 @@
 drills. It is read here rather than duplicated in Python, so adding a track or a
 drill is a one-file change that the Rust engine and this backend both pick up.
 
-The manifest ships inside the container image (see Dockerfile.backend), which
-matters because `exercises/` does not — the drill list must come from the
-manifest, not from a filesystem scan.
+The drill list comes from this manifest rather than a filesystem scan, so it is
+correct even where the exercise tree is absent or partial. (Dockerfile.backend
+ships both: `exercises/` is needed separately by GET /api/drill/theory, which
+reads theory.md and hints.md off disk.)
 """
 
 from __future__ import annotations
