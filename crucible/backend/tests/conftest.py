@@ -7,8 +7,6 @@ not earned -- the project's own CI silently forging the record the product
 calls "evidence, not badges".
 """
 
-import os
-
 import pytest
 
 
