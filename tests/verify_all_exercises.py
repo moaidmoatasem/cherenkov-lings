@@ -214,7 +214,7 @@ def _solution_has_content(content: str, ext: str) -> bool:
     if ext == ".java":
         return any(k in content for k in ["import", "@Test", "class Exercise", "class Solution"])
     if ext == ".yaml" or ext == ".yml":
-        return any(k in content for k in ["launchApp", "tapOn", "openLink", "scrollUntilVisible", "assertVisible"])
+        return any(k in content for k in ["launchApp", "tapOn", "openLink", "scrollUntilVisible", "assertVisible", "jobs:", "steps:", "uses:"])
     if ext == ".jmx":
         return any(k in content for k in ["<HTTPSamplerProxy", "<TestPlan", "<ThreadGroup"])
     return len(c) > 20
