@@ -184,10 +184,12 @@ $$\text{Composite Score} = (0.35 \times \text{Correctness}) + (0.35 \times \text
 
 - **Correctness (35%)**: Complete assertion verification against the system under test.
 - **Flakiness Guard (35%)**: 5 consecutive test iterations executed against network chaos and jitter.
-- **Locator Quality (15%)**: Static source analysis (regex rules over comment-stripped source, not a parsed syntax tree) penalizing anti-patterns:
-  - Hardcoded sleeps (`page.waitForTimeout`, `time.sleep`) $\to -40\text{ pts}$
-  - Absolute XPath (`/html/body/div[2]/span`) $\to -50\text{ pts}$
-  - Semantic Roles (`getByRole`, `getByTestId`) $\to +100\text{ pts}$
+- **Locator Quality (15%)**: Static source analysis (regex rules over comment-stripped source, not a parsed syntax tree) assigns an absolute score per locator kind found (`src/feedback.rs:70-78`), not a deduction from a baseline:
+  - Semantic role (`getByRole`) $\to 100\text{ pts}$
+  - Visible text/label (`getByText`/`getByLabel`/`getByPlaceholder`) $\to 90\text{ pts}$
+  - Test ID (`getByTestId`) $\to 85\text{ pts}$
+  - CSS class/id selector $\to 40\text{ pts}$
+  - Absolute XPath (`/html/body/div[2]/span`) $\to 0\text{ pts}$
 - **Speed Benchmarking (15%)**: Non-blocking async execution compared against baseline thresholds.
 
 ---

@@ -1,10 +1,16 @@
 # E2E Test Suite Ready
 
+> **Role of this document**: the dated point-in-time snapshot of gate results and
+> curriculum counts, re-verified alongside each remediation pass (see gate definitions
+> and philosophy in [`TEST_INFRA.md`](TEST_INFRA.md) instead). **Last reverified: 2026-09-05**
+> — the pytest count below was re-run directly; `cargo test`/`clippy`/`playwright` counts
+> are carried forward from the prior snapshot and were not re-run this pass.
+
 ## Test Runner & Verification Commands
-- `cargo test` (359/359 tests passing, 0 failures)
-- `cargo clippy --all-targets -- -D warnings` (0 warnings)
-- `python -m pytest tests/test_micro_crucible_chaos.py` (33/33 passing)
-- `python -m ruff check crucible/ tests/` (0 errors)
+- `cargo test` (359/359 tests passing, 0 failures) — not re-run this pass, carried forward
+- `cargo clippy --all-targets -- -D warnings` (0 warnings) — not re-run this pass, carried forward
+- `python -m pytest tests/test_micro_crucible_chaos.py` (35/35 passing — re-run 2026-09-05, up from 33 after PR #25 added Docker-mount and JWT `alg:none` coverage)
+- `python -m ruff check crucible/ tests/` (0 errors — re-run 2026-09-05)
 - `npx playwright test exercises/06_genai_qa/` (all solution tests passing)
 - `cargo run -- dashboard` (renders ANSI dashboard and exits with code 0)
 
@@ -29,8 +35,8 @@
 ## Verification Gates Status
 - Gate 1 (`cargo test`): PASS (359/359)
 - Gate 2 (`cargo clippy --all-targets -- -D warnings`): PASS (0 warnings)
-- Gate 3 (`pytest tests/test_micro_crucible_chaos.py`): PASS (33/33)
-- Gate 4 (`ruff check crucible/ tests/`): PASS (0 errors)
+- Gate 3 (`pytest tests/test_micro_crucible_chaos.py`): PASS (35/35, re-run 2026-09-05)
+- Gate 4 (`ruff check crucible/ tests/`): PASS (0 errors, re-run 2026-09-05)
 - Gate 5 (`playwright test exercises/06_genai_qa/`): PASS (100% on solutions)
 - Gate 6 (`cargo run -- dashboard`): PASS (exit code 0, complete ANSI render)
 - Forensic Integrity Audit (`auditor_1`): CLEAN (0 integrity violations)

@@ -58,8 +58,9 @@ Sprint 4 elevates `cherenkov-lings` to an Enterprise SDET Simulator featuring:
 ## Code Layout
 ```
 src/
-├── main.rs                    # CLI entrypoint with review, pipeline, triage, report subcommands
-├── cli/                       # CLI commands & arguments parsing
+├── main.rs                    # CLI entrypoint: clap arg parsing and all subcommands
+│                               #   (review, pipeline, triage, report, watch, audit, ...)
+│                               #   live directly in this file -- there is no src/cli/
 ├── review/                    # R1: AST rules engine, LLM client/mock, Fix-It-Together flow
 │   ├── mod.rs
 │   ├── rules.rs               # AST lint rules (sleep, locator, unwrap, assertion)
