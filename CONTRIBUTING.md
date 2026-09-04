@@ -4,12 +4,12 @@ First off, thank you for considering contributing to cherenkov-lings!
 
 This project aims to be the most comprehensive, scientifically rigorous experiential learning platform for Quality Engineering.
 
-## ?? Core Philosophy
+## 🧭 Core Philosophy
 1. **Realism**: Drills must represent actual production failures, not synthetic toy problems.
 2. **Resilience**: The platform deliberately injects network and timing chaos. Solutions must survive chaos, not just "happy path" local runs.
 3. **Empathy**: Feedback should act like a Senior SDET mentoring a junior. Never use punitive language ("Failed 0/100"); use coaching language ("Needs Flakiness Hardening").
 
-## ??? Local Development Setup
+## 🛠️ Local Development Setup
 
 1. **Rust Toolchain**: Must use `stable-x86_64-pc-windows-msvc` (or target OS equivalent).
 2. **Node.js**: v18+ required for Playwright / React.
@@ -30,7 +30,7 @@ python -m pytest tests/test_micro_crucible_chaos.py
 npx tsc --noEmit (in crucible/frontend)
 ```
 
-## ??? Adding a New Drill (The Strict Contract)
+## 🏗️ Adding a New Drill (The Strict Contract)
 
 We do not accept "half-drills". Every drill in the platform must conform to a strict structural contract.
 
@@ -81,7 +81,7 @@ cherenkov-lings audit
 
 If it does not pass the audit, the CI pipeline will reject the PR.
 
-## ?? Expanding the Micro-Crucible
+## 🔬 Expanding the Micro-Crucible
 If your drill requires a new failure mode (e.g., a specific GraphQL vulnerability), add it to `crucible/backend/app.py` or the React frontend. Ensure you respect the `X-Chaos` header patterns established in `ChaosMiddleware`.
 
 Thank you for helping us elevate the standard of QA Engineering globally!

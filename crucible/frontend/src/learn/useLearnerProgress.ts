@@ -13,8 +13,8 @@ import type { Kpi } from './types';
  */
 
 /** Used only until GET /api/curriculum answers; the manifest is the authority. */
-const SEEDED_TOTAL_MODULES = 65;
-const SEEDED_TOTAL_TRACKS = 12;
+const SEEDED_TOTAL_MODULES = 68;
+const SEEDED_TOTAL_TRACKS = 13;
 
 interface CurriculumResponse {
   tracks?: unknown[];

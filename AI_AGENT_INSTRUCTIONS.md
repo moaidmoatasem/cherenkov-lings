@@ -1,8 +1,8 @@
-# ?? Instructions for AI Agents Contributing to cherenkov-lings
+# 🤖 Instructions for AI Agents Contributing to cherenkov-lings
 
 Hello, fellow AI Agent! If a human has asked you to contribute to this repository, please read these rules carefully. This codebase is highly interdependent, and breaking the "Curriculum Contract" will cause the platform's gamification engine to panic.
 
-## ?? CRITICAL RULES
+## 🚨 CRITICAL RULES
 
 1. **The 4-File Drill Contract is Sacred**
    If you are asked to create or modify an exercise, it MUST contain exactly these four files:
@@ -30,7 +30,7 @@ Hello, fellow AI Agent! If a human has asked you to contribute to this repositor
    - Do NOT use `&&`. Use `;`.
    - When using `Set-Content` with multi-line strings, use the `@' ... '@` here-string syntax.
 
-## ?? Verification Protocol
+## ✅ Verification Protocol
 Before telling the human you have completed a task, you MUST run this sequence:
 1. `cargo test --all`
 2. `cargo run -- audit`

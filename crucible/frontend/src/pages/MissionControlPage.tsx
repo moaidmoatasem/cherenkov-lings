@@ -50,7 +50,7 @@ const BADGES = [
   { id: 'the_architect', icon: '🏗️', name: 'The Architect', desc: 'Master all Cross-Tool Decision drills' },
   { id: 'perfect_locator', icon: '🎯', name: 'Perfect Locator', desc: '5x 100/100 semantic locator scores' },
   { id: 'speed_demon', icon: '⚡', name: 'Speed Demon', desc: 'Beat execution speed baseline by 40%+' },
-  { id: 'sdet_master', icon: '👑', name: 'SDET Master', desc: 'Complete all 60 drills across all tracks' },
+  { id: 'sdet_master', icon: '👑', name: 'SDET Master', desc: 'Complete every drill across every track' },
 ];
 
 export const MissionControlPage: React.FC = () => {
@@ -202,7 +202,7 @@ export const MissionControlPage: React.FC = () => {
               🎯 Mission Control & Interactive Curriculum
             </h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px', maxWidth: '680px', marginTop: '6px' }}>
-              Your real-time SDET learning telemetry hub. Level up through 60 production failure drills across 11 tracks, simulate live micro-crucible chaos, and review architectural incident postmortems.
+              Your real-time SDET learning telemetry hub. Level up through production failure drills across every track, simulate live micro-crucible chaos, and review architectural incident postmortems.
             </p>
           </div>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>

@@ -310,8 +310,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Watch { track } => {
             println!("Starting watcher for track: {}", track.bright_cyan());
 
-            // Load configuration
-            let cfg = config::load_config("lings.toml")?;
+            // Load configuration, falling back to the compile-time-embedded
+            // manifest so `watch` works from outside the repo root, matching
+            // Dashboard/Audit/NewDrill and the "run from anywhere" promise
+            // made by install.sh/install.ps1 after a global install.
+            let cfg = config::load_config("lings.toml")
+                .unwrap_or_else(|_| gamification::embedded_config());
             let track_cfg = cfg.tracks.iter().find(|t| t.id == *track);
 
             if let Some(track_config) = track_cfg {

@@ -12,17 +12,19 @@
 | Track ID | Track Name | Drills Total | Status | Exercises | Solutions | Hints | Theory Modules |
 |---|---|:---:|:---:|:---:|:---:|:---:|:---:|
 | `foundations` | Python Testing Foundations | 5 | ✅ Complete | 5 | 5 | 5 | 5 (>=150w + ASCII) |
+| `api-pytest` | API Validation Fundamentals (Pytest) | 1 | ✅ Complete | 1 | 1 | 1 | 1 (>=150w + ASCII) |
 | `playwright-ts` | Modern Web Automation (Playwright TS) | 10 | ✅ Complete | 10 | 10 | 10 | 10 (>=150w + ASCII) |
 | `restassured-java` | API Resilience & Security (REST Assured) | 7 | ✅ Complete | 7 | 7 | 7 | 7 (>=150w + ASCII) |
-| `maestro-mobile` | Mobile UI Automation (Maestro) | 5 | ✅ Complete | 5 | 5 | 5 | 5 (>=150w + ASCII) |
-| `k6-js` | High-Concurrency Load Testing (k6) | 5 | ✅ Complete | 5 | 5 | 5 | 5 (>=150w + ASCII) |
+| `maestro-mobile` | Mobile UI Automation (Maestro) | 6 | ✅ Complete | 6 | 6 | 6 | 6 (>=150w + ASCII) |
+| `k6-js` | High-Concurrency Load Testing (k6) | 6 | ✅ Complete | 6 | 6 | 6 | 6 (>=150w + ASCII) |
 | `genai-qa` | GenAI QA & RAG Faithfulness | 5 | ✅ Complete | 5 | 5 | 5 | 5 (>=150w + ASCII) |
 | `jmeter` | Enterprise Performance Testing (JMeter) | 8 | ✅ Complete | 8 | 8 | 8 | 8 (>=150w + ASCII) |
 | `devsecops-python` | Cloud-Native & DevSecOps | 5 | ✅ Complete | 5 | 5 | 5 | 5 (>=150w + ASCII) |
 | `tool-decisions` | Architecture & Tool Selection | 4 | ✅ Complete | 4 | 4 | 4 | 4 (>=150w + ASCII) |
+| `ci-pipeline` | CI/CD Pipeline Engineering | 5 | ✅ Complete | 5 | 5 | 5 | 5 (>=150w + ASCII) |
 | `contract-pact` | Consumer-Driven Contract Testing (Pact) | 3 | ✅ Complete | 3 | 3 | 3 | 3 (>=150w + ASCII) |
 | `a11y-axe` | Accessibility & Visual Testing (Axe) | 3 | ✅ Complete | 3 | 3 | 3 | 3 (>=150w + ASCII) |
-| **Total** | **12 Tracks** | **65** | ✅ **100% Complete** | **65** | **65** | **65** | **65** |
+| **Total** | **13 Tracks** | **68** | ✅ **100% Complete** | **68** | **68** | **68** | **68** |
 
 ## Verification Gates Status
 - Gate 1 (`cargo test`): PASS (359/359)
