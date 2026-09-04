@@ -8,6 +8,8 @@ import requests
 
 def test_breaking_schema_change_detection():
     # Anti-pattern: No validation for unexpected schema regressions
-    # TODO: Implement strict schema verification that fails if expected consumer contract is violated
+    # TODO: Use pact-python's `Verifier` to prove an additive-only contract
+    # still passes against the live provider, and that a contract pinned to
+    # a field the provider no longer returns is correctly rejected.
     res = requests.get("http://localhost:8081/api/pact/orders")
     assert res.status_code == 200

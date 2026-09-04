@@ -8,6 +8,7 @@ import requests
 
 def test_provider_honors_contract():
     # Anti-pattern: Testing provider without validating required consumer fields
-    # TODO: Verify provider response strictly matches required contract schema
+    # TODO: Use pact-python's `Verifier` to replay a consumer's Pact contract
+    # against this live provider, instead of hand-checking one status code.
     res = requests.get("http://localhost:8081/api/pact/orders")
     assert res.status_code == 200
