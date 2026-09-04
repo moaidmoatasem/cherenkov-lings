@@ -11,6 +11,11 @@ jobs:
     name: Rust Engine & Curriculum Audit (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
+      # The windows leg is the only place several of these tests run at all, and
+      # a fail-fast matrix cancelled it the moment ubuntu failed -- so a
+      # Linux-only breakage silently blinded the platform whose flakes we were
+      # chasing. Let both legs finish and report.
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
 
@@ -266,6 +271,11 @@ jobs:
     - name: Build Frontend Image
       run: docker build -f Dockerfile.frontend -t cherenkov-frontend:ci .
 
+    # NOTE: keep `exit 1` off the start of its own line, for the reason spelled
+    # out on the Start Micro-Crucible Backend step above. This step shipped with
+    # a bare `exit 1` and turned `test_runner_executes_actual_repo_ci_workflow`
+    # red, which -- the matrix being fail-fast -- cancelled the windows leg on
+    # every push.
     - name: Smoke the Backend Image
       run: |
         docker run -d --name crucible -p 8081:8081 cherenkov-backend:ci
@@ -281,6 +291,6 @@ jobs:
           echo "The backend image never answered /health. Container log follows:"
           docker logs crucible
           docker rm -f crucible
-          exit 1
+          echo "backend image failed its health probe" >&2 && exit 1
         fi
         docker rm -f crucible
