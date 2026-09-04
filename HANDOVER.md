@@ -1,5 +1,40 @@
 # Handover: Cherenkov-Lings Remediation
 
+## ⚠️ POST-MERGE UPDATE (read this before anything below)
+
+PR #24 (this branch) was merged with `origin/master`, which had moved far ahead in
+parallel — PR #21 ("Learn UI, scoring rubric and progress record honest") and PR #22
+(Code Review / Triage API wiring) landed while this session worked. **Large parts of
+the plan below are now already done upstream.** Verified directly post-merge:
+
+- **Phase 3 (landing screen honesty) is DONE** — PR #21 rewrote `TodayScreen.tsx`,
+  `RecordScreen.tsx`, and `useLearnerProgress.ts` from scratch: no more seeded/fake
+  figures, dead buttons removed, real `/api/progress` + `/api/curriculum` wiring
+  throughout. Do not redo this — read the current files first.
+- **Phase 2a (`CodeReviewPage.tsx`) is DONE** — now imports `runReview`/
+  `applyReviewFix` from `crucible/frontend/src/lib/reviewApi.ts` (new file from PR #22).
+- **Phase 2c (`AllureTriagePage.tsx`) is DONE** — now imports `fetchTriageTests`/
+  `submitTriage` from `crucible/frontend/src/lib/triageApi.ts` (new file from PR #22).
+- **Phase 2b (`PipelineBuilderPage.tsx`) is STILL NOT WIRED** — confirmed via grep,
+  zero references to `apiUrl`/a pipeline API client in this file as of the merge. This
+  is the one flagship-tab task still open.
+- **Phase 1.3's exact drill** (`07_cloud_devsecops/02_jwt_weak_signing_key`) had its
+  `theory.md`/`exercise.py` production-story attribution fixed by PR #21 (Capital One →
+  real 2015 `alg:none` disclosure) — but PR #21 did **not** add Hint 3 or make it hit a
+  live endpoint. That specific gap (see the IN PROGRESS section below) is still open.
+  `01_insecure_docker_mount` (the other drill in that pair) is untouched by PR #21 —
+  still fully open.
+- Curriculum counts, scoring rubric weighting, and several other doc numbers were
+  independently fixed by PR #21 too — **re-check current file contents before editing
+  any file this doc references**, several may already be correct.
+
+**Bottom line: re-read the actual current state of any file below before acting on its
+description.** This document was written before the merge and describes the plan as
+it stood then — treat it as a task list to re-verify against current source, not as a
+description of current file contents.
+
+---
+
 Written 2026-09-04 by a Claude Code session that ran out of budget mid-implementation.
 This file is the single source of truth for what's done, what's in flight, and what's
 left. It inlines the full approved plan so it's self-contained — no dependency on any
