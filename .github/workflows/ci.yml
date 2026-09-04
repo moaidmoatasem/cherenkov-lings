@@ -54,6 +54,34 @@ jobs:
       with:
         python-version: '3.11'
 
+    # This job is a Python job that also compiles the Rust crate: scenarios 9
+    # and 10 of the empirical adversarial suite shell out to `cargo run -- audit`,
+    # `cargo run -- dashboard`, `cargo run -- diagnose` and `cargo test`. Without
+    # these two steps that compile was unpinned and uncached -- it took whatever
+    # rustc the runner image happened to ship (the crate is edition 2024, so it
+    # needs >= 1.85 and would break on an image that rolled backwards) and it
+    # rebuilt all 195 dependencies from scratch on every single push.
+    - name: Setup Rust Toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    # Keyed per job, so this does not collide with the cache rust_engine_and_audit
+    # keeps for its own matrix legs. The two jobs run in parallel and cannot share
+    # a warm target/ within one run anyway; what this buys is that the dependency
+    # graph is restored rather than recompiled on every run after the first.
+    - name: Rust Cache
+      uses: Swatinem/rust-cache@v2
+
+    # Building here rather than letting pytest trigger it inside a subprocess is
+    # worth a step of its own: the suite captures cargo's output and only prints
+    # it on failure, so a crate that does not compile used to surface as a bare
+    # "[FAIL] Scenario 9" with the compiler errors buried in captured stdout.
+    # This is not extra compilation -- it is the same target/ the suite then
+    # reuses -- and it puts the build's cost on the timeline where it can be read.
+    - name: Prebuild Rust Engine (used by empirical scenarios 9 & 10)
+      run: |
+        cargo build
+        cargo test --no-run
+
     - name: Install Dependencies
       run: |
         pip install -r crucible/backend/requirements.txt
