@@ -247,3 +247,40 @@ jobs:
             python -m pytest "$dir/solution.py" -v --tb=short || exit 1
           fi
         done
+
+  container_images:
+    name: Container Images
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    # Neither image was built anywhere in this workflow, so both Dockerfiles
+    # could rot for months without a push noticing. A build is the cheapest
+    # gate that catches it. The backend also gets a health probe, because an
+    # image that builds and then exits on startup is not much better than one
+    # that does not build at all.
+    - name: Build Backend Image
+      run: docker build -f Dockerfile.backend -t cherenkov-backend:ci .
+
+    - name: Build Frontend Image
+      run: docker build -f Dockerfile.frontend -t cherenkov-frontend:ci .
+
+    - name: Smoke the Backend Image
+      run: |
+        docker run -d --name crucible -p 8081:8081 cherenkov-backend:ci
+        ok=""
+        for _ in $(seq 1 30); do
+          if curl -sf http://127.0.0.1:8081/health > /dev/null; then
+            ok=1
+            break
+          fi
+          sleep 1
+        done
+        if [ -z "$ok" ]; then
+          echo "The backend image never answered /health. Container log follows:"
+          docker logs crucible
+          docker rm -f crucible
+          exit 1
+        fi
+        docker rm -f crucible
