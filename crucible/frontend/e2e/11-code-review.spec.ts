@@ -15,25 +15,30 @@ test.describe('Code Review Drill — AST Review Engine', () => {
   });
 
   test('selecting template loads code', async ({ page }) => {
-    await page.click('.template-pill:has-text("Fragile Locators")');
+    await page.click('.template-pill:has-text("Fragile XPath")');
     const code = page.locator('.code-textarea');
     await expect(code).toContainText('xpath=');
   });
 
   test('local AST scanner detects violations', async ({ page }) => {
     await expect(page.locator('.violation-card').first()).toBeVisible();
-    await expect(page.locator('text=AST Violations Identified')).toBeVisible();
+    // Heading is singular/plural depending on violation count ("1 AST Violation
+    // Identified" vs "N AST Violations Identified").
+    await expect(page.locator('text=/AST Violations? Identified/')).toBeVisible();
   });
 
   test('score gauge renders', async ({ page }) => {
     await expect(page.locator('.gauge-score-value')).toBeVisible();
   });
 
-  test('wizard tab shows 3 steps when violations exist', async ({ page }) => {
+  test('wizard walks through anti-pattern selection and fix preview', async ({ page }) => {
+    // Select a template with violations so there's something to fix.
+    await page.click('.template-pill:has-text("Fragile XPath")');
     await page.click('button:has-text("Fix-It Wizard")');
-    await expect(page.locator('text=Step 1')).toBeVisible();
-    await expect(page.locator('text=Step 2')).toBeVisible();
-    await expect(page.locator('text=Step 3')).toBeVisible();
+    await expect(page.locator('text=STEP 1')).toBeVisible();
+    await page.locator('.vchip').first().click();
+    await expect(page.locator('text=STEP 2')).toBeVisible();
+    await expect(page.locator('text=Unified Code Diff Preview')).toBeVisible();
   });
 
   test('reset button restores original code', async ({ page }) => {

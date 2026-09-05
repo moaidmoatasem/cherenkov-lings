@@ -4,7 +4,7 @@ test.describe('Transfer Drill — Kafka Lag Simulation', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/transfer');
     // Reset ledger before each test
-    await page.click('#reset-ledger-btn');
+    await page.click('[data-testid="reset-ledger-btn"]');
   });
 
   test('balance loads on mount', async ({ page }) => {
@@ -27,22 +27,28 @@ test.describe('Transfer Drill — Kafka Lag Simulation', () => {
   });
 
   test('transfer id is displayed', async ({ page }) => {
+    // The transaction id renders in its own .transfer-meta block, not inside
+    // the transfer-status span (which only ever shows the status text).
     await page.fill('#amount-input', '250.00');
     await page.click('#transfer-btn');
-    await expect(page.locator('data-testid=transfer-status')).toContainText('TX-');
+    await expect(page.locator('.transfer-meta')).toContainText('TX-');
   });
 
   test('invalid amount shows error', async ({ page }) => {
+    // #amount-input has min="1.00" and is inside <form onSubmit=...>, so the
+    // browser's native HTML5 constraint validation blocks submission before
+    // React's handler (and its custom .alert-error message) ever runs.
     await page.fill('#amount-input', '-50');
     await page.click('#transfer-btn');
-    await expect(page.locator('.alert-error')).toBeVisible();
+    await expect(page.locator('#amount-input:invalid')).toHaveCount(1);
+    await expect(page.locator('data-testid=transfer-status')).not.toBeVisible();
   });
 
   test('reset ledger restores default balance', async ({ page }) => {
     await page.fill('#amount-input', '250.00');
     await page.click('#transfer-btn');
     await expect(page.locator('data-testid=transfer-status')).toHaveText('Transfer Settled', { timeout: 10000 });
-    await page.click('#reset-ledger-btn');
+    await page.click('[data-testid="reset-ledger-btn"]');
     await expect(page.locator('data-testid=account-balance')).toHaveText('1000.00');
   });
 

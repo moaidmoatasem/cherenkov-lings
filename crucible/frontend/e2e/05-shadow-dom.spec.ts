@@ -16,19 +16,19 @@ test.describe('Shadow DOM & Iframe Drill', () => {
   });
 
   test('payment frame iframe exists', async ({ page }) => {
-    const frame = page.frameLocator('iframe[name="payment-gateway"]');
+    const frame = page.frameLocator('iframe[data-testid="payment-frame"]');
     await expect(frame.locator('#secure-card-pin')).toBeVisible();
     await expect(frame.locator('#btn-authorize')).toBeVisible();
   });
 
   test('payment iframe authorize button works', async ({ page }) => {
-    const frame = page.frameLocator('iframe[name="payment-gateway"]');
-    await frame.fill('#secure-card-pin', '1234');
-    await frame.click('#btn-authorize');
+    const frame = page.frameLocator('iframe[data-testid="payment-frame"]');
+    await frame.locator('#secure-card-pin').fill('1234');
+    await frame.locator('#btn-authorize').click();
     await expect(frame.locator('#frame-auth-status')).toHaveText('Payment Authorized');
   });
 
   test('inspector shows expected secret token', async ({ page }) => {
-    await expect(page.locator('text=CHERENKOV_SECRET_9876')).toBeVisible();
+    await expect(page.getByTestId('vault-secret')).toHaveText('CHERENKOV_SECRET_9876');
   });
 });

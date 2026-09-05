@@ -12,7 +12,7 @@ test.describe('Search Drill — Debounced Autocomplete Race', () => {
 
   test('typing playwright shows results', async ({ page }) => {
     await page.fill('#search-box', 'playwright');
-    await expect(page.locator('data-testid=search-results')).toHaveCount(5, { timeout: 5000 });
+    await expect(page.locator('data-testid=result-item')).toHaveCount(5, { timeout: 5000 });
     await expect(page.locator('data-testid=active-query')).toHaveText('playwright');
   });
 

@@ -1,20 +1,29 @@
-﻿import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
-test.describe('Checkout Drill — Hydration Timing Gap', () => {
+// These three assert the exact state of an 800ms setTimeout-driven hydration
+// flag. Under real wall-clock time that's a genuine race against test-runner
+// scheduling delay (navigation + assertion overhead can eat into the 800ms
+// window, especially with multiple parallel workers contending for CPU),
+// which made them flaky under `--workers=2`+ even though the underlying
+// behavior was correct. Installing Playwright's clock lets us control time
+// deterministically instead of racing it.
+test.describe('Checkout Drill — Hydration Timing Gap (clock-controlled)', () => {
   test.beforeEach(async ({ page }) => {
+    await page.clock.install();
     await page.goto('/checkout');
   });
 
   test('page loads with hydration trap warning', async ({ page }) => {
     await expect(page.locator('data-testid=checkout-page')).toBeVisible();
     await expect(page.locator('text=Hydration Timing Gap')).toBeVisible();
-    await expect(page.locator('data-hydrated=false')).toBeVisible();
+    await expect(page.locator('#checkout-btn[data-hydrated="false"]')).toBeVisible();
   });
 
   test('hydration completes after 800ms', async ({ page }) => {
     const btn = page.locator('#checkout-btn');
     await expect(btn).toHaveAttribute('data-hydrated', 'false');
-    await expect(btn).toHaveAttribute('data-hydrated', 'true', { timeout: 5000 });
+    await page.clock.fastForward(801);
+    await expect(btn).toHaveAttribute('data-hydrated', 'true');
   });
 
   test('early click before hydration increments drop count', async ({ page }) => {
@@ -23,9 +32,15 @@ test.describe('Checkout Drill — Hydration Timing Gap', () => {
     await expect(page.locator('data-testid=click-dropped-warning')).toBeVisible();
     await expect(page.locator('data-testid=click-dropped-warning')).toContainText('1 click');
   });
+});
+
+test.describe('Checkout Drill — Hydration Timing Gap', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/checkout');
+  });
 
   test('confirm purchase bypasses hydration trap', async ({ page }) => {
-    await page.click('#confirm-purchase-btn');
+    await page.click('[data-testid="confirm-purchase-btn"]');
     await expect(page.locator('data-testid=order-status')).toBeVisible();
     await expect(page.locator('data-testid=order-status')).toContainText('Order Confirmed');
   });
@@ -44,9 +59,13 @@ test.describe('Checkout Drill — Hydration Timing Gap', () => {
   });
 
   test('form validation for empty address', async ({ page }) => {
-    await page.fill('#address', '');
+    // Wait past the hydration trap -- an untouched, still-empty address field
+    // never fires onChange, so it never marks the form "touched", and clicking
+    // before hydration would get silently dropped rather than testing what
+    // this test is actually about (there's no client-side required-field
+    // validation on address).
+    await expect(page.locator('#checkout-btn')).toHaveAttribute('data-hydrated', 'true', { timeout: 5000 });
     await page.click('#checkout-btn');
-    // Should still work because confirm purchase bypasses validation
     await expect(page.locator('data-testid=order-status')).toBeVisible();
   });
 });
