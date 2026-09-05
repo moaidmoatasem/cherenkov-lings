@@ -276,7 +276,7 @@ export const MissionControlPage: React.FC = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
           <div>
             <h2 className="card-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span>?</span> Live Micro-Crucible Chaos Simulator
+              <span>☢️</span> Live Micro-Crucible Chaos Simulator
             </h2>
             <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '4px' }}>
               Inject latency, dropped SSE streams, Kafka lag, or prompt injection payloads directly against the live Crucible engine.
