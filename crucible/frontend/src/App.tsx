@@ -54,19 +54,38 @@ export const App: React.FC = () => {
   const [currentPath, setCurrentPath] = useState<string>(() => {
     return window.location.pathname || '/';
   });
+  // Tracked separately from currentPath so that navigating to the same
+  // pathname with a different hash (e.g. a fresh deep link to
+  // /mobile-test#account=123 while already on /mobile-test) still forces
+  // the page to remount and re-read the hash, instead of reusing the
+  // existing instance whose mount-only effects already ran.
+  const [currentHash, setCurrentHash] = useState<string>(() => window.location.hash);
 
   useEffect(() => {
     const handlePopState = () => {
       setCurrentPath(window.location.pathname || '/');
+      setCurrentHash(window.location.hash);
+    };
+    // Native hash-only navigation (address bar, an in-page <a href="#...">,
+    // or a test driver's page.goto to the same document with a new fragment)
+    // fires 'hashchange', not 'popstate'.
+    const handleHashChange = () => {
+      setCurrentHash(window.location.hash);
     };
 
     window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    window.addEventListener('hashchange', handleHashChange);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('hashchange', handleHashChange);
+    };
   }, []);
 
   const handleNavigate = (path: string) => {
     window.history.pushState({}, '', path);
-    setCurrentPath(path);
+    const [pathname, hash] = path.split('#');
+    setCurrentPath(pathname || '/');
+    setCurrentHash(hash ? `#${hash}` : '');
     window.scrollTo(0, 0);
   };
 
@@ -124,7 +143,7 @@ export const App: React.FC = () => {
     <div className="app-layout">
       <Navbar currentPath={currentPath} onNavigate={handleNavigate} />
       <main className="main-content">
-        <ErrorBoundary key={currentPath}>{renderPage()}</ErrorBoundary>
+        <ErrorBoundary key={currentPath + currentHash}>{renderPage()}</ErrorBoundary>
       </main>
       <footer className="site-footer">
         <div className="footer-content">
