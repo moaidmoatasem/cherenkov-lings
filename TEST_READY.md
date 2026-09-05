@@ -3,20 +3,23 @@
 > **Role of this document**: the dated point-in-time snapshot of gate results and
 > curriculum counts, re-verified alongside each remediation pass (see gate definitions
 > and philosophy in [`TEST_INFRA.md`](TEST_INFRA.md) instead). **Last reverified: 2026-09-05**
-> — the pytest count below was re-run directly; `cargo test`/`clippy`/`playwright` counts
+> — `cargo run -- audit` and the manifest inventory below were re-run directly after
+> adding the `getting-started` track; `cargo test`/`clippy`/`playwright`/pytest counts
 > are carried forward from the prior snapshot and were not re-run this pass.
 
 ## Test Runner & Verification Commands
 - `cargo test` (359/359 tests passing, 0 failures) — not re-run this pass, carried forward
 - `cargo clippy --all-targets -- -D warnings` (0 warnings) — not re-run this pass, carried forward
-- `python -m pytest tests/test_micro_crucible_chaos.py` (35/35 passing — re-run 2026-09-05, up from 33 after PR #25 added Docker-mount and JWT `alg:none` coverage)
-- `python -m ruff check crucible/ tests/` (0 errors — re-run 2026-09-05)
+- `python -m pytest tests/test_micro_crucible_chaos.py` (35/35 passing — carried forward from PR #25)
+- `python -m ruff check crucible/ tests/` (0 errors) — not re-run this pass, carried forward
 - `npx playwright test exercises/06_genai_qa/` (all solution tests passing)
 - `cargo run -- dashboard` (renders ANSI dashboard and exits with code 0)
+- `cargo run -- audit` (**72/72 drills, 360/360 contract checks, re-run 2026-09-05**)
 
 ## Curriculum & Module Inventory
 | Track ID | Track Name | Drills Total | Status | Exercises | Solutions | Hints | Theory Modules |
 |---|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| `getting-started` | Getting Started — Manual QA On-Ramp | 4 | ✅ Complete | 4 | 4 | 4 | 4 (>=150w + ASCII) |
 | `foundations` | Python Testing Foundations | 5 | ✅ Complete | 5 | 5 | 5 | 5 (>=150w + ASCII) |
 | `api-pytest` | API Validation Fundamentals (Pytest) | 1 | ✅ Complete | 1 | 1 | 1 | 1 (>=150w + ASCII) |
 | `playwright-ts` | Modern Web Automation (Playwright TS) | 10 | ✅ Complete | 10 | 10 | 10 | 10 (>=150w + ASCII) |
@@ -30,7 +33,7 @@
 | `ci-pipeline` | CI/CD Pipeline Engineering | 5 | ✅ Complete | 5 | 5 | 5 | 5 (>=150w + ASCII) |
 | `contract-pact` | Consumer-Driven Contract Testing (Pact) | 3 | ✅ Complete | 3 | 3 | 3 | 3 (>=150w + ASCII) |
 | `a11y-axe` | Accessibility & Visual Testing (Axe) | 3 | ✅ Complete | 3 | 3 | 3 | 3 (>=150w + ASCII) |
-| **Total** | **13 Tracks** | **68** | ✅ **100% Complete** | **68** | **68** | **68** | **68** |
+| **Total** | **14 Tracks** | **72** | ✅ **100% Complete** | **72** | **72** | **72** | **72** |
 
 ## Verification Gates Status
 - Gate 1 (`cargo test`): PASS (359/359)
