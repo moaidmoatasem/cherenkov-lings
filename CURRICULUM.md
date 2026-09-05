@@ -277,9 +277,9 @@ To maintain the integrity of our feedback loop, the 4D Feedback Matrix must be r
 
 ### Platform Developer Milestone Checklist (MCP Server & Core)
 
-* [ ] **Polyglot AST Analysis:** Update `get_diagnostic_report` to support Java (REST Assured) and Python (Pytest) performance trap detection.
-* [ ] **OTel Hinting:** Expand `get_hints` to provide progressive 3-tier guidance for Span ID correlation and distributed trace assertions.
-* [ ] **Micro-Crucible Expansion:** Integrate Kafka brokers and OpenTelemetry collectors into the standard `docker-compose.yml` orchestration.
-* [ ] **Badging System:** Implement "Chaos Survivor" and "The Architect" badges in the Mission Control UI based on Path B and C completions.
+* [x] **Polyglot AST Analysis:** Update `get_diagnostic_report` to support Java (REST Assured) and Python (Pytest) performance trap detection. (`src/feedback.rs`, dispatched via `src/mcp.rs`)
+* [x] **OTel Hinting:** Expand `get_hints` to provide progressive 3-tier guidance for Span ID correlation and distributed trace assertions. (`telemetry_hints()` in `src/feedback.rs`, wired via `src/mcp.rs`)
+* [x] **Micro-Crucible Expansion:** Integrate Kafka brokers and OpenTelemetry collectors into the standard `docker-compose.yml` orchestration. Containers and `otel-collector-config.yaml` are real and valid; note the backend does not yet emit real OTLP or use a Kafka client — `tracing.py` is a documented "Dummy OpenTelemetry" middleware that fabricates trace/span IDs and logs to stdout, and `kafka_lag` in `app.py` is a simulated chaos delay, not an actual broker integration. Follow-up: wire a real `opentelemetry-sdk` exporter and/or a Kafka client if live integration (not just simulated lag) is desired.
+* [x] **Badging System:** Implement "Chaos Survivor" and "The Architect" badges in the Mission Control UI based on Path B and C completions. (`crucible/frontend/src/components/badges/types.ts`, unlock logic in `BadgesShowcase.tsx` driven by live `/api/progress` data)
 
 This roadmap reaffirms our commitment to a zero-cloud, local-first environment where mastery is not granted through slides, but earned by systematically breaking and fixing real systems.
