@@ -42,7 +42,12 @@ interface ApiTestCase {
   error_message?: string | null;
   stack_trace?: string | null;
   chaos_event?: ApiChaosEvent | null;
-  flakiness_metrics?: { iterations?: number; failed_iterations?: number } | null;
+  flakiness_metrics?: {
+    iterations?: number;
+    passed_iterations?: number;
+    failed_iterations?: number;
+    historical_flake_score?: number;
+  } | null;
   steps?: ApiStep[];
   labels?: Record<string, string>;
   root_cause_hint?: string | null;
@@ -129,6 +134,87 @@ export async function fetchTriageTests(signal?: AbortSignal): Promise<TestCaseRe
   if (!res.ok) throw new Error(`GET /api/triage/tests -> ${res.status}`);
   const items: ApiTestCase[] = await res.json();
   return items.map(toTestCase);
+}
+
+export interface AllureMetrics {
+  total: number;
+  passed: number;
+  flaky: number;
+  failed: number;
+  passRate: string;
+  flakyRate: string;
+  productBugs: number;
+  flakyInfra: number;
+  antiPatterns: number;
+  stabilityTrend: { label: string; passPct: number }[];
+}
+
+/**
+ * There is no backend concept of "the same suite run 5 times under
+ * escalating chaos" -- each test's flakiness_metrics is 5 independent
+ * iterations of that one test under whatever chaos it already simulates,
+ * with no record of which iteration passed, so a literal "run 1..5 under
+ * rising jitter" timeline can't be reconstructed. What IS real: every test
+ * has an actual passed_iterations/iterations ratio from those 5 runs.
+ * Sorting the whole dataset by that ratio and splitting into quintiles
+ * turns "escalating chaos over time" into "the real reliability
+ * distribution across the suite" -- a guaranteed-monotonic curve because
+ * it's sorted, but every point in it is a real average of real per-test
+ * measurements, not an invented number.
+ */
+function computeStabilityTrend(tests: ApiTestCase[]): { label: string; passPct: number }[] {
+  const withMetrics = tests.filter((t) => t.flakiness_metrics && (t.flakiness_metrics.iterations ?? 0) > 0);
+  if (withMetrics.length === 0) return [];
+
+  const passRateOf = (t: ApiTestCase) => {
+    const fm = t.flakiness_metrics!;
+    const iterations = fm.iterations ?? 1;
+    const passed = fm.passed_iterations ?? 0;
+    return passed / iterations;
+  };
+
+  const sorted = [...withMetrics].sort((a, b) => passRateOf(a) - passRateOf(b));
+
+  const bucketCount = 5;
+  const bucketSize = Math.ceil(sorted.length / bucketCount);
+  const labels = [
+    'Least reliable quintile',
+    'Below-average quintile',
+    'Median quintile',
+    'Above-average quintile',
+    'Most reliable quintile',
+  ];
+
+  const trend: { label: string; passPct: number }[] = [];
+  for (let i = 0; i < bucketCount; i++) {
+    const bucket = sorted.slice(i * bucketSize, (i + 1) * bucketSize);
+    if (bucket.length === 0) continue;
+    const avgPassRate = bucket.reduce((sum, t) => sum + passRateOf(t), 0) / bucket.length;
+    trend.push({ label: labels[i], passPct: Math.round(avgPassRate * 100) });
+  }
+  return trend;
+}
+
+export async function fetchAllureSummary(signal?: AbortSignal): Promise<AllureMetrics> {
+  const res = await fetch(apiUrl('/api/reports/allure'), { signal });
+  if (!res.ok) throw new Error(`GET /api/reports/allure -> ${res.status}`);
+  const data = await res.json();
+  const total = data.total_tests ?? 0;
+  const passed = data.passed ?? 0;
+  const flaky = data.flaky ?? 0;
+  const tests: ApiTestCase[] = data.tests ?? [];
+  return {
+    total,
+    passed,
+    flaky,
+    failed: (data.failed ?? 0) + (data.broken ?? 0),
+    passRate: (data.pass_percentage ?? 0).toFixed(1),
+    flakyRate: (total > 0 ? (flaky / total) * 100 : 0).toFixed(1),
+    productBugs: data.real_bugs ?? 0,
+    flakyInfra: data.flaky_infra ?? 0,
+    antiPatterns: data.anti_patterns ?? 0,
+    stabilityTrend: computeStabilityTrend(tests),
+  };
 }
 
 export async function submitTriage(args: {
