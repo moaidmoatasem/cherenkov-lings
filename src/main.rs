@@ -204,6 +204,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!();
             println!(
                 "  {}  {}  {}",
+                "STEP 0".bright_white().bold(),
+                "Getting Started — never written a test before?".bright_yellow(),
+                "(no tools needed, just Python)".dimmed()
+            );
+            println!(
+                "         {}",
+                "cherenkov-lings watch --track=getting-started".bright_cyan()
+            );
+            println!(
+                "         Open: {}",
+                "exercises/00_getting_started/01_first_assertion/exercise.py".dimmed()
+            );
+            println!();
+            println!(
+                "  {}  {}  {}",
                 "STEP 1".bright_white().bold(),
                 "Foundations — What IS an automated test?".bright_yellow(),
                 "(no tools needed, just Python)".dimmed()
@@ -300,7 +315,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("{}", "  🚀 Begin your journey:".bold().green());
             println!(
                 "     {}",
-                "cherenkov-lings watch --track=foundations"
+                "cherenkov-lings watch --track=getting-started"
                     .bold()
                     .bright_cyan()
             );

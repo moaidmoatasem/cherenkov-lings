@@ -62,4 +62,4 @@ fi
 
 echo ""
 echo "[DONE] Installation Complete!"
-echo "Run 'cherenkov-lings dashboard' or 'cherenkov-lings watch --track=foundations' to begin."
+echo "Run 'cherenkov-lings dashboard' or 'cherenkov-lings watch --track=getting-started' to begin."

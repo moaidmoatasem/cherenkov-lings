@@ -261,16 +261,17 @@ fn test_next_drill_recommendation_prioritization() {
     let mut state = GamificationState::default();
     let config = sample_config();
 
-    // Default: recommends first drill in Foundations
+    // Default: recommends first drill in Getting Started, the curriculum's
+    // first track (a manual-QA on-ramp that now runs ahead of Foundations)
     let rec1 = get_next_recommended_drill(&config, &state);
-    assert_eq!(rec1.track_id, "foundations");
-    assert_eq!(rec1.drill_id, "01_what_is_a_test");
+    assert_eq!(rec1.track_id, "getting-started");
+    assert_eq!(rec1.drill_id, "01_first_assertion");
 
-    // Complete first drill in Foundations
+    // Complete first drill in Getting Started
     let ctx1 = DrillRunContext {
-        track_id: "foundations".to_string(),
-        drill_id: "01_what_is_a_test".to_string(),
-        file_path: "exercises/00_foundations/01_what_is_a_test/exercise.py".to_string(),
+        track_id: "getting-started".to_string(),
+        drill_id: "01_first_assertion".to_string(),
+        file_path: "exercises/00_getting_started/01_first_assertion/exercise.py".to_string(),
         passed: true,
         total_score: 95.0,
         tier: 1,
@@ -278,10 +279,10 @@ fn test_next_drill_recommendation_prioritization() {
     };
     state.record_drill_run(&ctx1);
 
-    // Now recommends second drill in Foundations
+    // Now recommends second drill in Getting Started
     let rec2 = get_next_recommended_drill(&config, &state);
-    assert_eq!(rec2.track_id, "foundations");
-    assert_eq!(rec2.drill_id, "02_test_naming_matters");
+    assert_eq!(rec2.track_id, "getting-started");
+    assert_eq!(rec2.drill_id, "02_reading_a_traceback");
 }
 
 #[test]

@@ -33,12 +33,47 @@ enable_audio_bell = false
 language = "en"
 
 # -----------------------------------------------------------------------------
-#  Automation Foundations (Manual QA On-Ramp) - Python / Pytest
+#  Getting Started (Manual QA On-Ramp) - Python / Pytest
+#  Runs before every other track. Zero prior-coding-drill assumed: reading a
+#  test result, reading a traceback, reading a diff, and translating a manual
+#  test case into one assertion -- the four skills every later track assumes
+#  you already have.
+# -----------------------------------------------------------------------------
+[[tracks]]
+id = "getting-started"
+name = "Getting Started — Manual QA On-Ramp (Python / Pytest)"
+display_name = "Getting Started (Manual QA On-Ramp)"
+runner = "python"
+exercise_dir = "exercises/00_getting_started"
+extension = ".py"
+command = "python -m pytest {file} --json-report --json-report-file=report.json"
+stack = "Python / Pytest"
+tier = "Tier 0 — Pre-requisite"
+description = "Before automation: reading a test result, reading a traceback, reading a diff, and turning a manual test case into one real assertion."
+
+  [[tracks.drills]]
+  id = "01_first_assertion"
+  name = "Your First Assertion"
+
+  [[tracks.drills]]
+  id = "02_reading_a_traceback"
+  name = "Reading a Traceback"
+
+  [[tracks.drills]]
+  id = "03_reading_a_diff"
+  name = "Reading a Diff"
+
+  [[tracks.drills]]
+  id = "04_manual_test_to_assertion"
+  name = "From Manual Test Case to Automated Assertion"
+
+# -----------------------------------------------------------------------------
+#  Automation Foundations - Python / Pytest
 # -----------------------------------------------------------------------------
 [[tracks]]
 id = "foundations"
-name = "Automation Foundations — Manual QA On-Ramp (Python / Pytest)"
-display_name = "Automation Foundations (Manual QA On-Ramp)"
+name = "Automation Foundations (Python / Pytest)"
+display_name = "Automation Foundations"
 runner = "python"
 exercise_dir = "exercises/00_foundations"
 extension = ".py"
