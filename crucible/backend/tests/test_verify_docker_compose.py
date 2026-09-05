@@ -9,7 +9,6 @@ Validates:
 6. Graceful live container startup or environment skip check.
 """
 
-import os
 import socket
 import subprocess
 import time

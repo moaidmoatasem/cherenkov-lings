@@ -34,12 +34,7 @@ traceparent: {version}-{trace_id}-{parent_id}-{trace_flags}
 - **trace_flags**: An 8-bit field, where `01` signals that the trace is recorded and sampled.
 
 When an automated test generates a unique `trace_id` and `client_span_id`, formats them into the `traceparent` header, and transmits them with the HTTP request:
-1. The receiving service extracts the trace context and starts a child span whose `parent_span_id` equals the test's `client_span_id`.
-2. As messages flow through Kafka topics and background workers, the trace context is injected into message headers and preserved across asynchronous boundaries.
-3. The test queries the OpenTelemetry Collector or tracing endpoint for `trace_id`, retrieving the complete directed acyclic graph (DAG) of spans.
-4. The test asserts:
-   - The root span has `parent_span_id == client_span_id` (proving distributed context was accepted).
-   - All expected child spans (`kafka.produce`, `kafka.consume`, `db.ledger_update`) are present.
-   - Every span status code equals `OK` with zero unhandled exceptions.
+1. The receiving service extracts the trace context and records a span whose `parent_span_id` equals the test's `client_span_id` -- the correlation the Micro-Crucible's `/api/telemetry/spans?trace_id=...` endpoint lets you query back.
+2. The test asserts that a span under its own `trace_id` exists with `parent_span_id == client_span_id`, proving the server actually received and acted on the propagated context -- not just that some request, somewhere, returned 200.
 
-By participating directly in distributed tracing, tests achieve deterministic, zero-sleep verification of complex asynchronous workflows.
+A production OpenTelemetry deployment extends this same mechanism further than the Crucible does: as messages flow through Kafka topics and background workers, the trace context is injected into message headers and preserved across asynchronous boundaries, so a query for one `trace_id` returns a full directed acyclic graph of child spans (`kafka.produce`, `kafka.consume`, `db.ledger_update`, each with its own status). The root-span correlation this drill checks is the same mechanism at its smallest scale -- get that propagation right and the rest is more spans on the same graph, not a different technique.

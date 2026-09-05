@@ -7,12 +7,14 @@ out-of-band. A test that only checks response status code misses silent async
 failures, consumer lag, and ledger balance corruption.
 
 GOAL:
-Inject W3C traceparent headers ('00-{trace_id}-{parent_id}-01') into the HTTP
-request and assert distributed span status and parent-child correlation.
+Inject a W3C traceparent header ('00-{trace_id}-{parent_id}-01') into the HTTP
+request so the server's span is correlated back to this client, then query
+/api/telemetry/spans to prove the correlation actually happened -- not just
+that the request returned 200.
 """
 
+import secrets
 import requests
-import time
 
 def test_distributed_trace_and_span_correlation():
     base_url = "http://localhost:8081"
@@ -22,11 +24,21 @@ def test_distributed_trace_and_span_correlation():
         "amount": 100.0,
     }
 
-    # FLAWED: Naive test without W3C traceparent context propagation
-    # and relying on brittle sleep without verifying telemetry spans.
+    trace_id = secrets.token_hex(16)
+    client_span_id = secrets.token_hex(8)
+
+    # TODO: This trace_id and client_span_id are generated but never sent
+    # anywhere -- the request below carries no 'traceparent' header, so the
+    # server has nothing of the client's to correlate against. It records a
+    # span under a trace_id of its own choosing, not this one.
     response = requests.post(f"{base_url}/transfer", json=payload)
-    time.sleep(1)
-    # TODO: Generate trace_id (32 hex chars) and client_span_id (16 hex chars).
-    # TODO: Inject 'traceparent': f'00-{trace_id}-{client_span_id}-01'.
-    # TODO: Query /api/telemetry/spans?trace_id={trace_id} and assert parent-child correlation.
     assert response.status_code == 200
+
+    telemetry_resp = requests.get(f"{base_url}/api/telemetry/spans?trace_id={trace_id}")
+    assert telemetry_resp.status_code == 200
+    spans = telemetry_resp.json()["spans"]
+    root_span = next((s for s in spans if s.get("parent_span_id") == client_span_id), None)
+    assert root_span is not None, (
+        f"No span under trace_id={trace_id} has parent_span_id={client_span_id} -- "
+        "the server never saw this trace_id because it was never sent."
+    )
