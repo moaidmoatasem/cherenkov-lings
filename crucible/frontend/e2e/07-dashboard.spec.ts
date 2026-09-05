@@ -14,7 +14,7 @@ test.describe('Dashboard Drill — Visual Regression', () => {
 
   test('service table renders 4 services', async ({ page }) => {
     await expect(page.locator('data-testid=service-table')).toBeVisible();
-    await expect(page.locator('data-testid=service-table tbody tr')).toHaveCount(4);
+    await expect(page.locator('[data-testid="service-table"] tbody tr')).toHaveCount(4);
   });
 
   test('stats cards show correct values', async ({ page }) => {

@@ -6,19 +6,21 @@ test.describe('Pipeline Builder Drill — CI/CD Simulator', () => {
   });
 
   test('pipeline builder loads with default stages', async ({ page }) => {
-    await expect(page.locator('text=CI/CD Pipeline Simulator')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'CI/CD Pipeline Simulator & Workflow Builder' })).toBeVisible();
     await expect(page.locator('text=Workflow Triggers')).toBeVisible();
     await expect(page.locator('text=Environment Setup')).toBeVisible();
   });
 
-  test('validate workflow shows results', async ({ page }) => {
-    await page.click('button:has-text("Validate Workflow")');
-    await expect(page.locator('text=SDET Score')).toBeVisible();
+  test('validation results show automatically', async ({ page }) => {
+    // There's no separate "Validate Workflow" step -- SDET policy validation
+    // runs against the current stage set and is shown up front.
+    await expect(page.locator('text=Enterprise SDET Architecture Validation')).toBeVisible();
   });
 
-  test('run pipeline shows execution results', async ({ page }) => {
-    await page.click('button:has-text("Run Pipeline")');
-    await expect(page.locator('text=Workflow Execution')).toBeVisible();
+  test('run simulation shows execution results', async ({ page }) => {
+    await page.click('button:has-text("Run Simulation")');
+    await expect(page.locator('text=Simulating Matrix')).toBeVisible();
+    await expect(page.locator('text=Parallel Matrix Simulation in Progress')).toBeVisible();
   });
 
   test('stage toggles enable/disable stages', async ({ page }) => {
