@@ -3,7 +3,7 @@
  *
  * All copy here is final product copy from the design handoff and is meant to be
  * used as-is. The tracks below are the four the design specifies; the full
- * eleven come from `/api/curriculum` (see `useLearnerProgress`), which is why
+ * thirteen come from `/api/curriculum` (see `useCurriculumTracks`), which is why
  * everything is shaped as the API would return it rather than inlined in JSX.
  */
 
@@ -15,7 +15,6 @@ import type {
   CodeLine,
   DeviceCondition,
   FlowStep,
-  Kpi,
   Learner,
   ModuleStep,
   PracticeAnswer,
@@ -426,13 +425,22 @@ export const TRACKS: Track[] = [
 ];
 
 // ─── My record ─────────────────────────────────────────────────────────────
-
-export const KPIS: Kpi[] = [
-  { label: 'Modules built', value: '14', sub: 'of 60, across four tracks' },
-  { label: 'Kept sessions', value: '86%', sub: 'six of seven this week' },
-  { label: 'Time spent', value: '9h 40m', sub: '42 minutes a day' },
-  { label: 'Points', value: '2,520', sub: 'two more modules to the certificate' },
-];
+//
+// The KPI strip on the record screen used to live here as four fixed cards:
+// "Modules built ... of 60, across four tracks", "Kept sessions 86%", "Time
+// spent 9h 40m", "Points 2,520". Two of those numbers were real but frozen in
+// place, and two -- kept sessions, time spent -- had no meter behind them at
+// all; the platform has never measured a session length or an attendance
+// rate. All four sat with equal visual weight, so a made-up percentage read
+// as no less true than the point total beside it.
+//
+// `RecordScreen` now renders `progress.kpis` from `useLearnerProgress`
+// instead, which computes "Modules built", "Tracks started", "Day streak" and
+// "Points" from `/api/progress` and `/api/curriculum` -- including the "of
+// <N>, across <N> tracks" caption, interpolated from the live manifest size
+// rather than a literal that goes stale the moment a track is added. There is
+// no live replacement for kept-sessions or time-spent, so rather than leave
+// them here as unused dead code with invented precision, they're gone.
 
 export const SKILLS: Skill[] = [
   { label: 'Waiting and assertions', level: 3, stage: 'built with it' },
