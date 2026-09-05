@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { CheckoutPage } from './pages/CheckoutPage';
 import { TransferPage } from './pages/TransferPage';
 import { SearchPage } from './pages/SearchPage';
@@ -109,18 +110,22 @@ export const App: React.FC = () => {
       // is only read on mount, so without this React reuses the instance and
       // navigating /learn -> /sandbox changed the URL while leaving the learner
       // on the screen they were already looking at.
-      <LearnApp
-        key={initialScreen}
-        initialScreen={initialScreen}
-        onExit={() => handleNavigate('/sandbox')}
-      />
+      <ErrorBoundary key={initialScreen}>
+        <LearnApp
+          key={initialScreen}
+          initialScreen={initialScreen}
+          onExit={() => handleNavigate('/sandbox')}
+        />
+      </ErrorBoundary>
     );
   }
 
   return (
     <div className="app-layout">
       <Navbar currentPath={currentPath} onNavigate={handleNavigate} />
-      <main className="main-content">{renderPage()}</main>
+      <main className="main-content">
+        <ErrorBoundary key={currentPath}>{renderPage()}</ErrorBoundary>
+      </main>
       <footer className="site-footer">
         <div className="footer-content">
           <span>Cherenkov-Lings Crucible Sandbox &copy; 2026</span>

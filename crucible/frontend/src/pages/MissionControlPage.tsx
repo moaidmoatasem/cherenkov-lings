@@ -18,18 +18,33 @@ interface TrackInfo {
 
 interface ProgressData {
   total_xp: number;
-  completed_drills: Array<{
-    drill_path: string;
-    track_id: string;
-    score: number;
-    completed_at: string;
-  }>;
-  unlocked_achievements: Array<{
+  // Keyed by drill id, not a list -- matches the Rust engine's
+  // `HashMap<String, DrillRecord>` (src/gamification.rs) that both the fresh
+  // and populated /api/progress responses serialize.
+  completed_drills: Record<
+    string,
+    {
+      track_id: string;
+      drill_id: string;
+      best_score: number;
+      completion_count: number;
+      first_completed_at: string;
+      last_completed_at: string;
+    }
+  >;
+  // "achievements", not "unlocked_achievements" -- the field the Rust engine
+  // and load_gamification_progress() (crucible/backend/triage.py) actually
+  // write. The old name here was undefined on every real response, and since
+  // `progress` itself is a truthy object once any request succeeds, the
+  // `progress?.` guard didn't short-circuit before `.some()` crashed the page.
+  achievements: Array<{
     id: string;
+    name: string;
+    description: string;
     unlocked_at: string;
   }>;
   streak_days: number;
-  consecutive_perfect_flakiness: number;
+  flakiness_100_streak: number;
   perfect_locator_count: number;
 }
 
@@ -247,7 +262,7 @@ export const MissionControlPage: React.FC = () => {
         </h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '14px' }}>
           {BADGES.map((b) => {
-            const isUnlocked = progress?.unlocked_achievements.some((a) => a.id === b.id);
+            const isUnlocked = progress?.achievements?.some((a) => a.id === b.id);
             return (
               <div
                 key={b.id}
