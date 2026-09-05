@@ -94,7 +94,10 @@ jobs:
         # requests joins them because this job runs the empirical adversarial
         # suite, which drives verify_all_exercises.py over 00_foundations, and
         # drills 04 and 05 import requests to call the live Crucible.
-        pip install ruff==0.15.12 'pytest>=8,<10' 'pytest-asyncio>=0.23,<2' 'pytest-json-report>=1.5,<2' 'httpx>=0.27,<1.0' 'requests>=2.31,<3'
+        # pact-python mirrors the same floor python_exercise_validation installs
+        # for the contract-pact track, so this job stays able to run those
+        # solutions too if the adversarial suite's scope ever grows into them.
+        pip install ruff==0.15.12 'pytest>=8,<10' 'pytest-asyncio>=0.23,<2' 'pytest-json-report>=1.5,<2' 'httpx>=0.27,<1.0' 'requests>=2.31,<3' 'pact-python>=3.4,<4'
 
     - name: Lint Backend Code
       run: ruff check crucible/ tests/
@@ -215,8 +218,13 @@ jobs:
         # The devsecops and contract-pact solutions import the crucible backend
         # and drive it through fastapi's TestClient, which needs httpx; the
         # foundations and tool-decisions solutions import requests.
+        # pact-python is the contract-pact track's own dependency: its
+        # solutions build real Pact/Verifier objects against pact-python-ffi
+        # (a compiled binary, hence the ceiling -- an unpinned major bump can
+        # change the Pact/Verifier surface out from under these drills; v1/v2
+        # used Consumer/Provider classes that v3's FFI-based API replaced).
         pip install -r crucible/backend/requirements.txt
-        pip install 'pytest>=8,<10' 'pytest-json-report>=1.5,<2' 'requests>=2.31,<3' 'httpx>=0.27,<1.0'
+        pip install 'pytest>=8,<10' 'pytest-json-report>=1.5,<2' 'requests>=2.31,<3' 'httpx>=0.27,<1.0' 'pact-python>=3.4,<4'
 
     # Several drills call the live Crucible on :8081 rather than a fake — that is
     # the lesson in 00_foundations/04_dont_test_the_mock, and 05_one_thing_per_test,

@@ -8,6 +8,8 @@ import requests
 
 def test_consumer_contract_definition():
     # Anti-pattern: Relying on live third-party dependencies without contract specifications
-    # TODO: Define consumer contract expectations for GET /api/pact/orders
+    # TODO: Use pact-python's `Pact` + `match` builders to define this consumer's
+    # expectations against a Pact mock provider (see pact.serve()), instead of
+    # sending the request straight to the live OrdersService below.
     res = requests.get("http://localhost:8081/api/pact/orders")
     assert res.status_code == 200
