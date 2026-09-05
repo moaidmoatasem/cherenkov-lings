@@ -27,11 +27,11 @@ The Cherenkov-lings Strategic Roadmap expands the platform across four core pill
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| M1 | Polyglot AST Analysis | Java & Python performance traps in `src/feedback.rs`, `src/review/rules.rs`, `crucible/backend/review.py`, and test suites | None | PLANNED |
-| M2 | OTel Hinting | 3-tier progressive hints in `src/mcp.rs`, `src/feedback.rs`, telemetry drill, and test suites | M1 | PLANNED |
-| M3 | Micro-Crucible Expansion | `docker-compose.yml`, `otel-collector-config.yaml`, automated test harness | None | PLANNED |
-| M4 | Badging System UI | `BadgeCard.tsx`, `BadgesShowcase.tsx`, `MissionControlPage.tsx`, Playwright & component tests | None | PLANNED |
-| M5 | E2E & Forensic Hardening | Comprehensive test run, Challenger verification, Forensic Audit | M1, M2, M3, M4 | PLANNED |
+| M1 | Polyglot AST Analysis | Java & Python performance traps in `src/feedback.rs`, `src/review/rules.rs`, `crucible/backend/review.py`, and test suites | None | DONE |
+| M2 | OTel Hinting | 3-tier progressive hints in `src/mcp.rs`, `src/feedback.rs`, telemetry drill, and test suites | M1 | DONE |
+| M3 | Micro-Crucible Expansion | `docker-compose.yml`, `otel-collector-config.yaml`, automated test harness | None | PARTIAL — containers stand up; backend never speaks Kafka or OTLP to them (see `CURRICULUM.md`'s checklist for specifics) |
+| M4 | Badging System UI | `BadgeCard.tsx`, `BadgesShowcase.tsx`, `MissionControlPage.tsx`, Playwright & component tests | None | DONE |
+| M5 | E2E & Forensic Hardening | Comprehensive test run, Challenger verification, Forensic Audit | M1, M2, M3, M4 | DONE — `cargo test`/`clippy`/`audit`, `ruff`, and the Python suites all pass; M3's gap above doesn't block this since the containers-stand-up test (`test_verify_docker_compose.py`) is itself passing and correctly scoped to that claim |
 
 ## Interface Contracts
 
