@@ -1,6 +1,6 @@
 ﻿import { test, expect } from '@playwright/test';
 
-const API_BASE = 'http://localhost:8099';
+const API_BASE = 'http://localhost:8081';
 
 test.describe('Backend API Contract Tests', () => {
   test('health endpoint returns ok', async ({ request }) => {

@@ -141,9 +141,8 @@ static RE_JWT_TOKEN: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 // 7. Java REST Assured Performance Traps
-static RE_REST_ASSURED_RESET: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"\bRestAssured\s*\.\s*reset\s*\(\s*\)"#).expect("Valid regex")
-});
+static RE_REST_ASSURED_RESET: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"\bRestAssured\s*\.\s*reset\s*\(\s*\)"#).expect("Valid regex"));
 
 static RE_SCHEMA_RELOAD: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r#"\bmatchesJsonSchema(?:InClasspath)?\s*\(\s*(?:["']([^"']+)["']|new\s+File\s*\(\s*["']([^"']+)["']\s*\))?"#).expect("Valid regex")
@@ -154,16 +153,18 @@ static RE_REST_ASSURED_REQUEST: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 // 8. Python Pytest Performance Traps
-static RE_PY_ASYNC_DEF: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"^\s*async\s+def\s+([a-zA-Z0-9_]+)\s*\("#).expect("Valid regex")
-});
+static RE_PY_ASYNC_DEF: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"^\s*async\s+def\s+([a-zA-Z0-9_]+)\s*\("#).expect("Valid regex"));
 
 static RE_PY_BLOCKING_IN_ASYNC: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r#"(?:\btime\.sleep|\brequests\.(?:get|post|put|delete|patch|head|options|request)|\burllib\.request\.(?:urlopen|Request))\s*\("#).expect("Valid regex")
 });
 
 static RE_PY_CLIENT_SESSION: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"\b(requests\.Session|httpx\.Client|httpx\.AsyncClient|aiohttp\.ClientSession)\s*\("#).expect("Valid regex")
+    Regex::new(
+        r#"\b(requests\.Session|httpx\.Client|httpx\.AsyncClient|aiohttp\.ClientSession)\s*\("#,
+    )
+    .expect("Valid regex")
 });
 
 static RE_PY_FIXTURE_DECORATOR: LazyLock<Regex> = LazyLock::new(|| {
@@ -274,22 +275,10 @@ impl RuleScanner {
         );
 
         // 3. Java REST Assured Performance Traps
-        Self::check_java_performance_traps(
-            file_path,
-            content,
-            &lines,
-            language,
-            &mut violations,
-        );
+        Self::check_java_performance_traps(file_path, content, &lines, language, &mut violations);
 
         // 4. Python Pytest Performance Traps
-        Self::check_python_performance_traps(
-            file_path,
-            content,
-            &lines,
-            language,
-            &mut violations,
-        );
+        Self::check_python_performance_traps(file_path, content, &lines, language, &mut violations);
 
         // Sort violations by line number and severity
         violations.sort_by(|a, b| {
@@ -737,7 +726,11 @@ impl RuleScanner {
                                 found_static = true;
                                 break;
                             }
-                            if prev.ends_with(';') || prev.contains(';') || prev.contains('{') || prev.contains('}') {
+                            if prev.ends_with(';')
+                                || prev.contains(';')
+                                || prev.contains('{')
+                                || prev.contains('}')
+                            {
                                 break;
                             }
                         }
@@ -745,7 +738,11 @@ impl RuleScanner {
                     found_static
                 };
                 if !is_static_decl {
-                    let schema = caps.get(1).or_else(|| caps.get(2)).map(|m| m.as_str()).unwrap_or("schema.json");
+                    let schema = caps
+                        .get(1)
+                        .or_else(|| caps.get(2))
+                        .map(|m| m.as_str())
+                        .unwrap_or("schema.json");
                     violations.push(AstViolation {
                         rule_id: "PERF_TRAP_REPEATED_SCHEMA_RELOAD".to_string(),
                         severity: Severity::Warning,
@@ -853,7 +850,9 @@ impl RuleScanner {
 
             // 2. Unclosed client sessions
             if let Some(caps) = RE_PY_CLIENT_SESSION.captures(trimmed) {
-                let is_with = trimmed.starts_with("with ") || trimmed.starts_with("async with ") || trimmed.contains(" with ");
+                let is_with = trimmed.starts_with("with ")
+                    || trimmed.starts_with("async with ")
+                    || trimmed.contains(" with ");
                 if !is_with && !has_close_in_file {
                     let client_type = caps.get(1).map(|m| m.as_str()).unwrap_or("ClientSession");
                     let fix = if client_type.contains("requests") {
@@ -901,7 +900,14 @@ impl RuleScanner {
                             fn_name = name.as_str().to_string();
                         }
                         if let Some(res_caps) = RE_PY_HEAVY_RESOURCE.captures(next_line) {
-                            heavy_res = Some(res_caps.get(0).map(|m| m.as_str()).unwrap_or("resource").trim().to_string());
+                            heavy_res = Some(
+                                res_caps
+                                    .get(0)
+                                    .map(|m| m.as_str())
+                                    .unwrap_or("resource")
+                                    .trim()
+                                    .to_string(),
+                            );
                             break;
                         }
                     }

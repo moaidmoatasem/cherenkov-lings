@@ -183,8 +183,7 @@ public class SampleJavaTraps {
     let text = responses[0]["result"]["content"][0]["text"]
         .as_str()
         .expect("content text");
-    let report: serde_json::Value =
-        serde_json::from_str(text).expect("diagnostic report json");
+    let report: serde_json::Value = serde_json::from_str(text).expect("diagnostic report json");
 
     let anti_patterns = report["anti_patterns"]
         .as_array()
@@ -199,12 +198,19 @@ public class SampleJavaTraps {
 
     let texts = anti_patterns
         .iter()
-        .map(|ap| format!("{} {} {}", ap["snippet"], ap["explanation"], ap["recommendation"]))
+        .map(|ap| {
+            format!(
+                "{} {} {}",
+                ap["snippet"], ap["explanation"], ap["recommendation"]
+            )
+        })
         .collect::<Vec<_>>()
         .join("\n");
 
     assert!(
-        texts.contains("RestAssured.reset") || texts.contains("client churn") || texts.contains("connection pools"),
+        texts.contains("RestAssured.reset")
+            || texts.contains("client churn")
+            || texts.contains("connection pools"),
         "Should detect RestAssured.reset() client churn in: {texts}"
     );
     assert!(
@@ -257,8 +263,7 @@ async def test_async():
     let text = responses[0]["result"]["content"][0]["text"]
         .as_str()
         .expect("content text");
-    let report: serde_json::Value =
-        serde_json::from_str(text).expect("diagnostic report json");
+    let report: serde_json::Value = serde_json::from_str(text).expect("diagnostic report json");
 
     let anti_patterns = report["anti_patterns"]
         .as_array()
@@ -273,7 +278,12 @@ async def test_async():
 
     let texts = anti_patterns
         .iter()
-        .map(|ap| format!("{} {} {}", ap["snippet"], ap["explanation"], ap["recommendation"]))
+        .map(|ap| {
+            format!(
+                "{} {} {}",
+                ap["snippet"], ap["explanation"], ap["recommendation"]
+            )
+        })
         .collect::<Vec<_>>()
         .join("\n");
 
@@ -286,7 +296,9 @@ async def test_async():
         "Should detect blocking calls in async function in: {texts}"
     );
     assert!(
-        texts.contains("Session") || texts.contains("unclosed") || texts.contains("context manager"),
+        texts.contains("Session")
+            || texts.contains("unclosed")
+            || texts.contains("context manager"),
         "Should detect unclosed client session in: {texts}"
     );
     assert!(
@@ -308,7 +320,9 @@ fn get_hints_returns_progressive_3_tier_otel_guidance() {
         drill_dir
     );
     let res_l1 = rpc(&[&req_l1]);
-    let text_l1 = res_l1[0]["result"]["content"][0]["text"].as_str().expect("text");
+    let text_l1 = res_l1[0]["result"]["content"][0]["text"]
+        .as_str()
+        .expect("text");
     assert!(
         text_l1.contains("Hint 1") && text_l1.contains("Architectural Nudge"),
         "Tier 1 must return Architectural Nudge, got: {text_l1}"
@@ -332,17 +346,23 @@ fn get_hints_returns_progressive_3_tier_otel_guidance() {
         drill_dir
     );
     let res_l2 = rpc(&[&req_l2]);
-    let text_l2 = res_l2[0]["result"]["content"][0]["text"].as_str().expect("text");
+    let text_l2 = res_l2[0]["result"]["content"][0]["text"]
+        .as_str()
+        .expect("text");
     assert!(
         text_l2.contains("Hint 2") && text_l2.contains("API Pattern"),
         "Tier 2 must return API Pattern, got: {text_l2}"
     );
     assert!(
-        text_l2.contains("00-") || text_l2.contains("00-{trace_id}-{parent_id}-01") || text_l2.contains("version-trace_id"),
+        text_l2.contains("00-")
+            || text_l2.contains("00-{trace_id}-{parent_id}-01")
+            || text_l2.contains("version-trace_id"),
         "Tier 2 must detail W3C traceparent formatting"
     );
     assert!(
-        text_l2.contains("Span ID") || text_l2.contains("client_span_id") || text_l2.contains("parent_span_id"),
+        text_l2.contains("Span ID")
+            || text_l2.contains("client_span_id")
+            || text_l2.contains("parent_span_id"),
         "Tier 2 must explain Span ID correlation"
     );
     assert!(
@@ -360,7 +380,9 @@ fn get_hints_returns_progressive_3_tier_otel_guidance() {
         drill_dir
     );
     let res_l3 = rpc(&[&req_l3]);
-    let text_l3 = res_l3[0]["result"]["content"][0]["text"].as_str().expect("text");
+    let text_l3 = res_l3[0]["result"]["content"][0]["text"]
+        .as_str()
+        .expect("text");
     assert!(
         text_l3.contains("Hint 3") && text_l3.contains("Code Diff"),
         "Tier 3 must return Code Diff, got: {text_l3}"
@@ -377,7 +399,9 @@ fn get_hints_returns_progressive_3_tier_otel_guidance() {
     // 2. Test calling with topic: "telemetry" with generic/fallback dir
     let req_topic_l1 = r#"{"jsonrpc":"2.0","id":24,"method":"tools/call","params":{"name":"get_hints","arguments":{"exercise_dir":"generic_drill","topic":"telemetry","level":1}}}"#;
     let res_topic_l1 = rpc(&[req_topic_l1]);
-    let text_topic_l1 = res_topic_l1[0]["result"]["content"][0]["text"].as_str().expect("text");
+    let text_topic_l1 = res_topic_l1[0]["result"]["content"][0]["text"]
+        .as_str()
+        .expect("text");
     assert!(
         text_topic_l1.contains("Architectural Nudge") && text_topic_l1.contains("traceparent"),
         "topic: 'telemetry' should trigger ProgressiveHints::telemetry_hints() fallback for Tier 1: {text_topic_l1}"
@@ -385,15 +409,20 @@ fn get_hints_returns_progressive_3_tier_otel_guidance() {
 
     let req_topic_l2 = r#"{"jsonrpc":"2.0","id":25,"method":"tools/call","params":{"name":"get_hints","arguments":{"exercise_dir":"generic_drill","topic":"telemetry","level":2}}}"#;
     let res_topic_l2 = rpc(&[req_topic_l2]);
-    let text_topic_l2 = res_topic_l2[0]["result"]["content"][0]["text"].as_str().expect("text");
+    let text_topic_l2 = res_topic_l2[0]["result"]["content"][0]["text"]
+        .as_str()
+        .expect("text");
     assert!(
-        text_topic_l2.contains("API Pattern") && (text_topic_l2.contains("00-") || text_topic_l2.contains("traceparent")),
+        text_topic_l2.contains("API Pattern")
+            && (text_topic_l2.contains("00-") || text_topic_l2.contains("traceparent")),
         "topic: 'telemetry' should trigger ProgressiveHints::telemetry_hints() fallback for Tier 2: {text_topic_l2}"
     );
 
     let req_topic_l3 = r#"{"jsonrpc":"2.0","id":26,"method":"tools/call","params":{"name":"get_hints","arguments":{"exercise_dir":"generic_drill","topic":"telemetry","level":3}}}"#;
     let res_topic_l3 = rpc(&[req_topic_l3]);
-    let text_topic_l3 = res_topic_l3[0]["result"]["content"][0]["text"].as_str().expect("text");
+    let text_topic_l3 = res_topic_l3[0]["result"]["content"][0]["text"]
+        .as_str()
+        .expect("text");
     assert!(
         text_topic_l3.contains("Code Diff") && text_topic_l3.contains("traceparent"),
         "topic: 'telemetry' should trigger ProgressiveHints::telemetry_hints() fallback for Tier 3: {text_topic_l3}"
@@ -418,9 +447,7 @@ fn tools_list_advertises_topic_property_for_get_hints() {
         "get_hints schema must advertise the optional 'topic' property"
     );
     assert_eq!(
-        properties["topic"]["type"],
-        "string",
+        properties["topic"]["type"], "string",
         "topic property must be of type string"
     );
 }
-
