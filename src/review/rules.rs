@@ -819,12 +819,12 @@ impl RuleScanner {
             if let Some(_caps) = RE_PY_ASYNC_DEF.captures(line) {
                 let indent = line.len() - line.trim_start().len();
                 current_async_indent = Some(indent);
-            } else if let Some(base_indent) = current_async_indent {
-                if !code_part.is_empty() {
-                    let indent = line.len() - line.trim_start().len();
-                    if indent <= base_indent && !code_part.starts_with("async def ") {
-                        current_async_indent = None;
-                    }
+            } else if let Some(base_indent) = current_async_indent
+                && !code_part.is_empty()
+            {
+                let indent = line.len() - line.trim_start().len();
+                if indent <= base_indent && !code_part.starts_with("async def ") {
+                    current_async_indent = None;
                 }
             }
 
@@ -887,16 +887,18 @@ impl RuleScanner {
                 if !is_broad_scope {
                     let mut fn_name = "fixture".to_string();
                     let mut heavy_res: Option<String> = None;
-                    for next_idx in (idx + 1)..lines.len().min(idx + 35) {
-                        let next_line = lines[next_idx];
+                    let scan_end = lines.len().min(idx + 35);
+                    for (offset, next_line) in lines[(idx + 1)..scan_end].iter().enumerate() {
+                        let next_idx = idx + 1 + offset;
+                        let next_line = *next_line;
                         let next_trimmed = next_line.trim();
                         if next_trimmed.starts_with("@pytest.") && next_idx > idx + 1 {
                             break;
                         }
-                        if let Some(def_caps) = RE_PY_DEF.captures(next_line) {
-                            if let Some(name) = def_caps.get(1) {
-                                fn_name = name.as_str().to_string();
-                            }
+                        if let Some(def_caps) = RE_PY_DEF.captures(next_line)
+                            && let Some(name) = def_caps.get(1)
+                        {
+                            fn_name = name.as_str().to_string();
                         }
                         if let Some(res_caps) = RE_PY_HEAVY_RESOURCE.captures(next_line) {
                             heavy_res = Some(res_caps.get(0).map(|m| m.as_str()).unwrap_or("resource").trim().to_string());
