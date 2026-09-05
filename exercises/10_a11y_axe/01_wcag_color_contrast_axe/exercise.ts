@@ -6,12 +6,14 @@
  */
 import { test, expect } from '@playwright/test';
 
-// Anti-pattern: Verifying only visual layout without accessibility tree assertions
-// TODO: Assert accessible element names and contrast compliance
+// Anti-pattern: Verifying only DOM presence — never runs an automated accessibility scan
+// TODO: Use AxeBuilder from '@axe-core/playwright' to run axe-core's `color-contrast`
+// rule against the checkout action buttons and assert the violations array is empty.
 test('verifies checkout button accessibility', async ({ page }) => {
   await page.goto('/checkout');
-  
-  // Brittle check: Only asserts element is present in DOM
+
+  // Brittle check: Only asserts element is present in DOM — never runs axe-core,
+  // so a genuinely low-contrast or mislabeled button would still pass this test.
   const btn = page.locator('#checkout-btn');
   await expect(btn).toBeAttached();
 });
