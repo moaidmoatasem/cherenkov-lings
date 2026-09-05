@@ -32,7 +32,24 @@ struct RpcResponse {
 /// the last level of every drill is a solution diff, so dumping the file hands
 /// the learner the answer on the first request.
 fn render_hint(exercise_dir: &Path, args: &Value) -> Option<String> {
-    let hints = feedback::ProgressiveHints::load_from_dir(exercise_dir)?;
+    let mut hints = feedback::ProgressiveHints::load_from_dir(exercise_dir);
+
+    let dir_str = exercise_dir.to_string_lossy();
+    let topic = args.get("topic").and_then(Value::as_str).unwrap_or("");
+    let is_telemetry = dir_str.contains("otel")
+        || dir_str.contains("telemetry")
+        || dir_str.contains("tracing")
+        || topic == "telemetry"
+        || topic == "otel"
+        || topic == "span_id_correlation"
+        || topic.contains("telemetry")
+        || topic.contains("otel");
+
+    if hints.is_none() && is_telemetry {
+        hints = Some(feedback::ProgressiveHints::telemetry_hints());
+    }
+
+    let hints = hints?;
 
     let selected = match args.get("score").and_then(Value::as_f64) {
         Some(score) => hints.get_hint_for_score(score),
@@ -126,7 +143,8 @@ pub fn run_mcp_server() {
                                             "properties": {
                                                 "exercise_dir": { "type": "string", "description": "Directory of the drill, containing its hints.md." },
                                                 "level": { "type": "integer", "minimum": 1, "description": "1-based hint level, clamped to the levels available. Defaults to 1." },
-                                                "score": { "type": "number", "description": "Optional 4D Matrix total score. When supplied, the level is derived from the score and `level` is ignored." }
+                                                "score": { "type": "number", "description": "Optional 4D Matrix total score. When supplied, the level is derived from the score and `level` is ignored." },
+                                                "topic": { "type": "string", "description": "Optional challenge topic (e.g. 'telemetry', 'otel', 'span_id_correlation')." }
                                             },
                                             "required": ["exercise_dir"]
                                         }

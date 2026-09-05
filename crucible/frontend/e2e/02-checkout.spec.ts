@@ -1,0 +1,52 @@
+﻿import { test, expect } from '@playwright/test';
+
+test.describe('Checkout Drill — Hydration Timing Gap', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/checkout');
+  });
+
+  test('page loads with hydration trap warning', async ({ page }) => {
+    await expect(page.locator('data-testid=checkout-page')).toBeVisible();
+    await expect(page.locator('text=Hydration Timing Gap')).toBeVisible();
+    await expect(page.locator('data-hydrated=false')).toBeVisible();
+  });
+
+  test('hydration completes after 800ms', async ({ page }) => {
+    const btn = page.locator('#checkout-btn');
+    await expect(btn).toHaveAttribute('data-hydrated', 'false');
+    await expect(btn).toHaveAttribute('data-hydrated', 'true', { timeout: 5000 });
+  });
+
+  test('early click before hydration increments drop count', async ({ page }) => {
+    const btn = page.locator('#checkout-btn');
+    await btn.click();
+    await expect(page.locator('data-testid=click-dropped-warning')).toBeVisible();
+    await expect(page.locator('data-testid=click-dropped-warning')).toContainText('1 click');
+  });
+
+  test('confirm purchase bypasses hydration trap', async ({ page }) => {
+    await page.click('#confirm-purchase-btn');
+    await expect(page.locator('data-testid=order-status')).toBeVisible();
+    await expect(page.locator('data-testid=order-status')).toContainText('Order Confirmed');
+  });
+
+  test('filling form enables hydration bypass', async ({ page }) => {
+    await page.fill('#address', '742 Evergreen Terrace');
+    await page.click('#checkout-btn');
+    await expect(page.locator('data-testid=order-status')).toBeVisible();
+  });
+
+  test('cart totals calculate correctly', async ({ page }) => {
+    await page.fill('#quantity', '3');
+    await expect(page.locator('#item-id')).toHaveValue('item-1');
+    const subtotal = page.locator('.summary-breakdown .summary-row').first();
+    await expect(subtotal).toContainText('$447.00');
+  });
+
+  test('form validation for empty address', async ({ page }) => {
+    await page.fill('#address', '');
+    await page.click('#checkout-btn');
+    // Should still work because confirm purchase bypasses validation
+    await expect(page.locator('data-testid=order-status')).toBeVisible();
+  });
+});

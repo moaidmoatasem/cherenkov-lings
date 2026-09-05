@@ -432,3 +432,188 @@ fn test_run_review_on_actual_file_path() {
         assert!(!report.exercise_name.is_empty());
     }
 }
+
+#[test]
+fn test_ast_java_performance_traps_client_churn_and_timeouts() {
+    let java_code = r#"
+        package com.cherenkov.api;
+
+        import io.restassured.RestAssured;
+        import org.junit.jupiter.api.Test;
+        import static io.restassured.RestAssured.given;
+        import static io.restassured.module.jsv.JsonSchemaValidator.matchesJsonSchemaInClasspath;
+
+        public class UserApiTest {
+            @Test
+            public void testGetUserProfile() {
+                // Client churn trap
+                RestAssured.reset();
+
+                // Missing timeout trap and inline schema reload trap
+                given()
+                    .when()
+                    .get("/users/42")
+                    .then()
+                    .statusCode(200)
+                    .body(matchesJsonSchemaInClasspath("schemas/user.json"));
+            }
+        }
+    "#;
+
+    let violations = RuleScanner::scan_content("UserApiTest.java", java_code);
+    assert!(
+        violations.iter().any(|v| v.rule_id == "PERF_TRAP_CLIENT_CHURN"),
+        "Should detect RestAssured.reset() client churn"
+    );
+    assert!(
+        violations.iter().any(|v| v.rule_id == "PERF_TRAP_MISSING_TIMEOUT"),
+        "Should detect missing socket/connection timeouts on given() call"
+    );
+    assert!(
+        violations.iter().any(|v| v.rule_id == "PERF_TRAP_REPEATED_SCHEMA_RELOAD"),
+        "Should detect inline matchesJsonSchemaInClasspath schema reload"
+    );
+}
+
+#[test]
+fn test_ast_java_resilient_avoids_performance_traps() {
+    let resilient_java = r#"
+        package com.cherenkov.api;
+
+        import io.restassured.RestAssured;
+        import io.restassured.config.RestAssuredConfig;
+        import org.hamcrest.Matcher;
+        import org.junit.jupiter.api.BeforeAll;
+        import org.junit.jupiter.api.Test;
+        import static io.restassured.RestAssured.given;
+        import static io.restassured.config.HttpClientConfig.httpClientConfig;
+        import static io.restassured.module.jsv.JsonSchemaValidator.matchesJsonSchemaInClasspath;
+
+        public class ResilientUserApiTest {
+            private static final Matcher<String> USER_SCHEMA = matchesJsonSchemaInClasspath("schemas/user.json");
+
+            @BeforeAll
+            public static void setup() {
+                RestAssured.config = RestAssuredConfig.config()
+                    .httpClient(httpClientConfig().setParam("http.connection.timeout", 5000).setParam("http.socket.timeout", 5000));
+            }
+
+            @Test
+            public void testGetUserProfile() {
+                given()
+                    .when()
+                    .get("/users/42")
+                    .then()
+                    .statusCode(200)
+                    .body(USER_SCHEMA);
+            }
+        }
+    "#;
+
+    let violations = RuleScanner::scan_content("ResilientUserApiTest.java", resilient_java);
+    assert!(
+        !violations.iter().any(|v| v.rule_id == "PERF_TRAP_CLIENT_CHURN"),
+        "No client churn should be reported"
+    );
+    assert!(
+        !violations.iter().any(|v| v.rule_id == "PERF_TRAP_MISSING_TIMEOUT"),
+        "No missing timeout should be reported when timeout configured"
+    );
+    assert!(
+        !violations.iter().any(|v| v.rule_id == "PERF_TRAP_REPEATED_SCHEMA_RELOAD"),
+        "Static final matcher should not be flagged as schema reload"
+    );
+}
+
+#[test]
+fn test_ast_python_performance_traps_async_blocking_and_fixture_scope() {
+    let py_code = r#"
+import pytest
+import time
+import requests
+from sqlalchemy import create_engine
+
+@pytest.fixture
+def db_conn():
+    engine = create_engine("sqlite:///test.db")
+    return engine
+
+@pytest.fixture(scope="function")
+def api_client():
+    return requests.Session()
+
+def test_sync_leak():
+    client = requests.Session()
+    resp = client.get("http://localhost:8080")
+    assert resp.status_code == 200
+
+async def test_async_blocking():
+    time.sleep(2.0)
+    response = requests.get("http://localhost:8080")
+    assert response.status_code == 200
+    "#;
+
+    let violations = RuleScanner::scan_content("test_perf_traps.py", py_code);
+    assert!(
+        violations.iter().any(|v| v.rule_id == "PERF_TRAP_INEFFICIENT_FIXTURE_SCOPE"),
+        "Should detect inefficient function scope on db/client fixtures"
+    );
+    assert!(
+        violations.iter().any(|v| v.rule_id == "PERF_TRAP_UNCLOSED_SESSION"),
+        "Should detect unclosed requests.Session() without context manager"
+    );
+    assert!(
+        violations.iter().any(|v| v.rule_id == "PERF_TRAP_BLOCKING_CALL_IN_ASYNC"),
+        "Should detect blocking time.sleep/requests.get inside async def"
+    );
+    assert!(
+        violations.iter().any(|v| v.rule_id == "ANTI_PATTERN_HARDCODED_SLEEP"),
+        "Should also flag hardcoded sleep"
+    );
+}
+
+#[test]
+fn test_ast_python_resilient_avoids_performance_traps() {
+    let clean_py = r#"
+import pytest
+import asyncio
+import httpx
+from sqlalchemy import create_engine
+
+@pytest.fixture(scope="session")
+def db_conn():
+    engine = create_engine("sqlite:///test.db")
+    yield engine
+    engine.dispose()
+
+@pytest.fixture(scope="session")
+def client():
+    with httpx.Client() as client:
+        yield client
+
+def test_sync_with_context():
+    with httpx.Client() as client:
+        resp = client.get("http://localhost:8080")
+        assert resp.status_code == 200
+
+async def test_async_clean():
+    await asyncio.sleep(0.01)
+    async with httpx.AsyncClient() as client:
+        resp = await client.get("http://localhost:8080")
+        assert resp.status_code == 200
+    "#;
+
+    let violations = RuleScanner::scan_content("test_clean.py", clean_py);
+    assert!(
+        !violations.iter().any(|v| v.rule_id == "PERF_TRAP_INEFFICIENT_FIXTURE_SCOPE"),
+        "Session scope fixture should not be flagged"
+    );
+    assert!(
+        !violations.iter().any(|v| v.rule_id == "PERF_TRAP_UNCLOSED_SESSION"),
+        "Context manager client should not be flagged"
+    );
+    assert!(
+        !violations.iter().any(|v| v.rule_id == "PERF_TRAP_BLOCKING_CALL_IN_ASYNC"),
+        "Async sleep and async client should not be flagged"
+    );
+}

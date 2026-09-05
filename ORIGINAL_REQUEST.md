@@ -219,3 +219,39 @@ The document (and its supporting `.agents/handoff.md` / Victory Auditor trail) c
 - [ ] The document's own conclusion/attestation section accurately describes the audit as validating internal consistency and repo alignment, not external market accuracy.
 - [ ] A new short section ("Data Provenance") near the top classifies the report's major claim categories as one of: Verified-from-repo, Externally-sourced-and-cited, or Estimate-unsourced — so a reader can tell at a glance which numbers to trust for external use (e.g. a pitch deck) and which are directional only.
 ```
+
+## 2026-09-05T10:21:22Z
+
+Implement the new Cherenkov-lings Strategic Roadmap features: polyglot AST analysis, OTel hinting, Micro-Crucible Kafka/OTel expansion, and a Mission Control badging system.
+
+Working directory: c:\Users\moaid\Documents\antigravity\wonderful-raman
+Integrity mode: development
+
+## Requirements
+
+### R1. Polyglot AST Analysis
+Update `get_diagnostic_report` (or the equivalent reporting mechanism) to support performance trap detection for Java (REST Assured) and Python (Pytest) codebases.
+
+### R2. OTel Hinting
+Expand the `get_hints` functionality to provide progressive 3-tier guidance for Span ID correlation and distributed trace assertions.
+
+### R3. Micro-Crucible Expansion
+Integrate Kafka brokers and OpenTelemetry collectors into the existing `docker-compose.yml` orchestration, ensuring they interoperate with the current stack.
+
+### R4. Badging System
+Implement "Chaos Survivor" and "The Architect" badges in the Mission Control React UI based on specific path completions.
+
+## Acceptance Criteria
+
+### Polyglot AST Analysis
+- [ ] Programmatic test suite executes and correctly identifies predefined performance traps in sample Java and Python code files.
+
+### OTel Hinting
+- [ ] Programmatic tests verify that `get_hints` returns the expected 3-tier structural guidance for telemetry challenges.
+
+### Micro-Crucible
+- [ ] `docker-compose config` validates the updated YAML structure without errors.
+- [ ] Automated script or test verifies that Kafka and OTel collector containers start up successfully alongside existing services.
+
+### Badging System
+- [ ] React component tests (or UI tests) verify that the "Chaos Survivor" and "The Architect" badges render correctly when the corresponding completion states are passed in.

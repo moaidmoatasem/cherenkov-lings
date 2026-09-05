@@ -44,6 +44,48 @@ static RE_LOCATOR_CALL: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r#"(?:page|locator|\b)\s*\.\s*(?:locator|\$|\$\$)\s*\(\s*(?:'((?:\\.|[^'\\])*)'|"((?:\\.|[^"\\])*)"|`((?:\\.|[^`\\])*)`)\s*\)"#).expect("Valid regex")
 });
 
+// Java REST Assured trap patterns
+static RE_REST_ASSURED_RESET: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"\bRestAssured\s*\.\s*reset\s*\(\s*\)"#).expect("Valid regex")
+});
+
+static RE_SCHEMA_RELOAD: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"\bmatchesJsonSchema(?:InClasspath)?\s*\(\s*(?:["']([^"']+)["']|new\s+File\s*\(\s*["']([^"']+)["']\s*\))?"#).expect("Valid regex")
+});
+
+static RE_REST_ASSURED_REQUEST: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"(?:\bgiven\s*\(\s*\)|\bRestAssured\s*\.\s*(?:get|post|put|delete|patch|head|options)\s*\()"#).expect("Valid regex")
+});
+
+// Python Pytest trap patterns
+static RE_PY_TIME_SLEEP: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"\btime\.sleep\s*\(\s*([0-9.]+)?\s*\)"#).expect("Valid regex")
+});
+
+static RE_PY_ASYNC_DEF: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"^\s*async\s+def\s+([a-zA-Z0-9_]+)\s*\("#).expect("Valid regex")
+});
+
+static RE_PY_BLOCKING_IN_ASYNC: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"(?:\btime\.sleep|\brequests\.(?:get|post|put|delete|patch|head|options|request)|\burllib\.request\.(?:urlopen|Request))\s*\("#).expect("Valid regex")
+});
+
+static RE_PY_CLIENT_SESSION: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"\b(requests\.Session|httpx\.Client|httpx\.AsyncClient|aiohttp\.ClientSession)\s*\("#).expect("Valid regex")
+});
+
+static RE_PY_FIXTURE_DECORATOR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"^\s*@pytest\s*\.\s*fixture(?:\s*\((.*?)\))?\s*$"#).expect("Valid regex")
+});
+
+static RE_PY_HEAVY_RESOURCE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"(?:\bcreate_engine\s*\(|\bSessionLocal\s*\(|\bplaywright\.[a-z]+\.launch|\b\.launch\s*\(|\blaunch_persistent_context|\brequests\.Session\s*\(|\bhttpx\.Client\s*\(|\bdocker\.from_env\s*\()"#).expect("Valid regex")
+});
+
+static RE_PY_DEF: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"^\s*(?:async\s+)?def\s+([a-zA-Z0-9_]+)\s*\("#).expect("Valid regex")
+});
+
 fn extract_string_arg<'a>(caps: &'a regex::Captures<'a>, start_group: usize) -> Option<&'a str> {
     caps.get(start_group)
         .or_else(|| caps.get(start_group + 1))
@@ -111,6 +153,14 @@ pub enum AntiPatternKind {
     MissingColdStartDeepLink { command: String },
     MissingActivityRecreation { state: String },
     UnconditionalFallbackAssert { selector: String },
+    // Java REST Assured Performance Traps:
+    RestAssuredClientChurn { detail: String },
+    MissingTimeout { detail: String },
+    RepeatedSchemaReload { schema_path: String },
+    // Python Pytest Performance Traps:
+    PytestBlockingCallInAsync { call: String },
+    PytestUnclosedClientSession { client_type: String },
+    PytestInefficientFixtureScope { fixture_name: String, resource: String },
 }
 
 /// Diagnostic details for a detected anti-pattern
@@ -437,7 +487,23 @@ pub fn analyze_source(source: &str, file_path: &str) -> StaticAnalysisReport {
     if is_yaml {
         return analyze_yaml_source(source, file_path);
     }
-    let stripped = strip_comments(source);
+    let is_python = file_path.ends_with(".py")
+        || (!file_path.ends_with(".ts")
+            && !file_path.ends_with(".js")
+            && !file_path.ends_with(".java")
+            && (source.contains("def ") || source.contains("import pytest")));
+
+    let is_java = file_path.ends_with(".java")
+        || (!is_python
+            && (source.contains("public class ")
+                || source.contains("package ")
+                || source.contains("import io.restassured")));
+
+    let stripped = if is_python {
+        strip_yaml_comments(source)
+    } else {
+        strip_comments(source)
+    };
     let original_lines: Vec<&str> = source.lines().collect();
     let stripped_lines: Vec<&str> = stripped.lines().collect();
 
@@ -445,9 +511,22 @@ pub fn analyze_source(source: &str, file_path: &str) -> StaticAnalysisReport {
     let mut locators = Vec::new();
     let mut has_wait_for_timeout = false;
 
+    let mut current_async_indent: Option<usize> = None;
+    let java_has_timeout = stripped.contains("http.connection.timeout")
+        || stripped.contains("http.socket.timeout")
+        || stripped.contains("connectionTimeout")
+        || stripped.contains("socketTimeout")
+        || stripped.contains("setConnectTimeout")
+        || stripped.contains("setSocketTimeout")
+        || stripped.contains("setTimeout")
+        || stripped.contains(".timeout(")
+        || stripped.contains("HttpClientConfig");
+    let has_close_in_source = stripped.contains(".close()");
+
     for (idx, stripped_line) in stripped_lines.iter().enumerate() {
         let line_num = idx + 1;
         let original_snippet = original_lines.get(idx).unwrap_or(&"").trim().to_string();
+        let trimmed = stripped_line.trim();
 
         // 1. Detect waitForTimeout anti-pattern
         if let Some(caps) = RE_WAIT_FOR_TIMEOUT.captures(stripped_line) {
@@ -488,6 +567,179 @@ pub fn analyze_source(source: &str, file_path: &str) -> StaticAnalysisReport {
                 explanation: "Fixed Thread.sleep() makes tests brittle under asynchronous processing lag and eventual consistency.".to_string(),
                 recommendation: "Replace Thread.sleep() with dynamic polling assertions using Awaitility (e.g. await().atMost(5, SECONDS).untilAsserted(...)).".to_string(),
             });
+        }
+
+        // 3a. Detect Python time.sleep anti-pattern
+        if is_python {
+            if let Some(caps) = RE_PY_TIME_SLEEP.captures(stripped_line) {
+                has_wait_for_timeout = true;
+                let duration_ms = caps
+                    .get(1)
+                    .and_then(|m| m.as_str().parse::<f64>().ok())
+                    .map(|secs| (secs * 1000.0) as u64);
+                anti_patterns.push(AntiPattern {
+                    kind: AntiPatternKind::HardcodedSleep { duration_ms },
+                    line: line_num,
+                    snippet: original_snippet.clone(),
+                    explanation: "time.sleep() blocks the OS thread and Python GIL, inflating test execution time and causing flakiness under CI load.".to_string(),
+                    recommendation: "Use event-driven assertions (e.g. Playwright expect(locator).to_be_visible()) or async wait polling instead of time.sleep().".to_string(),
+                });
+            }
+
+            // 3b. Detect Python async def and blocking calls
+            if let Some(_caps) = RE_PY_ASYNC_DEF.captures(stripped_line) {
+                let indent = stripped_line.len() - stripped_line.trim_start().len();
+                current_async_indent = Some(indent);
+            } else if let Some(base_indent) = current_async_indent {
+                if !trimmed.is_empty() {
+                    let indent = stripped_line.len() - stripped_line.trim_start().len();
+                    if indent <= base_indent && !trimmed.starts_with("async def ") {
+                        current_async_indent = None;
+                    }
+                }
+            }
+
+            let has_direct_sleep = source.contains("from time import sleep");
+            let has_direct_get = source.contains("from requests import get");
+            let is_blocking_call = !trimmed.contains("to_thread")
+                && (RE_PY_BLOCKING_IN_ASYNC.is_match(trimmed)
+                    || (has_direct_sleep && trimmed.contains("sleep("))
+                    || (has_direct_get && trimmed.contains("get(")));
+
+            if current_async_indent.is_some() && is_blocking_call {
+                anti_patterns.push(AntiPattern {
+                    kind: AntiPatternKind::PytestBlockingCallInAsync {
+                        call: original_snippet.clone(),
+                    },
+                    line: line_num,
+                    snippet: original_snippet.clone(),
+                    explanation: "Synchronous blocking call inside async test function blocks the asyncio event loop and prevents concurrent task execution.".to_string(),
+                    recommendation: "Replace blocking call with non-blocking async equivalent: await asyncio.sleep() or httpx.AsyncClient.".to_string(),
+                });
+            }
+
+            // 3c. Detect Python unclosed client sessions
+            if let Some(caps) = RE_PY_CLIENT_SESSION.captures(trimmed) {
+                let is_with = trimmed.starts_with("with ") || trimmed.starts_with("async with ") || trimmed.contains(" with ");
+                if !is_with && !has_close_in_source {
+                    let client_type = caps.get(1).map(|m| m.as_str()).unwrap_or("ClientSession").to_string();
+                    anti_patterns.push(AntiPattern {
+                        kind: AntiPatternKind::PytestUnclosedClientSession { client_type },
+                        line: line_num,
+                        snippet: original_snippet.clone(),
+                        explanation: "HTTP client session instantiated without context manager or close teardown leaks sockets and connection pools.".to_string(),
+                        recommendation: "Wrap client in a context manager ('with requests.Session() as session:') or close it in a fixture teardown.".to_string(),
+                    });
+                }
+            }
+
+            // 3d. Detect Python inefficient fixture scopes
+            if RE_PY_FIXTURE_DECORATOR.is_match(trimmed) {
+                let is_broad_scope = trimmed.contains("scope=\"session\"")
+                    || trimmed.contains("scope='session'")
+                    || trimmed.contains("scope=\"module\"")
+                    || trimmed.contains("scope='module'")
+                    || trimmed.contains("scope=\"package\"")
+                    || trimmed.contains("scope='package'")
+                    || trimmed.contains("scope=\"class\"")
+                    || trimmed.contains("scope='class'");
+
+                if !is_broad_scope {
+                    let mut fn_name = "fixture".to_string();
+                    let mut heavy_res: Option<String> = None;
+                    for next_idx in (idx + 1)..stripped_lines.len().min(idx + 35) {
+                        let next_line = stripped_lines[next_idx];
+                        let next_trimmed = next_line.trim();
+                        if next_trimmed.starts_with("@pytest.") && next_idx > idx + 1 {
+                            break;
+                        }
+                        if let Some(def_caps) = RE_PY_DEF.captures(next_line) {
+                            if let Some(name) = def_caps.get(1) {
+                                fn_name = name.as_str().to_string();
+                            }
+                        }
+                        if let Some(res_caps) = RE_PY_HEAVY_RESOURCE.captures(next_line) {
+                            heavy_res = Some(res_caps.get(0).map(|m| m.as_str()).unwrap_or("resource").trim().to_string());
+                            break;
+                        }
+                    }
+                    if let Some(res) = heavy_res {
+                        anti_patterns.push(AntiPattern {
+                            kind: AntiPatternKind::PytestInefficientFixtureScope {
+                                fixture_name: fn_name,
+                                resource: res,
+                            },
+                            line: line_num,
+                            snippet: original_snippet.clone(),
+                            explanation: "Heavy resource initialized inside function-scoped fixture re-creates connections or browsers on every single test method.".to_string(),
+                            recommendation: "Promote fixture scope to 'module' or 'session' (e.g. @pytest.fixture(scope='session')) to reuse resource across tests.".to_string(),
+                        });
+                    }
+                }
+            }
+        }
+
+        // 3e. Detect Java REST Assured performance traps
+        if is_java {
+            let is_reset = RE_REST_ASSURED_RESET.is_match(trimmed) || {
+                if trimmed.starts_with(".reset(") && idx > 0 {
+                    stripped_lines[idx - 1].trim().ends_with("RestAssured")
+                } else {
+                    false
+                }
+            };
+            if is_reset {
+                anti_patterns.push(AntiPattern {
+                    kind: AntiPatternKind::RestAssuredClientChurn {
+                        detail: "RestAssured.reset()".to_string(),
+                    },
+                    line: line_num,
+                    snippet: original_snippet.clone(),
+                    explanation: "Calling RestAssured.reset() inside test methods tears down connection pools and forces SSL handshake renegotiation for subsequent requests.".to_string(),
+                    recommendation: "Use isolated RequestSpecification instances with connection reuse (httpClientConfig().reuseHttpClientInstance()) instead of resetting global state.".to_string(),
+                });
+            }
+
+            if let Some(caps) = RE_SCHEMA_RELOAD.captures(trimmed) {
+                let is_static_decl = trimmed.contains("static") || {
+                    let mut found_static = false;
+                    if idx > 0 {
+                        for prev_idx in (0..idx).rev() {
+                            let prev = stripped_lines[prev_idx].trim();
+                            if prev.contains("static") {
+                                found_static = true;
+                                break;
+                            }
+                            if prev.ends_with(';') || prev.contains(';') || prev.contains('{') || prev.contains('}') {
+                                break;
+                            }
+                        }
+                    }
+                    found_static
+                };
+                if !is_static_decl {
+                    let schema_path = caps.get(1).or_else(|| caps.get(2)).map(|m| m.as_str()).unwrap_or("schema").to_string();
+                    anti_patterns.push(AntiPattern {
+                        kind: AntiPatternKind::RepeatedSchemaReload { schema_path },
+                        line: line_num,
+                        snippet: original_snippet.clone(),
+                        explanation: "Calling matchesJsonSchemaInClasspath inside tests reloads and compiles JSON schemas on every assertion.".to_string(),
+                        recommendation: "Precompile and cache the JSON schema in a static final Matcher<String> constant.".to_string(),
+                    });
+                }
+            }
+
+            if !java_has_timeout && RE_REST_ASSURED_REQUEST.is_match(trimmed) {
+                anti_patterns.push(AntiPattern {
+                    kind: AntiPatternKind::MissingTimeout {
+                        detail: "Missing connection/socket timeout".to_string(),
+                    },
+                    line: line_num,
+                    snippet: original_snippet.clone(),
+                    explanation: "REST Assured request invoked without socket or connection timeouts. Network stalls or server latency will hang test execution indefinitely.".to_string(),
+                    recommendation: "Configure global or specification timeouts via RestAssuredConfig.config().httpClient(httpClientConfig().setParam(\"http.connection.timeout\", 5000).setParam(\"http.socket.timeout\", 5000)).".to_string(),
+                });
+            }
         }
 
         // 3. Detect getByRole (Semantic standard - 100 pts)
@@ -755,6 +1007,69 @@ impl ProgressiveHints {
 
         Some((index + 1, total, self.hints[index].as_str()))
     }
+
+    /// Standardized 3-tier guidance for OpenTelemetry Span ID correlation and distributed trace assertions.
+    pub fn telemetry_hints() -> Self {
+        Self {
+            hints: vec![
+                r#"## Hint 1 (Architectural Nudge)
+In modern distributed microservice architectures, an HTTP 200 response alone does not guarantee backend side-effects occurred correctly. Downstream queue lag, async database writes, and background message broker workers operate out-of-band. A test that only checks `response.status_code == 200` suffers from the vacuous assertion anti-pattern: it misses async failures, silent downstream drops, and ledger balance corruption.
+
+To verify end-to-end consistency without fragile, non-deterministic sleeps (`time.sleep`), your test must act as a distributed trace participant. Every request initiated by your test must propagate a W3C trace context header (`traceparent`) across service boundaries so all downstream spans share the exact same `trace_id`. Naive tests that issue disconnected requests break trace context propagation, rendering downstream async execution invisible to test verification."#.to_string(),
+                r#"## Hint 2 (API Pattern)
+Follow the W3C Trace Context specification (`traceparent: version-trace_id-parent_id-trace_flags`):
+- `version`: `00` (current W3C specification version)
+- `trace_id`: 32-character hexadecimal string (16 bytes, globally unique trace identifier)
+- `parent_id` (Span ID): 16-character hexadecimal string (8 bytes, caller/client span identifier)
+- `trace_flags`: `01` (recorded/sampled flag enabled)
+
+Format the header in Python:
+```python
+import secrets
+
+trace_id = secrets.token_hex(16)
+client_span_id = secrets.token_hex(8)
+headers = {
+    "traceparent": f"00-{trace_id}-{client_span_id}-01",
+    "Content-Type": "application/json",
+}
+response = client.post("/transfer", json=payload, headers=headers)
+```
+
+To assert parent-child span tree correlation and distributed trace execution:
+1. Query the OpenTelemetry collector or Crucible telemetry endpoint (`/api/telemetry/spans?trace_id={trace_id}`).
+2. Verify that a root server span exists whose `parent_span_id` equals your injected `client_span_id`.
+3. Assert that downstream asynchronous spans (e.g. `kafka.ledger.settle`, `db.persist`) share the exact same `trace_id` and have an `OK` status code."#.to_string(),
+                r#"## Hint 3 (Code Diff)
+Replace the naive sleep and status-only check with W3C traceparent propagation and distributed span tree assertions:
+
+```diff
+- # Old brittle check: sleep and assume background Kafka processed the event
+- response = client.post("/transfer", json=payload)
+- time.sleep(2)
+- assert response.status_code == 200
+
++ # Resilient OTel Assertion: Propagate W3C traceparent and assert span tree correlation
++ import secrets
++ trace_id = secrets.token_hex(16)
++ client_span_id = secrets.token_hex(8)
++ headers = {
++     "traceparent": f"00-{trace_id}-{client_span_id}-01",
++     "Content-Type": "application/json",
++ }
++ response = client.post("/transfer", json=payload, headers=headers)
++ assert response.status_code == 200
++
++ # Query Crucible telemetry / OTel collector for distributed span correlation
++ spans = wait_for_spans(trace_id=trace_id, timeout_sec=5.0)
++ root_span = next(s for s in spans if s.get("parent_span_id") == client_span_id)
++ assert root_span["parent_span_id"] == client_span_id, "W3C traceparent client Span ID not correlated"
++ assert any(s["name"] == "kafka.ledger.settle" for s in spans), "Missing downstream Kafka event span"
++ assert all(s.get("status", {}).get("code") != "ERROR" for s in spans), "Distributed span reported error"
+```"#.to_string(),
+            ],
+        }
+    }
 }
 
 /// Calculate wall-clock execution speed score vs baseline duration (1000ms)
@@ -961,6 +1276,42 @@ pub fn evaluate_feedback(
                 diagnostics.push(format!(
                     "✗ Anti-pattern: Unconditional fallback assert '{}' on line {}\n  → {}\n  → Recommendation: {}",
                     selector, ap.line, ap.explanation, ap.recommendation
+                ));
+            }
+            AntiPatternKind::RestAssuredClientChurn { detail } => {
+                diagnostics.push(format!(
+                    "✗ Anti-pattern: RestAssured client churn ({}) on line {}\n  → {}\n  → Recommendation: {}",
+                    detail, ap.line, ap.explanation, ap.recommendation
+                ));
+            }
+            AntiPatternKind::MissingTimeout { detail } => {
+                diagnostics.push(format!(
+                    "✗ Anti-pattern: Missing socket/connection timeout ({}) on line {}\n  → {}\n  → Recommendation: {}",
+                    detail, ap.line, ap.explanation, ap.recommendation
+                ));
+            }
+            AntiPatternKind::RepeatedSchemaReload { schema_path } => {
+                diagnostics.push(format!(
+                    "✗ Anti-pattern: Repeated schema reload for '{}' on line {}\n  → {}\n  → Recommendation: {}",
+                    schema_path, ap.line, ap.explanation, ap.recommendation
+                ));
+            }
+            AntiPatternKind::PytestBlockingCallInAsync { call } => {
+                diagnostics.push(format!(
+                    "✗ Anti-pattern: Blocking call '{}' in async test on line {}\n  → {}\n  → Recommendation: {}",
+                    call, ap.line, ap.explanation, ap.recommendation
+                ));
+            }
+            AntiPatternKind::PytestUnclosedClientSession { client_type } => {
+                diagnostics.push(format!(
+                    "✗ Anti-pattern: Unclosed client session '{}' on line {}\n  → {}\n  → Recommendation: {}",
+                    client_type, ap.line, ap.explanation, ap.recommendation
+                ));
+            }
+            AntiPatternKind::PytestInefficientFixtureScope { fixture_name, resource } => {
+                diagnostics.push(format!(
+                    "✗ Anti-pattern: Inefficient fixture scope on '{}' ({}) on line {}\n  → {}\n  → Recommendation: {}",
+                    fixture_name, resource, ap.line, ap.explanation, ap.recommendation
                 ));
             }
         }
@@ -2219,4 +2570,40 @@ public class Exercise {
             }
         }
     }
+
+    #[test]
+    fn test_telemetry_hints_3_tier_progressive_structure() {
+        let hints = ProgressiveHints::telemetry_hints();
+        assert_eq!(hints.len(), 3);
+
+        let (l1, tot1, text1) = hints.get_hint_at_level(1).expect("level 1 hint");
+        assert_eq!(l1, 1);
+        assert_eq!(tot1, 3);
+        assert!(text1.contains("Hint 1 (Architectural Nudge)"));
+        assert!(text1.contains("traceparent"));
+        assert!(text1.contains("trace_id"));
+
+        let (l2, tot2, text2) = hints.get_hint_at_level(2).expect("level 2 hint");
+        assert_eq!(l2, 2);
+        assert_eq!(tot2, 3);
+        assert!(text2.contains("Hint 2 (API Pattern)"));
+        assert!(text2.contains("00-"));
+        assert!(text2.contains("parent_id") || text2.contains("Span ID"));
+
+        let (l3, tot3, text3) = hints.get_hint_at_level(3).expect("level 3 hint");
+        assert_eq!(l3, 3);
+        assert_eq!(tot3, 3);
+        assert!(text3.contains("Hint 3 (Code Diff)"));
+        assert!(text3.contains("```diff"));
+        assert!(text3.contains("traceparent"));
+
+        // Test score-based hint retrieval
+        let (sl1, _, _) = hints.get_hint_for_score(40.0).expect("score 40");
+        assert_eq!(sl1, 1);
+        let (sl2, _, _) = hints.get_hint_for_score(60.0).expect("score 60");
+        assert_eq!(sl2, 2);
+        let (sl3, _, _) = hints.get_hint_for_score(80.0).expect("score 80");
+        assert_eq!(sl3, 3);
+    }
 }
+

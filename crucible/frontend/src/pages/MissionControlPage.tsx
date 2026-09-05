@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { apiUrl } from '../lib/api';
+import { BadgesShowcase } from '../components/badges/BadgesShowcase';
 
 interface DrillInfo {
   id: string;
@@ -57,22 +58,31 @@ interface DrillTheoryModalData {
   has_hints: boolean;
 }
 
-const BADGES = [
-  { id: 'first_blood', icon: '🩸', name: 'First Blood', desc: 'Complete your first drill' },
-  { id: 'flakiness_slayer', icon: '🗡️', name: 'Flakiness Slayer', desc: '3x 100/100 Flakiness under chaos' },
-  { id: 'chaos_survivor', icon: '🌀', name: 'Chaos Survivor', desc: 'Pass 5/5 k6 load test iterations under chaos' },
-  { id: 'tool_polyglot', icon: '🧰', name: 'Tool Polyglot', desc: 'Complete drills across 4 different tech stacks' },
-  { id: 'the_architect', icon: '🏗️', name: 'The Architect', desc: 'Master all Cross-Tool Decision drills' },
-  { id: 'perfect_locator', icon: '🎯', name: 'Perfect Locator', desc: '5x 100/100 semantic locator scores' },
-  { id: 'speed_demon', icon: '⚡', name: 'Speed Demon', desc: 'Beat execution speed baseline by 40%+' },
-  { id: 'sdet_master', icon: '👑', name: 'SDET Master', desc: 'Complete every drill across every track' },
-];
-
 export const MissionControlPage: React.FC = () => {
   const [progress, setProgress] = useState<ProgressData | null>(null);
   const [curriculum, setCurriculum] = useState<TrackInfo[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [copiedPath, setCopiedPath] = useState<string | null>(null);
+
+  const completionOverrides = useMemo(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const overrides: Record<string, boolean> = {};
+      if (params.has('chaos_survivor')) {
+        overrides['chaos_survivor'] = params.get('chaos_survivor') === 'true' || params.get('chaos_survivor') === '1';
+      }
+      if (params.has('the_architect')) {
+        overrides['the_architect'] = params.get('the_architect') === 'true' || params.get('the_architect') === '1';
+      }
+      const winOverrides = (window as unknown as { __BADGE_COMPLETION_OVERRIDES__?: Record<string, boolean> }).__BADGE_COMPLETION_OVERRIDES__;
+      if (winOverrides) {
+        Object.assign(overrides, winOverrides);
+      }
+      return Object.keys(overrides).length > 0 ? overrides : undefined;
+    } catch {
+      return undefined;
+    }
+  }, []);
 
   // Modal State for Drill Theory & Hints
   const [activeDrill, setActiveDrill] = useState<DrillInfo | null>(null);
@@ -256,39 +266,10 @@ export const MissionControlPage: React.FC = () => {
       </div>
 
       {/* Achievements Showcase */}
-      <div className="card">
-        <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span>🏅</span> SDET Mastery Achievements
-        </h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '14px' }}>
-          {BADGES.map((b) => {
-            const isUnlocked = progress?.achievements?.some((a) => a.id === b.id);
-            return (
-              <div
-                key={b.id}
-                style={{
-                  background: isUnlocked ? 'rgba(56, 189, 248, 0.08)' : 'rgba(15, 23, 42, 0.4)',
-                  border: isUnlocked ? '1px solid var(--accent-cyan)' : '1px solid var(--border-color)',
-                  borderRadius: '8px',
-                  padding: '12px 14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  opacity: isUnlocked ? 1 : 0.65,
-                }}
-              >
-                <div style={{ fontSize: '26px' }}>{b.icon}</div>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '13px', color: isUnlocked ? 'var(--accent-cyan)' : 'var(--text-main)' }}>
-                    {b.name}
-                  </div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{b.desc}</div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      <BadgesShowcase
+        progress={progress}
+        completionOverrides={completionOverrides}
+      />
 
       {/* Live Chaos Simulator Console */}
       <div className="card diagnostic-card" style={{ border: '1px solid #27354f' }}>

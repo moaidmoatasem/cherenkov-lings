@@ -21,7 +21,6 @@ import static org.hamcrest.Matchers.equalTo;
  * This test naively relies on a hardcoded, brittle Thread.sleep(100) to wait for an
  * asynchronous ledger transfer to settle. Because the message queue introduces 1500ms
  * of lag, the sleep finishes prematurely and the balance assertion fails.
- *
  * GOAL:
  * Observe the failure due to asynchronous eventual consistency, then replace Thread.sleep
  * with event-driven polling using Awaitility in Solution.java.
@@ -31,6 +30,7 @@ public class Exercise {
     @BeforeAll
     static void setup() {
         RestAssured.baseURI = System.getProperty("base.url", System.getenv().getOrDefault("TARGET_URL", "http://localhost:8081"));
+        RestAssured.config = io.restassured.config.RestAssuredConfig.config().httpClient(io.restassured.config.HttpClientConfig.httpClientConfig().setParam("http.connection.timeout", 5000).setParam("http.socket.timeout", 5000));
     }
 
     @Test

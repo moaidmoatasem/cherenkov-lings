@@ -501,3 +501,141 @@ test('checkout completes', async ({ page }) => {
     data = client.post("/api/review", json={"code": clean, "file_path": "solution.ts"}).json()
     assert data["violations"] == [], f"clean code flagged: {data['violations']}"
     assert data["score"] == 100
+
+
+def test_review_detects_java_rest_assured_performance_traps():
+    """Verify AST review detects RestAssured.reset(), missing timeouts, and schema reloads in Java."""
+    java_code = """package com.cherenkov.api;
+
+import io.restassured.RestAssured;
+import org.junit.jupiter.api.Test;
+import static io.restassured.RestAssured.given;
+import static io.restassured.module.jsv.JsonSchemaValidator.matchesJsonSchemaInClasspath;
+
+public class OrderApiTest {
+    @Test
+    public void testOrderDetails() {
+        RestAssured.reset();
+
+        given()
+            .when()
+            .get("/orders/123")
+            .then()
+            .statusCode(200)
+            .body(matchesJsonSchemaInClasspath("schemas/order.json"));
+    }
+}
+"""
+    resp = client.post("/api/review", json={"code": java_code, "language": "java", "file_path": "OrderApiTest.java"})
+    assert resp.status_code == 200
+    data = resp.json()
+
+    rule_ids = [v["rule_id"] for v in data["violations"]]
+    assert "PERF_TRAP_CLIENT_CHURN" in rule_ids, f"Expected client churn in {rule_ids}"
+    assert "PERF_TRAP_MISSING_TIMEOUT" in rule_ids, f"Expected missing timeout in {rule_ids}"
+    assert "PERF_TRAP_REPEATED_SCHEMA_RELOAD" in rule_ids, f"Expected repeated schema reload in {rule_ids}"
+    assert data["score"] < 100
+    assert data["suggested_diff"] is not None
+
+
+def test_review_detects_pytest_performance_traps():
+    """Verify AST review detects time.sleep, async blocking calls, unclosed sessions, and fixture scope traps."""
+    pytest_code = """import pytest
+import time
+import requests
+from sqlalchemy import create_engine
+
+@pytest.fixture
+def db_engine():
+    engine = create_engine("sqlite:///test.db")
+    return engine
+
+def test_sync_leak():
+    client = requests.Session()
+    resp = client.get("http://localhost:8080/items")
+    assert resp.status_code == 200
+
+async def test_async_blocking():
+    time.sleep(1.5)
+    resp = requests.get("http://localhost:8080/async")
+    assert resp.status_code == 200
+"""
+    resp = client.post("/api/review", json={"code": pytest_code, "language": "python", "file_path": "test_api.py"})
+    assert resp.status_code == 200
+    data = resp.json()
+
+    rule_ids = [v["rule_id"] for v in data["violations"]]
+    assert "HARDCODED_SLEEP" in rule_ids, f"Expected HARDCODED_SLEEP in {rule_ids}"
+    assert "PERF_TRAP_BLOCKING_CALL_IN_ASYNC" in rule_ids, f"Expected blocking call in {rule_ids}"
+    assert "PERF_TRAP_UNCLOSED_SESSION" in rule_ids, f"Expected unclosed session in {rule_ids}"
+    assert "PERF_TRAP_INEFFICIENT_FIXTURE_SCOPE" in rule_ids, f"Expected inefficient fixture scope in {rule_ids}"
+    assert data["score"] < 70
+
+
+def test_review_resilient_polyglot_passes_clean():
+    """Verify clean resilient Java and Python code does not trigger false performance traps."""
+    clean_java = """package com.cherenkov.api;
+
+import io.restassured.RestAssured;
+import io.restassured.config.RestAssuredConfig;
+import org.hamcrest.Matcher;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import static io.restassured.RestAssured.given;
+import static io.restassured.config.HttpClientConfig.httpClientConfig;
+import static io.restassured.module.jsv.JsonSchemaValidator.matchesJsonSchemaInClasspath;
+
+public class CleanJavaTest {
+    private static final Matcher<String> ORDER_SCHEMA = matchesJsonSchemaInClasspath("schemas/order.json");
+
+    @BeforeAll
+    public static void setup() {
+        RestAssured.config = RestAssuredConfig.config()
+            .httpClient(httpClientConfig().setParam("http.connection.timeout", 5000).setParam("http.socket.timeout", 5000));
+    }
+
+    @Test
+    public void testClean() {
+        given()
+            .when()
+            .get("/orders/123")
+            .then()
+            .statusCode(200)
+            .body(ORDER_SCHEMA);
+    }
+}
+"""
+    resp = client.post("/api/review", json={"code": clean_java, "file_path": "CleanJavaTest.java"})
+    assert resp.status_code == 200
+    data = resp.json()
+    perf_traps = [v["rule_id"] for v in data["violations"] if "PERF_TRAP" in v["rule_id"]]
+    assert perf_traps == [], f"Clean Java triggered performance traps: {perf_traps}"
+
+    clean_py = """import pytest
+import asyncio
+import httpx
+from sqlalchemy import create_engine
+
+@pytest.fixture(scope="session")
+def db_engine():
+    engine = create_engine("sqlite:///test.db")
+    yield engine
+    engine.dispose()
+
+def test_sync_clean():
+    with httpx.Client() as client:
+        resp = client.get("http://localhost:8080")
+        assert resp.status_code == 200
+
+async def test_async_clean():
+    await asyncio.sleep(0.01)
+    async with httpx.AsyncClient() as client:
+        resp = await client.get("http://localhost:8080")
+        assert resp.status_code == 200
+"""
+    resp = client.post("/api/review", json={"code": clean_py, "file_path": "test_clean.py"})
+    assert resp.status_code == 200
+    data = resp.json()
+    perf_traps = [v["rule_id"] for v in data["violations"] if "PERF_TRAP" in v["rule_id"]]
+    assert perf_traps == [], f"Clean Python triggered performance traps: {perf_traps}"
+

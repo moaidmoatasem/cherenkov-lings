@@ -121,6 +121,10 @@ description = "Direct HTTP contract validation: status code assertions, vacuous 
   id = "01_status_code"
   name = "Health Endpoint Status Code Assertion"
 
+  [[tracks.drills]]
+  id = "02_otel_distributed_trace"
+  name = "OpenTelemetry Distributed Trace & Span ID Correlation"
+
 # -----------------------------------------------------------------------------
 #  Modern Web Automation - Playwright TypeScript
 # -----------------------------------------------------------------------------

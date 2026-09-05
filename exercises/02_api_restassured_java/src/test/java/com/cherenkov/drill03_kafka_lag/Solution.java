@@ -25,6 +25,10 @@ public class Solution {
     @BeforeAll
     static void setup() {
         RestAssured.baseURI = System.getProperty("base.url", System.getenv().getOrDefault("TARGET_URL", "http://localhost:8081"));
+        RestAssured.config = io.restassured.config.RestAssuredConfig.config()
+            .httpClient(io.restassured.config.HttpClientConfig.httpClientConfig()
+                .setParam("http.connection.timeout", 5000)
+                .setParam("http.socket.timeout", 5000));
     }
 
     @Test

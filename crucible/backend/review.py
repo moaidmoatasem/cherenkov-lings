@@ -68,6 +68,38 @@ RE_FLOATING_LOCATOR_ACTION = re.compile(
     r"^(?!\s*//)(?!\s*await\b)(?!\s*return\b)(?!\s*(?:const|let|var)\b)\s*(?:page|frame)\.locator\(.+?\)\.(?:click|fill|type|press|selectOption|check|uncheck)\("
 )
 
+# Java REST Assured Performance Traps
+RE_REST_ASSURED_RESET = re.compile(r"\bRestAssured\s*\.\s*reset\s*\(\s*\)")
+RE_SCHEMA_RELOAD = re.compile(r"\bmatchesJsonSchema(?:InClasspath)?\s*\(\s*(?:['\"]([^'\"]+)['\"]|new\s+File\s*\(\s*['\"]([^'\"]+)['\"]\s*\))?")
+RE_REST_ASSURED_REQUEST = re.compile(r"(?:\bgiven\s*\(\s*\)|\bRestAssured\s*\.\s*(?:get|post|put|delete|patch|head|options)\s*\()")
+RE_TIMEOUT_CONFIG = re.compile(r"(?:http\.connection\.timeout|http\.socket\.timeout|connectionTimeout|socketTimeout|setConnectTimeout|setSocketTimeout|setTimeout|\.timeout\(|HttpClientConfig)")
+
+# Python Pytest Performance Traps
+RE_PY_ASYNC_DEF = re.compile(r"^\s*async\s+def\s+([a-zA-Z0-9_]+)\s*\(")
+RE_PY_BLOCKING_IN_ASYNC = re.compile(r"(?:\btime\.sleep|\brequests\.(?:get|post|put|delete|patch|head|options|request)|\burllib\.request\.(?:urlopen|Request))\s*\(")
+RE_PY_CLIENT_SESSION = re.compile(r"\b(requests\.Session|httpx\.Client|httpx\.AsyncClient|aiohttp\.ClientSession)\s*\(")
+RE_PY_FIXTURE_DECORATOR = re.compile(r"^\s*@pytest\s*\.\s*fixture(?:\s*\((.*?)\))?\s*$")
+RE_PY_HEAVY_RESOURCE = re.compile(r"(?:\bcreate_engine\s*\(|\bSessionLocal\s*\(|\bplaywright\.[a-z]+\.launch|\b\.launch\s*\(|\blaunch_persistent_context|\brequests\.Session\s*\(|\bhttpx\.Client\s*\(|\bdocker\.from_env\s*\()")
+RE_PY_DEF = re.compile(r"^\s*(?:async\s+)?def\s+([a-zA-Z0-9_]+)\s*\(")
+
+
+def strip_java_comments(code: str) -> str:
+    def replacer(match):
+        s = match.group(0)
+        if s.startswith('/'):
+            return ' ' * len(s)
+        return s
+    return re.sub(r'//[^\n]*|/\*.*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"', replacer, code, flags=re.DOTALL)
+
+
+def strip_python_comments(code: str) -> str:
+    def replacer(match):
+        s = match.group(0)
+        if s.startswith('#'):
+            return ' ' * len(s)
+        return s
+    return re.sub(r'#[^\n]*|\'\'\'.*?\'\'\'|""".*?"""|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"', replacer, code, flags=re.DOTALL)
+
 
 def detect_language(file_path: str, hint_language: str | None = None) -> str:
     """Determine language from path or explicit parameter."""
@@ -105,6 +137,14 @@ def scan_content(file_path: str, content: str, language: str | None = None) -> l
     lines = content.splitlines()
 
     has_any_assertion = False
+    stripped_java_content = strip_java_comments(content) if lang == "java" else ""
+    stripped_py_content = strip_python_comments(content) if lang == "python" else ""
+
+    has_timeout_config = bool(RE_TIMEOUT_CONFIG.search(stripped_java_content)) if lang == "java" else bool(RE_TIMEOUT_CONFIG.search(content))
+    has_close_in_file = ".close()" in (stripped_py_content if lang == "python" else content)
+    has_direct_sleep = "from time import sleep" in content
+    has_direct_get = "from requests import get" in content
+    current_async_indent: int | None = None
 
     for idx, line in enumerate(lines, start=1):
         stripped = line.strip()
@@ -311,7 +351,150 @@ def scan_content(file_path: str, content: str, language: str | None = None) -> l
             if "assert" in line or "expect" in line:
                 has_any_assertion = True
 
-    # 6. Missing assertions check (if test file has code but 0 assertions)
+        # 6. Java REST Assured Performance Traps
+        if lang == "java":
+            is_reset = bool(RE_REST_ASSURED_RESET.search(line)) or (
+                stripped.startswith(".reset(") and idx > 1 and lines[idx - 2].strip().endswith("RestAssured")
+            )
+            if is_reset:
+                violations.append(
+                    AstViolation(
+                        rule_id="PERF_TRAP_CLIENT_CHURN",
+                        severity="warning",
+                        file_path=file_path,
+                        line_number=idx,
+                        message="RestAssured.reset() called inside test flow. Tearing down global configuration clears HTTP client connection pools and forces SSL handshake renegotiation.",
+                        code_snippet=stripped,
+                        suggested_fix="// Use isolated RequestSpecification with connection pooling instead of resetting RestAssured global state\n// RestAssuredConfig.config().httpClient(httpClientConfig().reuseHttpClientInstance());",
+                    )
+                )
+
+            m_schema = RE_SCHEMA_RELOAD.search(line)
+            if m_schema:
+                found_static = "static" in line
+                if not found_static:
+                    for prev_i in range(idx - 1, 0, -1):
+                        prev_line = lines[prev_i - 1].strip()
+                        if "static" in prev_line:
+                            found_static = True
+                            break
+                        if ";" in prev_line or "{" in prev_line or "}" in prev_line:
+                            break
+
+                if not found_static:
+                    schema = m_schema.group(1) or "schema.json"
+                    violations.append(
+                        AstViolation(
+                            rule_id="PERF_TRAP_REPEATED_SCHEMA_RELOAD",
+                            severity="warning",
+                            file_path=file_path,
+                            line_number=idx,
+                            message="matchesJsonSchemaInClasspath called inline inside test. JSON schema is reloaded and parsed from disk on every assertion; cache in a static final field.",
+                            code_snippet=stripped,
+                            suggested_fix=f'private static final Matcher<String> SCHEMA = matchesJsonSchemaInClasspath("{schema}");',
+                        )
+                    )
+
+            if not has_timeout_config and RE_REST_ASSURED_REQUEST.search(line):
+                violations.append(
+                    AstViolation(
+                        rule_id="PERF_TRAP_MISSING_TIMEOUT",
+                        severity="warning",
+                        file_path=file_path,
+                        line_number=idx,
+                        message="REST Assured HTTP call executed without socket/connection timeouts. Network partitions or upstream hangs will stall test execution indefinitely.",
+                        code_snippet=stripped,
+                        suggested_fix='RestAssured.config = RestAssuredConfig.config().httpClient(httpClientConfig().setParam("http.connection.timeout", 5000).setParam("http.socket.timeout", 5000));',
+                    )
+                )
+
+        # 7. Python Pytest Performance Traps
+        if lang == "python":
+            m_async = RE_PY_ASYNC_DEF.match(line)
+            if m_async:
+                current_async_indent = len(line) - len(line.lstrip())
+            elif current_async_indent is not None:
+                if stripped:
+                    indent = len(line) - len(line.lstrip())
+                    if indent <= current_async_indent and not stripped.startswith("async def "):
+                        current_async_indent = None
+
+            line_no_comment = line.split("#")[0].rstrip() if "#" in line else line
+            stripped_no_comment = line_no_comment.strip()
+
+            is_blocking = (
+                "to_thread" not in line_no_comment
+                and not stripped_no_comment.startswith("await ")
+                and (
+                    bool(RE_PY_BLOCKING_IN_ASYNC.search(line_no_comment))
+                    or (has_direct_sleep and "sleep(" in line_no_comment)
+                    or (has_direct_get and "get(" in line_no_comment)
+                )
+            )
+
+            if current_async_indent is not None and is_blocking:
+                fix = "await asyncio.sleep(1)" if "sleep" in line_no_comment else "async with httpx.AsyncClient() as client:\n    response = await client.get(...)"
+                violations.append(
+                    AstViolation(
+                        rule_id="PERF_TRAP_BLOCKING_CALL_IN_ASYNC",
+                        severity="error",
+                        file_path=file_path,
+                        line_number=idx,
+                        message="Synchronous blocking call detected inside async test function. Blocking calls freeze the asyncio event loop and starve concurrent coroutines.",
+                        code_snippet=stripped,
+                        suggested_fix=fix,
+                    )
+                )
+
+            m_session = RE_PY_CLIENT_SESSION.search(line_no_comment)
+            if m_session:
+                is_with = stripped_no_comment.startswith("with ") or stripped_no_comment.startswith("async with ") or " with " in stripped_no_comment
+                if not is_with and not has_close_in_file:
+                    client_type = m_session.group(1)
+                    fix = "with requests.Session() as session:\n    response = session.get(...)" if "requests" in client_type else "with httpx.Client() as client:\n    response = client.get(...)"
+                    violations.append(
+                        AstViolation(
+                            rule_id="PERF_TRAP_UNCLOSED_SESSION",
+                            severity="warning",
+                            file_path=file_path,
+                            line_number=idx,
+                            message=f"Unclosed HTTP client session '{client_type}' instantiated without context manager or close teardown. Leaks TCP sockets and connection resources.",
+                            code_snippet=stripped,
+                            suggested_fix=fix,
+                        )
+                    )
+
+            if RE_PY_FIXTURE_DECORATOR.match(line):
+                is_broad = any(s in line for s in ('scope="session"', "scope='session'", 'scope="module"', "scope='module'", 'scope="package"', "scope='package'", 'scope="class"', "scope='class'"))
+                if not is_broad:
+                    fn_name = "fixture"
+                    heavy_res = None
+                    for next_idx in range(idx, min(len(lines), idx + 35)):
+                        next_line = lines[next_idx]
+                        next_stripped = next_line.strip()
+                        if next_stripped.startswith("@pytest.") and next_idx > idx:
+                            break
+                        def_m = RE_PY_DEF.match(next_line)
+                        if def_m:
+                            fn_name = def_m.group(1)
+                        res_m = RE_PY_HEAVY_RESOURCE.search(next_line)
+                        if res_m:
+                            heavy_res = res_m.group(0).strip()
+                            break
+                    if heavy_res:
+                        violations.append(
+                            AstViolation(
+                                rule_id="PERF_TRAP_INEFFICIENT_FIXTURE_SCOPE",
+                                severity="warning",
+                                file_path=file_path,
+                                line_number=idx,
+                                message=f"Heavy resource '{heavy_res}' initialized inside function-scoped fixture '{fn_name}'. Re-instantiating on every test introduces severe execution churn.",
+                                code_snippet=stripped,
+                                suggested_fix='@pytest.fixture(scope="session")',
+                            )
+                        )
+
+    # 8. Missing assertions check (if test file has code but 0 assertions)
     if not has_any_assertion and len(lines) > 5 and not any(v.rule_id == "VACUOUS_ASSERTION" for v in violations):
         violations.append(
             AstViolation(
@@ -497,6 +680,11 @@ def apply_automated_fixes(content: str, target_violations: list[AstViolation]) -
                 applied_lines[idx] = f"{indent_str}expect(status).toContain('Order Confirmed');"
             elif "assert" in orig_line:
                 applied_lines[idx] = f"{indent_str}assert response.status_code == 200"
+
+        elif v.suggested_fix:
+            fix_lines = v.suggested_fix.splitlines()
+            formatted_fix = "\n".join(f"{indent_str}{fl.lstrip()}" for fl in fix_lines)
+            applied_lines[idx] = formatted_fix
 
     return "\n".join(applied_lines)
 

@@ -140,6 +140,44 @@ static RE_JWT_TOKEN: LazyLock<Regex> = LazyLock::new(|| {
         .expect("Valid regex")
 });
 
+// 7. Java REST Assured Performance Traps
+static RE_REST_ASSURED_RESET: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"\bRestAssured\s*\.\s*reset\s*\(\s*\)"#).expect("Valid regex")
+});
+
+static RE_SCHEMA_RELOAD: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"\bmatchesJsonSchema(?:InClasspath)?\s*\(\s*(?:["']([^"']+)["']|new\s+File\s*\(\s*["']([^"']+)["']\s*\))?"#).expect("Valid regex")
+});
+
+static RE_REST_ASSURED_REQUEST: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"(?:\bgiven\s*\(\s*\)|\bRestAssured\s*\.\s*(?:get|post|put|delete|patch|head|options)\s*\()"#).expect("Valid regex")
+});
+
+// 8. Python Pytest Performance Traps
+static RE_PY_ASYNC_DEF: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"^\s*async\s+def\s+([a-zA-Z0-9_]+)\s*\("#).expect("Valid regex")
+});
+
+static RE_PY_BLOCKING_IN_ASYNC: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"(?:\btime\.sleep|\brequests\.(?:get|post|put|delete|patch|head|options|request)|\burllib\.request\.(?:urlopen|Request))\s*\("#).expect("Valid regex")
+});
+
+static RE_PY_CLIENT_SESSION: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"\b(requests\.Session|httpx\.Client|httpx\.AsyncClient|aiohttp\.ClientSession)\s*\("#).expect("Valid regex")
+});
+
+static RE_PY_FIXTURE_DECORATOR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"^\s*@pytest\s*\.\s*fixture(?:\s*\((.*?)\))?\s*$"#).expect("Valid regex")
+});
+
+static RE_PY_HEAVY_RESOURCE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"(?:\bcreate_engine\s*\(|\bSessionLocal\s*\(|\bplaywright\.[a-z]+\.launch|\b\.launch\s*\(|\blaunch_persistent_context|\brequests\.Session\s*\(|\bhttpx\.Client\s*\(|\bdocker\.from_env\s*\()"#).expect("Valid regex")
+});
+
+static RE_PY_DEF: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"^\s*(?:async\s+)?def\s+([a-zA-Z0-9_]+)\s*\("#).expect("Valid regex")
+});
+
 /// Rule Scanner Implementation
 pub struct RuleScanner;
 
@@ -228,6 +266,24 @@ impl RuleScanner {
 
         // 2. Global file-level checks (e.g. test files with zero assertions)
         Self::check_missing_assertions_in_test_file(
+            file_path,
+            content,
+            &lines,
+            language,
+            &mut violations,
+        );
+
+        // 3. Java REST Assured Performance Traps
+        Self::check_java_performance_traps(
+            file_path,
+            content,
+            &lines,
+            language,
+            &mut violations,
+        );
+
+        // 4. Python Pytest Performance Traps
+        Self::check_python_performance_traps(
             file_path,
             content,
             &lines,
@@ -614,6 +670,252 @@ impl RuleScanner {
                 code_snippet: lines.first().unwrap_or(&"").to_string(),
                 suggested_fix: Some("// Add explicit assertion validating response/DOM state\nexpect(result).toBeDefined();".to_string()),
             });
+        }
+    }
+
+    fn check_java_performance_traps(
+        file_path: &str,
+        content: &str,
+        lines: &[&str],
+        language: SupportedLanguage,
+        violations: &mut Vec<AstViolation>,
+    ) {
+        let is_java = language == SupportedLanguage::Java
+            || content.contains("RestAssured")
+            || content.contains("matchesJsonSchema")
+            || (content.contains("public class") && content.contains("@Test"));
+        if !is_java {
+            return;
+        }
+
+        let stripped_java = crate::feedback::strip_comments(content);
+        let has_timeout_config = stripped_java.contains("http.connection.timeout")
+            || stripped_java.contains("http.socket.timeout")
+            || stripped_java.contains("connectionTimeout")
+            || stripped_java.contains("socketTimeout")
+            || stripped_java.contains("setConnectTimeout")
+            || stripped_java.contains("setSocketTimeout")
+            || stripped_java.contains("setTimeout")
+            || stripped_java.contains(".timeout(")
+            || stripped_java.contains("HttpClientConfig");
+
+        for (idx, line) in lines.iter().enumerate() {
+            let line_num = idx + 1;
+            let trimmed = line.trim();
+            if Self::is_comment_line(trimmed, SupportedLanguage::Java) {
+                continue;
+            }
+
+            // 1. RestAssured.reset() inside tests (client churn)
+            let is_reset = RE_REST_ASSURED_RESET.is_match(trimmed) || {
+                if trimmed.starts_with(".reset(") && idx > 0 {
+                    lines[idx - 1].trim().ends_with("RestAssured")
+                } else {
+                    false
+                }
+            };
+            if is_reset {
+                violations.push(AstViolation {
+                    rule_id: "PERF_TRAP_CLIENT_CHURN".to_string(),
+                    severity: Severity::Warning,
+                    file_path: file_path.to_string(),
+                    line_number: line_num,
+                    message: "RestAssured.reset() called inside test flow. Tearing down global configuration clears HTTP client connection pools and forces SSL handshake renegotiation.".to_string(),
+                    code_snippet: line.to_string(),
+                    suggested_fix: Some("// Use isolated RequestSpecification with connection pooling instead of resetting RestAssured global state\n// RestAssuredConfig.config().httpClient(httpClientConfig().reuseHttpClientInstance());".to_string()),
+                });
+            }
+
+            // 2. Repeated schema reloads inline in tests
+            if let Some(caps) = RE_SCHEMA_RELOAD.captures(trimmed) {
+                let is_static_decl = trimmed.contains("static") || {
+                    let mut found_static = false;
+                    if idx > 0 {
+                        for prev_idx in (0..idx).rev() {
+                            let prev = lines[prev_idx].trim();
+                            if prev.contains("static") {
+                                found_static = true;
+                                break;
+                            }
+                            if prev.ends_with(';') || prev.contains(';') || prev.contains('{') || prev.contains('}') {
+                                break;
+                            }
+                        }
+                    }
+                    found_static
+                };
+                if !is_static_decl {
+                    let schema = caps.get(1).or_else(|| caps.get(2)).map(|m| m.as_str()).unwrap_or("schema.json");
+                    violations.push(AstViolation {
+                        rule_id: "PERF_TRAP_REPEATED_SCHEMA_RELOAD".to_string(),
+                        severity: Severity::Warning,
+                        file_path: file_path.to_string(),
+                        line_number: line_num,
+                        message: "matchesJsonSchemaInClasspath called inline inside test. JSON schema is reloaded and parsed from disk on every assertion; cache in a static final field.".to_string(),
+                        code_snippet: line.to_string(),
+                        suggested_fix: Some(format!("private static final Matcher<String> SCHEMA = matchesJsonSchemaInClasspath(\"{}\");", schema)),
+                    });
+                }
+            }
+
+            // 3. Missing socket/connection timeouts
+            if !has_timeout_config && RE_REST_ASSURED_REQUEST.is_match(trimmed) {
+                violations.push(AstViolation {
+                    rule_id: "PERF_TRAP_MISSING_TIMEOUT".to_string(),
+                    severity: Severity::Warning,
+                    file_path: file_path.to_string(),
+                    line_number: line_num,
+                    message: "REST Assured HTTP call executed without socket/connection timeouts. Network partitions or upstream hangs will stall test execution indefinitely.".to_string(),
+                    code_snippet: line.to_string(),
+                    suggested_fix: Some("RestAssured.config = RestAssuredConfig.config().httpClient(httpClientConfig().setParam(\"http.connection.timeout\", 5000).setParam(\"http.socket.timeout\", 5000));".to_string()),
+                });
+            }
+        }
+    }
+
+    fn check_python_performance_traps(
+        file_path: &str,
+        content: &str,
+        lines: &[&str],
+        language: SupportedLanguage,
+        violations: &mut Vec<AstViolation>,
+    ) {
+        let is_python = language == SupportedLanguage::Python
+            || content.contains("import pytest")
+            || content.contains("def test_")
+            || content.contains("async def ");
+        if !is_python {
+            return;
+        }
+
+        let stripped_py = crate::feedback::strip_yaml_comments(content);
+        let has_close_in_file = stripped_py.contains(".close()");
+        let has_direct_sleep = content.contains("from time import sleep");
+        let has_direct_get = content.contains("from requests import get");
+        let mut current_async_indent: Option<usize> = None;
+
+        for (idx, line) in lines.iter().enumerate() {
+            let line_num = idx + 1;
+            let trimmed = line.trim();
+            if Self::is_comment_line(trimmed, SupportedLanguage::Python) {
+                continue;
+            }
+
+            // Strip trailing inline comment for code checks
+            let code_part = if let Some(hash_pos) = trimmed.find('#') {
+                let before = &trimmed[..hash_pos];
+                let single_quotes = before.chars().filter(|&c| c == '\'').count();
+                let double_quotes = before.chars().filter(|&c| c == '"').count();
+                if single_quotes % 2 == 0 && double_quotes % 2 == 0 {
+                    before.trim()
+                } else {
+                    trimmed
+                }
+            } else {
+                trimmed
+            };
+
+            // Track async def scope
+            if let Some(_caps) = RE_PY_ASYNC_DEF.captures(line) {
+                let indent = line.len() - line.trim_start().len();
+                current_async_indent = Some(indent);
+            } else if let Some(base_indent) = current_async_indent {
+                if !code_part.is_empty() {
+                    let indent = line.len() - line.trim_start().len();
+                    if indent <= base_indent && !code_part.starts_with("async def ") {
+                        current_async_indent = None;
+                    }
+                }
+            }
+
+            // 1. Synchronous blocking call inside async test
+            let is_blocking = !code_part.contains("to_thread")
+                && (RE_PY_BLOCKING_IN_ASYNC.is_match(code_part)
+                    || (has_direct_sleep && code_part.contains("sleep("))
+                    || (has_direct_get && code_part.contains("get(")));
+
+            if current_async_indent.is_some() && is_blocking {
+                let fix = if code_part.contains("sleep") {
+                    "await asyncio.sleep(1)"
+                } else {
+                    "async with httpx.AsyncClient() as client:\n    response = await client.get(...)"
+                };
+                violations.push(AstViolation {
+                    rule_id: "PERF_TRAP_BLOCKING_CALL_IN_ASYNC".to_string(),
+                    severity: Severity::Error,
+                    file_path: file_path.to_string(),
+                    line_number: line_num,
+                    message: "Synchronous blocking call detected inside async test function. Blocking calls freeze the asyncio event loop and starve concurrent coroutines.".to_string(),
+                    code_snippet: line.to_string(),
+                    suggested_fix: Some(fix.to_string()),
+                });
+            }
+
+            // 2. Unclosed client sessions
+            if let Some(caps) = RE_PY_CLIENT_SESSION.captures(trimmed) {
+                let is_with = trimmed.starts_with("with ") || trimmed.starts_with("async with ") || trimmed.contains(" with ");
+                if !is_with && !has_close_in_file {
+                    let client_type = caps.get(1).map(|m| m.as_str()).unwrap_or("ClientSession");
+                    let fix = if client_type.contains("requests") {
+                        "with requests.Session() as session:\n    response = session.get(...)"
+                    } else {
+                        "with httpx.Client() as client:\n    response = client.get(...)"
+                    };
+                    violations.push(AstViolation {
+                        rule_id: "PERF_TRAP_UNCLOSED_SESSION".to_string(),
+                        severity: Severity::Warning,
+                        file_path: file_path.to_string(),
+                        line_number: line_num,
+                        message: format!("Unclosed HTTP client session '{}' instantiated without context manager or close teardown. Leaks TCP sockets and connection resources.", client_type),
+                        code_snippet: line.to_string(),
+                        suggested_fix: Some(fix.to_string()),
+                    });
+                }
+            }
+
+            // 3. Inefficient fixture scopes
+            if RE_PY_FIXTURE_DECORATOR.is_match(trimmed) {
+                let is_broad_scope = trimmed.contains("scope=\"session\"")
+                    || trimmed.contains("scope='session'")
+                    || trimmed.contains("scope=\"module\"")
+                    || trimmed.contains("scope='module'")
+                    || trimmed.contains("scope=\"package\"")
+                    || trimmed.contains("scope='package'")
+                    || trimmed.contains("scope=\"class\"")
+                    || trimmed.contains("scope='class'");
+
+                if !is_broad_scope {
+                    let mut fn_name = "fixture".to_string();
+                    let mut heavy_res: Option<String> = None;
+                    for next_idx in (idx + 1)..lines.len().min(idx + 35) {
+                        let next_line = lines[next_idx];
+                        let next_trimmed = next_line.trim();
+                        if next_trimmed.starts_with("@pytest.") && next_idx > idx + 1 {
+                            break;
+                        }
+                        if let Some(def_caps) = RE_PY_DEF.captures(next_line) {
+                            if let Some(name) = def_caps.get(1) {
+                                fn_name = name.as_str().to_string();
+                            }
+                        }
+                        if let Some(res_caps) = RE_PY_HEAVY_RESOURCE.captures(next_line) {
+                            heavy_res = Some(res_caps.get(0).map(|m| m.as_str()).unwrap_or("resource").trim().to_string());
+                            break;
+                        }
+                    }
+                    if let Some(res) = heavy_res {
+                        violations.push(AstViolation {
+                            rule_id: "PERF_TRAP_INEFFICIENT_FIXTURE_SCOPE".to_string(),
+                            severity: Severity::Warning,
+                            file_path: file_path.to_string(),
+                            line_number: line_num,
+                            message: format!("Heavy resource '{}' initialized inside function-scoped fixture '{}'. Re-instantiating on every test introduces severe execution churn.", res, fn_name),
+                            code_snippet: line.to_string(),
+                            suggested_fix: Some("@pytest.fixture(scope=\"session\")".to_string()),
+                        });
+                    }
+                }
+            }
         }
     }
 }

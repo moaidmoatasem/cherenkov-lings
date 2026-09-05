@@ -1,102 +1,112 @@
-# Project: cherenkov-lings Sprint 4 — "The Enterprise SDET Simulator"
+﻿# Project: Cherenkov-lings Strategic Roadmap Implementation
 
 ## Architecture
-Sprint 4 elevates `cherenkov-lings` to an Enterprise SDET Simulator featuring:
-1. **Virtual Senior QA & AI Mentor**: AST-based static rule linting (hardcoded sleeps, unwrap, missing assertions, fragile locators) combined with a local LLM client (Ollama/custom endpoint with deterministic offline mock fallback) and an interactive Socratic "Fix-It-Together" wizard.
-2. **CI/CD Pipeline Simulator**: GitHub Actions workflow YAML parsing, strict enterprise SDET validation (mandatory matrix parallel strategies and test artifact uploads), and an interactive parallel mock runner.
-3. **Enterprise Allure Chaos Reporting & Triage System**: Generation of Allure-compatible test execution telemetry and interactive HTML reports containing chaotic test runs (real defects, flaky infrastructure chaos, test automation anti-patterns) with an interactive root-cause triage hypothesis submission engine.
-4. **Mission Control React Frontend**: Integrated tabs for Code Review, Drag-and-Drop CI Pipeline Builder, and Allure Test Reports & Triage Dashboard.
-5. **Full API & CLI Integration**: Dedicated CLI subcommands (`review`, `pipeline run`, `triage`, `report`) and REST API endpoints.
+The Cherenkov-lings Strategic Roadmap expands the platform across four core pillars:
+1. **Polyglot AST Analysis**: Extends `get_diagnostic_report` (and static review engines) to detect performance traps across Java (REST Assured) and Python (Pytest) test suites, preventing client churn, socket leaks, unbuffered schema parsing, blocking async event loop calls, and inefficient fixture scopes.
+2. **OTel Hinting**: Expands `get_hints` to provide progressive 3-tier guidance (Architectural Nudge, API Pattern, Code Diff) for telemetry challenges covering Span ID correlation, distributed trace assertions, and W3C traceparent propagation.
+3. **Micro-Crucible Expansion**: Integrates Apache Kafka (KRaft mode, zero-ZooKeeper) and OpenTelemetry Collector into `docker-compose.yml` with dedicated networking, CORS headers, healthchecks, and validation tooling.
+4. **Mission Control Badging System**: Implements "Chaos Survivor" and "The Architect" badges in the Mission Control React UI with modular component architecture, `data-testid` selectors, `data-unlocked` attributes, visual status pills, and test verification across completion states.
+5. **Dual-Track E2E Verification & Forensic Hardening**: Validates 100% test passing across all tiers, adversarial challenger stress testing, and forensic audit with zero integrity violations.
 
 ## Feature Inventory
 | # | Feature | Description | Milestone | Source |
 |---|---------|-------------|-----------|--------|
-| 1 | F1: AST Static Code Review Engine | Rule-based static AST analysis detecting anti-patterns (sleeps, fragile locators, missing assertions, raw unwraps) across TS, JS, Python, Java, Rust | M1 | Survey |
-| 2 | F2: AI Senior QA Mentor | Configurable LLM client (Ollama / HTTP / deterministic offline mock) providing Socratic architectural critiques and refactoring guidance | M1 | Survey |
-| 3 | F3: Interactive Fix-It-Together Flow | Interactive terminal flow offering progressive hints, unified diff previews, and one-click automated code patching | M1 | Survey |
-| 4 | F4: GitHub Actions Workflow YAML Validator | Parser and strict SDET validator enforcing matrix parallelism (`strategy.matrix`) and artifact uploads (`actions/upload-artifact`) | M2 | Survey |
-| 5 | F5: Mock CI Pipeline Runner Engine | Simulated parallel matrix execution engine with animated step progress, logs, and timing | M2 | Survey |
-| 6 | F6: Enterprise Allure & Chaos Reporting Engine | Generator for Allure JSON test results and interactive HTML reports with chaotic test run telemetry | M3 | Survey |
-| 7 | F7: Interactive Triage Hypothesis Engine | Root-cause triage submission challenge evaluating student hypotheses against failure taxonomy and awarding XP | M3 | Survey |
-| 8 | F8: Server REST API Endpoints | Endpoints for review, pipeline validation/execution, reports, and triage (`/api/review`, `/api/pipeline/*`, `/api/triage/*`) | M4 | Survey |
-| 9 | F9: React Code Review Tab | UI for AST rule gauge, violation cards, Senior QA mentor chat, and Fix-It-Together side-by-side diff applier | M5 | Survey |
-| 10 | F10: React Drag-and-Drop CI Builder | Visual canvas for workflow stages/steps, 2-way YAML sync, SDET validation warnings, and simulated runner logs | M5 | Survey |
-| 11 | F11: React Allure & Triage Dashboard | Allure donut charts, flaky test trends, chaos log correlation, and interactive triage hypothesis form | M5 | Survey |
-| 12 | F12: E2E Verification & Forensic Hardening | Comprehensive test suite covering Tiers 1-5, regression protection for Sprints 1-3, Challenger verification, and Forensic Audit | M6 | Survey |
+| 1 | F1: Polyglot Performance Trap Detection (Java) | AST rule scanning for REST Assured client churn (`RestAssured.reset`), missing connection/socket timeouts, and repeated inline schema reloads | M1 | ORIGINAL_REQUEST §R1 |
+| 2 | F2: Polyglot Performance Trap Detection (Python) | AST rule scanning for Pytest `time.sleep`, blocking calls in `async def test_*`, unclosed client sessions, and inefficient fixture scope | M1 | ORIGINAL_REQUEST §R1 |
+| 3 | F3: Diagnostic Reporting Integration | Wire Java and Python performance trap detection into `get_diagnostic_report` in `src/mcp.rs` and `src/feedback.rs` | M1 | ORIGINAL_REQUEST §R1 |
+| 4 | F4: 3-Tier OTel Progressive Hinting | Expand `get_hints` in `src/mcp.rs` and `src/feedback.rs` with 3 progressive tiers for Span ID correlation and distributed trace assertions | M2 | ORIGINAL_REQUEST §R2 |
+| 5 | F5: OTel Telemetry Challenge Curriculum | Dedicated telemetry drill under `exercises/` with progressive 3-tier `hints.md` and test verification | M2 | ORIGINAL_REQUEST §R2 |
+| 6 | F6: Kafka Broker KRaft Integration | KRaft-mode single-container Kafka broker (`apache/kafka:3.7.0`) in `docker-compose.yml` with dual listeners (29092 internal, 9092 host) and healthcheck | M3 | ORIGINAL_REQUEST §R3 |
+| 7 | F7: OpenTelemetry Collector Integration | Contrib collector (`otel/opentelemetry-collector-contrib:0.95.0`) with OTLP gRPC (:4317), OTLP HTTP (:4318), CORS, debug exporter, and healthcheck (:13133) in `docker-compose.yml` and `otel-collector-config.yaml` | M3 | ORIGINAL_REQUEST §R3 |
+| 8 | F8: Container Validation & Automated Startup Test | Automated test harness executing `docker-compose config` validation and container interoperability verification | M3 | ORIGINAL_REQUEST §R3 |
+| 9 | F9: Mission Control Badge Components | Modular `BadgeCard.tsx` and `BadgesShowcase.tsx` with test selectors, status pills, and unlocked timestamps | M4 | ORIGINAL_REQUEST §R4 |
+| 10 | F10: "Chaos Survivor" & "The Architect" Badges | Dynamic rendering based on completion state props and backend achievements | M4 | ORIGINAL_REQUEST §R4 |
+| 11 | F11: Badging System Component / UI Tests | Playwright route-mocked and React component tests verifying badge states | M4 | ORIGINAL_REQUEST §R4 |
+| 12 | F12: Dual-Track Verification & Forensic Audit | E2E test execution across Rust, Python, Docker Compose, and React; Challenger stress testing; Forensic Integrity Audit | M5 | Protocol |
 
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| M1 | R1: Review Engine & AI Mentor | `src/review/`, AST rules, LLM client/mock, Fix-It-Together flow, CLI command `cherenkov-lings review` | None | DONE |
-| M2 | R2: CI/CD Pipeline Simulator | `src/pipeline/`, YAML parser, SDET validator, mock runner, CLI command `cherenkov-lings pipeline run` | None | DONE |
-| M3 | R3: Allure Chaos Reporting & Triage | `src/reports/`, `src/triage/`, Allure JSON/HTML generation, chaotic test data, hypothesis submission engine | None | DONE |
-| M4 | Backend API & Server Integration | Server endpoints in `crucible/backend/`, CLI integration in `src/main.rs` | M1, M2, M3 | DONE |
-| M5 | Frontend React Mission Control Tabs | `crucible/frontend/src/pages/` (CodeReview, PipelineBuilder, AllureTriage), Navbar, App routing | M1, M2, M3 | DONE |
-| M6 | Dual Track E2E Verification & Forensic Audit | Full test suite, Challenger stress tests, Forensic Auditor integrity verification | M1, M2, M3, M4, M5 | DONE |
+| M1 | Polyglot AST Analysis | Java & Python performance traps in `src/feedback.rs`, `src/review/rules.rs`, `crucible/backend/review.py`, and test suites | None | PLANNED |
+| M2 | OTel Hinting | 3-tier progressive hints in `src/mcp.rs`, `src/feedback.rs`, telemetry drill, and test suites | M1 | PLANNED |
+| M3 | Micro-Crucible Expansion | `docker-compose.yml`, `otel-collector-config.yaml`, automated test harness | None | PLANNED |
+| M4 | Badging System UI | `BadgeCard.tsx`, `BadgesShowcase.tsx`, `MissionControlPage.tsx`, Playwright & component tests | None | PLANNED |
+| M5 | E2E & Forensic Hardening | Comprehensive test run, Challenger verification, Forensic Audit | M1, M2, M3, M4 | PLANNED |
 
 ## Interface Contracts
 
-### 1. Review Engine (`src/review/`) ↔ CLI / API
-- **Struct `AstViolation`**: `rule_id: String`, `severity: Severity` (Error, Warning, Info), `file_path: String`, `line_number: usize`, `message: String`, `code_snippet: String`, `suggested_fix: Option<String>`
-- **Struct `ReviewReport`**: `exercise_name: String`, `score: u32`, `passed: bool`, `violations: Vec<AstViolation>`, `mentor_critique: String`, `socratic_questions: Vec<String>`, `suggested_diff: Option<String>`
-- **Fn `run_review(file_path: &Path, config: &ReviewConfig) -> Result<ReviewReport>`**
-- **Fn `apply_fix(file_path: &Path, fix_id: &str) -> Result<String>`**
+### 1. Diagnostic Reporting (`get_diagnostic_report`)
+- **Tool**: `get_diagnostic_report(file_path: String) -> JsonValue`
+- **Output Schema**:
+  ```json
+  {
+    "file_path": "...",
+    "anti_patterns": [
+      {
+        "kind": "RestAssuredClientChurn | MissingTimeout | RepeatedSchemaReload | HardcodedSleep | PytestBlockingCallInAsync | PytestUnclosedClientSession | ...",
+        "line": 12,
+        "snippet": "...",
+        "explanation": "...",
+        "recommendation": "..."
+      }
+    ],
+    "locators": [...],
+    "locator_quality_score": 100.0
+  }
+  ```
 
-### 2. Pipeline Simulator (`src/pipeline/`) ↔ CLI / API
-- **Struct `PipelineValidation`**: `valid: bool`, `errors: Vec<PipelineError>`, `warnings: Vec<PipelineWarning>`, `matrix_detected: bool`, `artifact_upload_detected: bool`
-- **Struct `PipelineRunResult`**: `workflow_name: String`, `jobs: Vec<JobRunResult>`, `duration_ms: u64`, `success: bool`, `logs: Vec<LogEntry>`
-- **Fn `validate_workflow(yaml_content: &str) -> PipelineValidation`**
-- **Fn `run_pipeline(yaml_path: &Path, opts: &PipelineRunOptions) -> Result<PipelineRunResult>`**
+### 2. OTel Hinting (`get_hints`)
+- **Tool**: `get_hints(exercise_dir: String, level?: Integer, score?: Float, topic?: String) -> JsonValue`
+- **Output Schema**:
+  - `level 1`: Architectural Nudge (W3C trace context, async side-effects, traceparent propagation).
+  - `level 2`: API Pattern (W3C traceparent formatting `00-{trace_id}-{parent_id}-01`, Span ID correlation, querying spans).
+  - `level 3`: Code Diff (Reference diff with traceparent header injection and span tree assertions).
 
-### 3. Allure & Triage (`src/reports/`, `src/triage/`) ↔ CLI / API
-- **Struct `ChaosTestResult`**: `test_id: String`, `name: String`, `status: TestStatus` (Passed, Failed, Broken, Flaky), `duration_ms: u64`, `error_message: Option<String>`, `stack_trace: Option<String>`, `chaos_event: Option<ChaosEventTelemetry>`, `category: FailureCategory` (RealBug, FlakyInfra, AntiPattern)
-- **Struct `TriageSubmission`**: `test_id: String`, `learner_category: FailureCategory`, `root_cause_explanation: String`, `suggested_fix: String`
-- **Struct `TriageResult`**: `correct: bool`, `actual_category: FailureCategory`, `score_awarded: u32`, `feedback: String`, `badge_unlocked: Option<String>`
-- **Fn `generate_chaos_allure_report(output_dir: &Path) -> Result<AllureReportSummary>`**
-- **Fn `evaluate_triage(submission: &TriageSubmission) -> TriageResult`**
+### 3. Docker Compose Orchestration
+- **Services**:
+  - `backend`: port 8081, environment `KAFKA_BOOTSTRAP_SERVERS=kafka:29092`, `OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318`
+  - `frontend`: port 8080
+  - `kafka`: port 9092:9092, internal 29092, KRaft controller 9093
+  - `otel-collector`: port 4317:4317, 4318:4318, 8888:8888, 13133:13133, volume `./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro`
+- **Network**: `crucible-network` (bridge)
+
+### 4. Mission Control Badging System
+- **Components**:
+  - `BadgeCard`: props `{ badge: BadgeDefinition, state: BadgeCompletionState, onClick?: () => void }`
+  - `BadgesShowcase`: props `{ progress: ProgressData | null, completionOverrides?: Record<string, boolean> }`
+- **DOM Attributes**:
+  - `data-testid="badge-chaos_survivor"`, `data-testid="badge-the_architect"`
+  - `data-unlocked="true" | "false"`
+  - `data-testid="badge-status-pill"` -> contains text "UNLOCKED" | "LOCKED"
 
 ## Code Layout
 ```
 src/
-├── main.rs                    # CLI entrypoint: clap arg parsing and all subcommands
-│                               #   (review, pipeline, triage, report, watch, audit, ...)
-│                               #   live directly in this file -- there is no src/cli/
-├── review/                    # R1: AST rules engine, LLM client/mock, Fix-It-Together flow
-│   ├── mod.rs
-│   ├── rules.rs               # AST lint rules (sleep, locator, unwrap, assertion)
-│   ├── llm.rs                 # Ollama / OpenAI / Mock AI Mentor provider
-│   └── interactive.rs         # Fix-It-Together terminal wizard
-├── pipeline/                  # R2: CI/CD simulator
-│   ├── mod.rs
-│   ├── parser.rs              # GitHub Actions YAML parser
-│   ├── validator.rs           # Strict SDET rules (matrix, artifact uploads)
-│   └── runner.rs              # Mock parallel matrix execution engine
-├── reports/                   # R3: Allure & chaos reports
-│   ├── mod.rs
-│   ├── allure.rs              # Allure JSON / HTML report generator
-│   └── chaos_dataset.rs       # 70+ chaotic test telemetry generator
-└── triage/                    # R3: Interactive triage challenge
-    ├── mod.rs
-    ├── evaluator.rs           # Hypothesis scoring & XP/badge rewards
-    └── interactive.rs         # Terminal triage challenge flow
+├── feedback.rs                        # M1 & M2: AST static analyzer & ProgressiveHints
+├── mcp.rs                             # M1 & M2: get_diagnostic_report and get_hints handlers
+└── review/rules.rs                    # M1: RuleScanner performance trap rules
 
 crucible/
-├── backend/                   # FastAPI backend server
-│   ├── main.py                # REST endpoints for review, pipeline, reports, triage
-│   ├── review.py              # AST review logic & diff generator
-│   ├── pipeline.py            # Workflow validator & matrix simulator
-│   ├── reports.py             # Allure HTML generator & chaos dataset
-│   ├── triage.py              # Root-cause evaluator & XP engine
-│   ├── models.py              # Pydantic schemas for Sprint 4
+├── backend/
+│   ├── review.py                      # M1: Python review engine AST rules
 │   └── tests/
-│       └── test_sprint4_api.py # 17/17 passing tests
-└── frontend/                  # React Vite Mission Control
-    └── src/
-        ├── pages/
-        │   ├── CodeReviewPage.tsx       # Code Review & Fix-It-Together tab
-        │   ├── PipelineBuilderPage.tsx  # Drag-and-Drop CI workflow builder
-        │   └── AllureTriagePage.tsx     # Allure chaos reports & triage dashboard
-        ├── components/
-        │   └── Navbar.tsx               # Updated navigation items
-        └── App.tsx                      # Updated route switchboard
+│       └── test_sprint4_api.py        # M1: Backend review test assertions
+├── frontend/
+│   ├── src/
+│   │   ├── components/badges/         # M4: Modular badging components
+│   │   │   ├── types.ts
+│   │   │   ├── BadgeCard.tsx
+│   │   │   └── BadgesShowcase.tsx
+│   │   └── pages/
+│   │       └── MissionControlPage.tsx # M4: Mission Control integration
+│   └── e2e/
+│       └── 16-badges.spec.ts          # M4: Playwright badging tests
+├── docker-compose.yml                 # M3: Orchestration config
+├── otel-collector-config.yaml         # M3: OpenTelemetry collector configuration
+└── tests/
+    └── test_verify_docker_compose.py  # M3: Docker compose verification test
+
+tests/
+├── mcp_server_tests.rs                # M1 & M2: Programmatic tests for get_diagnostic_report & get_hints
+└── review_tests.rs                    # M1: Programmatic AST rule tests
 ```
