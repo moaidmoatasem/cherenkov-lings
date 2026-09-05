@@ -45,9 +45,8 @@ static RE_LOCATOR_CALL: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 // Java REST Assured trap patterns
-static RE_REST_ASSURED_RESET: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"\bRestAssured\s*\.\s*reset\s*\(\s*\)"#).expect("Valid regex")
-});
+static RE_REST_ASSURED_RESET: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"\bRestAssured\s*\.\s*reset\s*\(\s*\)"#).expect("Valid regex"));
 
 static RE_SCHEMA_RELOAD: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r#"\bmatchesJsonSchema(?:InClasspath)?\s*\(\s*(?:["']([^"']+)["']|new\s+File\s*\(\s*["']([^"']+)["']\s*\))?"#).expect("Valid regex")
@@ -58,20 +57,21 @@ static RE_REST_ASSURED_REQUEST: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 // Python Pytest trap patterns
-static RE_PY_TIME_SLEEP: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"\btime\.sleep\s*\(\s*([0-9.]+)?\s*\)"#).expect("Valid regex")
-});
+static RE_PY_TIME_SLEEP: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"\btime\.sleep\s*\(\s*([0-9.]+)?\s*\)"#).expect("Valid regex"));
 
-static RE_PY_ASYNC_DEF: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"^\s*async\s+def\s+([a-zA-Z0-9_]+)\s*\("#).expect("Valid regex")
-});
+static RE_PY_ASYNC_DEF: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"^\s*async\s+def\s+([a-zA-Z0-9_]+)\s*\("#).expect("Valid regex"));
 
 static RE_PY_BLOCKING_IN_ASYNC: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r#"(?:\btime\.sleep|\brequests\.(?:get|post|put|delete|patch|head|options|request)|\burllib\.request\.(?:urlopen|Request))\s*\("#).expect("Valid regex")
 });
 
 static RE_PY_CLIENT_SESSION: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"\b(requests\.Session|httpx\.Client|httpx\.AsyncClient|aiohttp\.ClientSession)\s*\("#).expect("Valid regex")
+    Regex::new(
+        r#"\b(requests\.Session|httpx\.Client|httpx\.AsyncClient|aiohttp\.ClientSession)\s*\("#,
+    )
+    .expect("Valid regex")
 });
 
 static RE_PY_FIXTURE_DECORATOR: LazyLock<Regex> = LazyLock::new(|| {
@@ -143,24 +143,55 @@ pub struct LocatorOccurrence {
 /// Anti-pattern classification detected by static source analysis
 #[derive(Debug, Clone, PartialEq)]
 pub enum AntiPatternKind {
-    WaitForTimeout { duration_ms: Option<u64> },
-    HardcodedSleep { duration_ms: Option<u64> },
-    ThreadSleep { duration_ms: Option<u64> },
-    FragileXPath { selector: String },
-    FragileCss { selector: String },
+    WaitForTimeout {
+        duration_ms: Option<u64>,
+    },
+    HardcodedSleep {
+        duration_ms: Option<u64>,
+    },
+    ThreadSleep {
+        duration_ms: Option<u64>,
+    },
+    FragileXPath {
+        selector: String,
+    },
+    FragileCss {
+        selector: String,
+    },
     // Maestro Mobile YAML Anti-Patterns:
-    MissingWhenCondition { flow_type: String },
-    MissingColdStartDeepLink { command: String },
-    MissingActivityRecreation { state: String },
-    UnconditionalFallbackAssert { selector: String },
+    MissingWhenCondition {
+        flow_type: String,
+    },
+    MissingColdStartDeepLink {
+        command: String,
+    },
+    MissingActivityRecreation {
+        state: String,
+    },
+    UnconditionalFallbackAssert {
+        selector: String,
+    },
     // Java REST Assured Performance Traps:
-    RestAssuredClientChurn { detail: String },
-    MissingTimeout { detail: String },
-    RepeatedSchemaReload { schema_path: String },
+    RestAssuredClientChurn {
+        detail: String,
+    },
+    MissingTimeout {
+        detail: String,
+    },
+    RepeatedSchemaReload {
+        schema_path: String,
+    },
     // Python Pytest Performance Traps:
-    PytestBlockingCallInAsync { call: String },
-    PytestUnclosedClientSession { client_type: String },
-    PytestInefficientFixtureScope { fixture_name: String, resource: String },
+    PytestBlockingCallInAsync {
+        call: String,
+    },
+    PytestUnclosedClientSession {
+        client_type: String,
+    },
+    PytestInefficientFixtureScope {
+        fixture_name: String,
+        resource: String,
+    },
 }
 
 /// Diagnostic details for a detected anti-pattern
@@ -620,9 +651,15 @@ pub fn analyze_source(source: &str, file_path: &str) -> StaticAnalysisReport {
 
             // 3c. Detect Python unclosed client sessions
             if let Some(caps) = RE_PY_CLIENT_SESSION.captures(trimmed) {
-                let is_with = trimmed.starts_with("with ") || trimmed.starts_with("async with ") || trimmed.contains(" with ");
+                let is_with = trimmed.starts_with("with ")
+                    || trimmed.starts_with("async with ")
+                    || trimmed.contains(" with ");
                 if !is_with && !has_close_in_source {
-                    let client_type = caps.get(1).map(|m| m.as_str()).unwrap_or("ClientSession").to_string();
+                    let client_type = caps
+                        .get(1)
+                        .map(|m| m.as_str())
+                        .unwrap_or("ClientSession")
+                        .to_string();
                     anti_patterns.push(AntiPattern {
                         kind: AntiPatternKind::PytestUnclosedClientSession { client_type },
                         line: line_num,
@@ -648,7 +685,8 @@ pub fn analyze_source(source: &str, file_path: &str) -> StaticAnalysisReport {
                     let mut fn_name = "fixture".to_string();
                     let mut heavy_res: Option<String> = None;
                     let scan_end = stripped_lines.len().min(idx + 35);
-                    for (offset, next_line) in stripped_lines[(idx + 1)..scan_end].iter().enumerate()
+                    for (offset, next_line) in
+                        stripped_lines[(idx + 1)..scan_end].iter().enumerate()
                     {
                         let next_idx = idx + 1 + offset;
                         let next_line = *next_line;
@@ -662,7 +700,14 @@ pub fn analyze_source(source: &str, file_path: &str) -> StaticAnalysisReport {
                             fn_name = name.as_str().to_string();
                         }
                         if let Some(res_caps) = RE_PY_HEAVY_RESOURCE.captures(next_line) {
-                            heavy_res = Some(res_caps.get(0).map(|m| m.as_str()).unwrap_or("resource").trim().to_string());
+                            heavy_res = Some(
+                                res_caps
+                                    .get(0)
+                                    .map(|m| m.as_str())
+                                    .unwrap_or("resource")
+                                    .trim()
+                                    .to_string(),
+                            );
                             break;
                         }
                     }
@@ -713,7 +758,11 @@ pub fn analyze_source(source: &str, file_path: &str) -> StaticAnalysisReport {
                                 found_static = true;
                                 break;
                             }
-                            if prev.ends_with(';') || prev.contains(';') || prev.contains('{') || prev.contains('}') {
+                            if prev.ends_with(';')
+                                || prev.contains(';')
+                                || prev.contains('{')
+                                || prev.contains('}')
+                            {
                                 break;
                             }
                         }
@@ -721,7 +770,12 @@ pub fn analyze_source(source: &str, file_path: &str) -> StaticAnalysisReport {
                     found_static
                 };
                 if !is_static_decl {
-                    let schema_path = caps.get(1).or_else(|| caps.get(2)).map(|m| m.as_str()).unwrap_or("schema").to_string();
+                    let schema_path = caps
+                        .get(1)
+                        .or_else(|| caps.get(2))
+                        .map(|m| m.as_str())
+                        .unwrap_or("schema")
+                        .to_string();
                     anti_patterns.push(AntiPattern {
                         kind: AntiPatternKind::RepeatedSchemaReload { schema_path },
                         line: line_num,
@@ -1311,7 +1365,10 @@ pub fn evaluate_feedback(
                     client_type, ap.line, ap.explanation, ap.recommendation
                 ));
             }
-            AntiPatternKind::PytestInefficientFixtureScope { fixture_name, resource } => {
+            AntiPatternKind::PytestInefficientFixtureScope {
+                fixture_name,
+                resource,
+            } => {
                 diagnostics.push(format!(
                     "✗ Anti-pattern: Inefficient fixture scope on '{}' ({}) on line {}\n  → {}\n  → Recommendation: {}",
                     fixture_name, resource, ap.line, ap.explanation, ap.recommendation
@@ -2609,4 +2666,3 @@ public class Exercise {
         assert_eq!(sl3, 3);
     }
 }
-

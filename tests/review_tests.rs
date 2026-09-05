@@ -462,15 +462,21 @@ fn test_ast_java_performance_traps_client_churn_and_timeouts() {
 
     let violations = RuleScanner::scan_content("UserApiTest.java", java_code);
     assert!(
-        violations.iter().any(|v| v.rule_id == "PERF_TRAP_CLIENT_CHURN"),
+        violations
+            .iter()
+            .any(|v| v.rule_id == "PERF_TRAP_CLIENT_CHURN"),
         "Should detect RestAssured.reset() client churn"
     );
     assert!(
-        violations.iter().any(|v| v.rule_id == "PERF_TRAP_MISSING_TIMEOUT"),
+        violations
+            .iter()
+            .any(|v| v.rule_id == "PERF_TRAP_MISSING_TIMEOUT"),
         "Should detect missing socket/connection timeouts on given() call"
     );
     assert!(
-        violations.iter().any(|v| v.rule_id == "PERF_TRAP_REPEATED_SCHEMA_RELOAD"),
+        violations
+            .iter()
+            .any(|v| v.rule_id == "PERF_TRAP_REPEATED_SCHEMA_RELOAD"),
         "Should detect inline matchesJsonSchemaInClasspath schema reload"
     );
 }
@@ -512,15 +518,21 @@ fn test_ast_java_resilient_avoids_performance_traps() {
 
     let violations = RuleScanner::scan_content("ResilientUserApiTest.java", resilient_java);
     assert!(
-        !violations.iter().any(|v| v.rule_id == "PERF_TRAP_CLIENT_CHURN"),
+        !violations
+            .iter()
+            .any(|v| v.rule_id == "PERF_TRAP_CLIENT_CHURN"),
         "No client churn should be reported"
     );
     assert!(
-        !violations.iter().any(|v| v.rule_id == "PERF_TRAP_MISSING_TIMEOUT"),
+        !violations
+            .iter()
+            .any(|v| v.rule_id == "PERF_TRAP_MISSING_TIMEOUT"),
         "No missing timeout should be reported when timeout configured"
     );
     assert!(
-        !violations.iter().any(|v| v.rule_id == "PERF_TRAP_REPEATED_SCHEMA_RELOAD"),
+        !violations
+            .iter()
+            .any(|v| v.rule_id == "PERF_TRAP_REPEATED_SCHEMA_RELOAD"),
         "Static final matcher should not be flagged as schema reload"
     );
 }
@@ -555,19 +567,27 @@ async def test_async_blocking():
 
     let violations = RuleScanner::scan_content("test_perf_traps.py", py_code);
     assert!(
-        violations.iter().any(|v| v.rule_id == "PERF_TRAP_INEFFICIENT_FIXTURE_SCOPE"),
+        violations
+            .iter()
+            .any(|v| v.rule_id == "PERF_TRAP_INEFFICIENT_FIXTURE_SCOPE"),
         "Should detect inefficient function scope on db/client fixtures"
     );
     assert!(
-        violations.iter().any(|v| v.rule_id == "PERF_TRAP_UNCLOSED_SESSION"),
+        violations
+            .iter()
+            .any(|v| v.rule_id == "PERF_TRAP_UNCLOSED_SESSION"),
         "Should detect unclosed requests.Session() without context manager"
     );
     assert!(
-        violations.iter().any(|v| v.rule_id == "PERF_TRAP_BLOCKING_CALL_IN_ASYNC"),
+        violations
+            .iter()
+            .any(|v| v.rule_id == "PERF_TRAP_BLOCKING_CALL_IN_ASYNC"),
         "Should detect blocking time.sleep/requests.get inside async def"
     );
     assert!(
-        violations.iter().any(|v| v.rule_id == "ANTI_PATTERN_HARDCODED_SLEEP"),
+        violations
+            .iter()
+            .any(|v| v.rule_id == "ANTI_PATTERN_HARDCODED_SLEEP"),
         "Should also flag hardcoded sleep"
     );
 }
@@ -605,15 +625,21 @@ async def test_async_clean():
 
     let violations = RuleScanner::scan_content("test_clean.py", clean_py);
     assert!(
-        !violations.iter().any(|v| v.rule_id == "PERF_TRAP_INEFFICIENT_FIXTURE_SCOPE"),
+        !violations
+            .iter()
+            .any(|v| v.rule_id == "PERF_TRAP_INEFFICIENT_FIXTURE_SCOPE"),
         "Session scope fixture should not be flagged"
     );
     assert!(
-        !violations.iter().any(|v| v.rule_id == "PERF_TRAP_UNCLOSED_SESSION"),
+        !violations
+            .iter()
+            .any(|v| v.rule_id == "PERF_TRAP_UNCLOSED_SESSION"),
         "Context manager client should not be flagged"
     );
     assert!(
-        !violations.iter().any(|v| v.rule_id == "PERF_TRAP_BLOCKING_CALL_IN_ASYNC"),
+        !violations
+            .iter()
+            .any(|v| v.rule_id == "PERF_TRAP_BLOCKING_CALL_IN_ASYNC"),
         "Async sleep and async client should not be flagged"
     );
 }

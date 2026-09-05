@@ -15,7 +15,11 @@ test.describe('Catalog Drill — Response Stubbing', () => {
   });
 
   test('products have name, price, and stock badge', async ({ page }) => {
-    await expect(page.locator('data-testid=product-item').first()).toBeVisible();
+    // CatalogPage injects its own X-Chaos: delay=5000ms on this fetch (a
+    // deliberate patience drill), so the default 5s assertion timeout races
+    // that delay almost exactly -- give it the same 10s budget test 2 above
+    // already does for the same reason.
+    await expect(page.locator('data-testid=product-item').first()).toBeVisible({ timeout: 10000 });
     await expect(page.locator('.product-name').first()).toBeVisible();
     await expect(page.locator('.product-price').first()).toBeVisible();
   });
