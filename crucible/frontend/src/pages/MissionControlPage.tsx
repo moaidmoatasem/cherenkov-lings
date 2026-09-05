@@ -18,19 +18,28 @@ interface TrackInfo {
 
 interface ProgressData {
   total_xp: number;
-  completed_drills: Array<{
-    drill_path: string;
-    track_id: string;
-    score: number;
-    completed_at: string;
-  }>;
-  unlocked_achievements: Array<{
+  level_name: string;
+  streak_days: number;
+  last_active_date: string | null;
+  flakiness_100_streak: number;
+  perfect_locator_count: number;
+  achievements: Array<{
     id: string;
+    name: string;
+    description: string;
     unlocked_at: string;
   }>;
-  streak_days: number;
-  consecutive_perfect_flakiness: number;
-  perfect_locator_count: number;
+  completed_drills: Record<
+    string,
+    {
+      track_id: string;
+      drill_id: string;
+      best_score: number;
+      completion_count: number;
+      first_completed_at: string;
+      last_completed_at: string;
+    }
+  >;
 }
 
 interface DrillTheoryModalData {
@@ -247,7 +256,7 @@ export const MissionControlPage: React.FC = () => {
         </h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '14px' }}>
           {BADGES.map((b) => {
-            const isUnlocked = progress?.unlocked_achievements.some((a) => a.id === b.id);
+            const isUnlocked = progress?.achievements.some((a) => a.id === b.id) ?? false;
             return (
               <div
                 key={b.id}

@@ -204,6 +204,38 @@ function toRunResult(r: ApiPipelineRunResult): PipelineRunResult {
 }
 
 // ---------------------------------------------------------------------------
+// Errors
+// ---------------------------------------------------------------------------
+
+/**
+ * A response the backend actually sent — e.g. a 400 for YAML that fails to
+ * parse or a matrix that exceeds the combination cap. Distinct from a plain
+ * network failure so callers can tell "the backend rejected this run" from
+ * "the backend is unreachable" instead of collapsing both into the same
+ * fallback path and presenting a rejected run as a fake success.
+ */
+export class PipelineApiError extends Error {
+  status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = 'PipelineApiError';
+    this.status = status;
+  }
+}
+
+async function throwApiError(res: Response, path: string): Promise<never> {
+  let detail = `${path} -> ${res.status}`;
+  try {
+    const body = await res.json();
+    if (typeof body?.detail === 'string' && body.detail.trim()) detail = body.detail;
+  } catch {
+    // Non-JSON error body — keep the status-based message.
+  }
+  throw new PipelineApiError(res.status, detail);
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -215,13 +247,15 @@ function toRunResult(r: ApiPipelineRunResult): PipelineRunResult {
 export async function validatePipeline(
   yamlContent: string,
   strict = false,
+  signal?: AbortSignal,
 ): Promise<PipelineValidationResult> {
   const res = await fetch(apiUrl('/api/pipeline/validate'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ yaml_content: yamlContent, strict }),
+    signal,
   });
-  if (!res.ok) throw new Error(`POST /api/pipeline/validate -> ${res.status}`);
+  if (!res.ok) await throwApiError(res, 'POST /api/pipeline/validate');
   const data: ApiPipelineValidation = await res.json();
   return toValidation(data);
 }
@@ -231,6 +265,10 @@ export async function validatePipeline(
  *
  * Maps to `POST /api/pipeline/run`. Returns the full execution outcome
  * including jobs, steps, logs, and an optional embedded validation.
+ *
+ * Throws `PipelineApiError` for a response the backend actually sent (bad
+ * YAML, a matrix that exceeds the combination cap, etc.) so callers can
+ * distinguish that from a genuine network failure.
  */
 export async function runPipeline(
   yamlContent: string,
@@ -252,7 +290,7 @@ export async function runPipeline(
       verbose: opts.verbose ?? true,
     }),
   });
-  if (!res.ok) throw new Error(`POST /api/pipeline/run -> ${res.status}`);
+  if (!res.ok) await throwApiError(res, 'POST /api/pipeline/run');
   const data: ApiPipelineRunResult = await res.json();
   return toRunResult(data);
 }

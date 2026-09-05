@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { runPipeline } from '../lib/pipelineApi';
+import { runPipeline, validatePipeline, PipelineApiError } from '../lib/pipelineApi';
+import type { PipelineValidationResult } from '../lib/pipelineApi';
 
 export interface PipelineStage {
   id: string;
@@ -117,10 +118,18 @@ export const PipelineBuilderPage: React.FC = () => {
   const [simProgress, setSimProgress] = useState<number>(0);
   const [runnerJobs, setRunnerJobs] = useState<RunnerJob[]>([]);
   const [selectedRunnerId, setSelectedRunnerId] = useState<string | null>(null);
+  const [backendValidation, setBackendValidation] = useState<PipelineValidationResult | null>(null);
   const replayTimerRef = useRef<number | null>(null);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
+    // React StrictMode double-invokes effects in dev (mount → cleanup →
+    // mount) to surface missing-cleanup bugs; without this, the simulated
+    // cleanup would latch `isMountedRef.current` to false forever even
+    // though the component is still very much mounted.
+    isMountedRef.current = true;
     return () => {
+      isMountedRef.current = false;
       if (replayTimerRef.current !== null) window.clearInterval(replayTimerRef.current);
     };
   }, []);
@@ -226,6 +235,24 @@ export const PipelineBuilderPage: React.FC = () => {
     setYamlCode(generateYamlFromStages(stages));
   }, [stages]);
 
+  // Cross-check against the backend's authoritative SDET policy validator
+  // (secret scanning, concurrency, job timeouts — checks the local heuristic
+  // below has no way to perform) so the compliance badge can't disagree with it.
+  useEffect(() => {
+    const ctrl = new AbortController();
+    const timer = window.setTimeout(() => {
+      validatePipeline(yamlCode, false, ctrl.signal)
+        .then((v) => setBackendValidation(v))
+        .catch(() => {
+          if (!ctrl.signal.aborted) setBackendValidation(null);
+        });
+    }, 600);
+    return () => {
+      ctrl.abort();
+      window.clearTimeout(timer);
+    };
+  }, [yamlCode]);
+
   // Parse YAML string back into Stages
   const handleYamlChange = (newYaml: string) => {
     setYamlCode(newYaml);
@@ -319,7 +346,32 @@ export const PipelineBuilderPage: React.FC = () => {
       });
     }
 
-    const isCompliant = issues.filter((i) => i.type === 'error').length === 0;
+    // Backend-only policy checks (secret scanning, concurrency, job timeouts)
+    // this local heuristic can't evaluate on its own. Matrix and
+    // artifact-upload codes are skipped since the stage checks above already
+    // cover those from the canvas's point of view.
+    if (backendValidation) {
+      for (const err of backendValidation.errors) {
+        if (err.code === 'MISSING_MATRIX_STRATEGY' || err.code === 'MISSING_ARTIFACT_UPLOAD') continue;
+        issues.push({
+          id: `backend-error-${err.code}-${err.line ?? issues.length}`,
+          type: 'error',
+          title: `SDET Policy: ${err.code}`,
+          desc: err.message
+        });
+      }
+      for (const warn of backendValidation.warnings) {
+        issues.push({
+          id: `backend-warning-${warn.code}`,
+          type: 'warning',
+          title: `SDET Policy: ${warn.code}`,
+          desc: warn.message
+        });
+      }
+    }
+
+    const isCompliant =
+      issues.filter((i) => i.type === 'error').length === 0 && (backendValidation ? backendValidation.valid : true);
 
     return {
       isCompliant,
@@ -327,7 +379,7 @@ export const PipelineBuilderPage: React.FC = () => {
       errorCount: issues.filter((i) => i.type === 'error').length,
       warningCount: issues.filter((i) => i.type === 'warning').length
     };
-  }, [stages]);
+  }, [stages, backendValidation]);
 
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
@@ -371,7 +423,9 @@ export const PipelineBuilderPage: React.FC = () => {
 
   // Run CI Pipeline — calls POST /api/pipeline/run, then replays the real
   // results step-by-step so the learner sees the pipeline "execute".  Falls
-  // back to a lightweight local simulation when the backend is unreachable.
+  // back to a lightweight local simulation only when the backend is truly
+  // unreachable; a real backend rejection (bad YAML, matrix explosion, etc.)
+  // is surfaced to the learner instead of being masked as a fake success.
   const handleStartSimulation = useCallback(async () => {
     if (isSimulating) return;
     setActiveTab('simulation');
@@ -385,11 +439,20 @@ export const PipelineBuilderPage: React.FC = () => {
         verbose: true,
       });
 
+      // The component may have unmounted while this request was in flight —
+      // don't touch state or start an interval that nothing will ever clear.
+      if (!isMountedRef.current) return;
 
       // Map backend jobs → the UI's RunnerJob shape
       const runners: RunnerJob[] = result.jobs.map((job, i) => {
-        const os = job.matrixCombination['os'] ?? 'ubuntu-latest';
-        const shard = job.matrixCombination['shard'] ?? `${i + 1}/${result.jobs.length}`;
+        const matrixKeys = Object.keys(job.matrixCombination);
+        const os = job.matrixCombination['os'] ?? job.matrixCombination[matrixKeys[0]] ?? 'ubuntu-latest';
+        const shard =
+          job.matrixCombination['shard'] ??
+          job.matrixCombination[matrixKeys[1]] ??
+          `${i + 1}/${result.jobs.length}`;
+        const initLog = result.logs.find((l) => l.runner === job.runnerName && l.step === 'job_init');
+        const initTs = initLog ? new Date(initLog.timestamp).toISOString() : new Date().toISOString();
         return {
           id: job.jobId || `runner-${i + 1}`,
           runnerName: job.runnerName || `Matrix Runner #${i + 1}`,
@@ -403,8 +466,8 @@ export const PipelineBuilderPage: React.FC = () => {
             durationMs: s.durationMs,
           })),
           logs: [
-            `[${new Date().toISOString()}] Initializing container runner on ${os}...`,
-            `[${new Date().toISOString()}] Provisioning virtual environment (Shard ${shard})...`,
+            `[${initTs}] Initializing container runner on ${os}...`,
+            `[${initTs}] Provisioning virtual environment (Shard ${shard})...`,
           ],
         };
       });
@@ -443,13 +506,17 @@ export const PipelineBuilderPage: React.FC = () => {
 
             const currentBackendStep = backendJob?.steps[stepIndex];
             const newLogs = [...runner.logs];
-            if (currentBackendStep) {
+            if (currentBackendStep && backendJob) {
+              const matchingLog = result.logs.find(
+                (l) => l.runner === backendJob.runnerName && l.step === currentBackendStep.name,
+              );
+              const stepTs = matchingLog ? new Date(matchingLog.timestamp).toISOString() : new Date().toISOString();
               const statusLabel = currentBackendStep.status === 'failed' ? 'FAILED' : 'SUCCESS';
               newLogs.push(
-                `[${new Date().toISOString()}] Step: ${currentBackendStep.name} -> ${statusLabel} (${currentBackendStep.durationMs}ms)`,
+                `[${stepTs}] Step: ${currentBackendStep.name} -> ${statusLabel} (${currentBackendStep.durationMs}ms)`,
               );
               if (currentBackendStep.output) {
-                newLogs.push(`[${new Date().toISOString()}]   ${currentBackendStep.output}`);
+                newLogs.push(`[${stepTs}]   ${currentBackendStep.output}`);
               }
             }
 
@@ -476,7 +543,7 @@ export const PipelineBuilderPage: React.FC = () => {
           setSimProgress(100);
 
           const failedCount = result.jobs.filter((j) => j.status === 'failed').length;
-          if (result.success) {
+          if (failedCount === 0) {
             showToast(`🎉 All ${result.jobs.length} Matrix Runners Finished Successfully (0 Failures)`);
           } else {
             showToast(`⚠️ Pipeline completed with ${failedCount} failure${failedCount === 1 ? '' : 's'}`);
@@ -486,9 +553,20 @@ export const PipelineBuilderPage: React.FC = () => {
 
       replayTimerRef.current = interval;
       return;
-    } catch {
-      // Backend unreachable — fall through to local offline simulation
+    } catch (err) {
+      if (err instanceof PipelineApiError) {
+        // The backend is reachable and genuinely rejected this run (bad YAML,
+        // a matrix that exceeds the combination cap, etc.) — surface that
+        // instead of silently faking a successful offline run over it.
+        setIsSimulating(false);
+        setSimProgress(0);
+        showToast(`❌ Pipeline rejected: ${err.message}`);
+        return;
+      }
+      // Genuine network failure — fall through to local offline simulation.
     }
+
+    if (!isMountedRef.current) return;
 
     // --- Offline fallback (no backend) --------------------------------------
     const matrixStage = stages.find((s) => s.type === 'matrix' && s.enabled);
