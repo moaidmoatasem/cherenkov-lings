@@ -2,8 +2,9 @@
 PRODUCTION STORY:
 Fintech Async Ledger Settlement Failure (2021)
 By acting as a distributed trace participant, the test injects W3C traceparent
-context and asserts that downstream spans correlate back to the client Span ID,
-proving asynchronous operations completed without silent failures.
+context and asserts that the server's span correlates back to the client's
+own span ID, proving the request was actually observable end to end -- not
+just that it returned 200.
 """
 
 import secrets
@@ -17,7 +18,8 @@ def test_distributed_trace_and_span_correlation():
         "amount": 100.0,
     }
 
-    # Generate 16-byte (32 hex) trace_id and 8-byte (16 hex) client_span_id
+    # 32 hex chars (16 bytes) trace_id, 16 hex chars (8 bytes) client_span_id,
+    # per the W3C Trace Context spec: version-trace_id-parent_id-flags.
     trace_id = secrets.token_hex(16)
     client_span_id = secrets.token_hex(8)
 
@@ -29,11 +31,11 @@ def test_distributed_trace_and_span_correlation():
     response = requests.post(f"{base_url}/transfer", json=payload, headers=headers)
     assert response.status_code == 200, f"Expected 200, got {response.status_code}"
 
-    # Query telemetry spans for parent-child tree assertions
     telemetry_resp = requests.get(f"{base_url}/api/telemetry/spans?trace_id={trace_id}")
-    if telemetry_resp.status_code == 200:
-        spans = telemetry_resp.json().get("spans", [])
-        if spans:
-            root_span = next((s for s in spans if s.get("parent_span_id") == client_span_id), None)
-            assert root_span is not None, "Root span parent_span_id must match client_span_id"
-            assert root_span.get("trace_id") == trace_id, "Span trace_id must match propagated trace_id"
+    assert telemetry_resp.status_code == 200, (
+        f"Expected 200 from telemetry query, got {telemetry_resp.status_code}"
+    )
+    spans = telemetry_resp.json()["spans"]
+    root_span = next((s for s in spans if s.get("parent_span_id") == client_span_id), None)
+    assert root_span is not None, "Root span parent_span_id must match client_span_id"
+    assert root_span.get("trace_id") == trace_id, "Span trace_id must match propagated trace_id"

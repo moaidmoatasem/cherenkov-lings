@@ -1,5 +1,6 @@
 import base64
 import json
+import secrets
 import time
 from fastapi.testclient import TestClient
 from crucible.backend.app import app
@@ -524,6 +525,62 @@ def test_pact_orders_endpoint():
     data = resp.json()
     assert "orders" in data
     assert data["count"] == 2
+
+
+def test_telemetry_spans_correlate_to_traceparent_header():
+    """A request carrying a W3C traceparent must be recorded under that exact
+    trace_id, with parent_span_id set to the client's own span id -- the
+    correlation the 02_otel_distributed_trace drill's solution relies on."""
+    trace_id = secrets.token_hex(16)
+    client_span_id = secrets.token_hex(8)
+
+    resp = client.post(
+        "/transfer",
+        json={"from_account": "ACC-001", "to_account": "ACC-002", "amount": 1.0},
+        headers={"traceparent": f"00-{trace_id}-{client_span_id}-01"},
+    )
+    assert resp.status_code == 200
+    assert resp.headers["X-Trace-Id"] == trace_id
+
+    spans_resp = client.get(f"/api/telemetry/spans?trace_id={trace_id}")
+    assert spans_resp.status_code == 200
+    spans = spans_resp.json()["spans"]
+    root_span = next((s for s in spans if s.get("parent_span_id") == client_span_id), None)
+    assert root_span is not None
+    assert root_span["trace_id"] == trace_id
+    assert root_span["path"] == "/transfer"
+
+
+def test_telemetry_spans_without_traceparent_do_not_correlate():
+    """A request with no traceparent header gets its own server-generated
+    trace_id -- querying by a trace_id the client invented but never sent
+    must return nothing, which is exactly the failure the exercise.py
+    version of the OTel drill is supposed to hit."""
+    never_sent_trace_id = secrets.token_hex(16)
+
+    resp = client.post(
+        "/transfer",
+        json={"from_account": "ACC-001", "to_account": "ACC-002", "amount": 1.0},
+    )
+    assert resp.status_code == 200
+    assert resp.headers["X-Trace-Id"] != never_sent_trace_id
+
+    spans_resp = client.get(f"/api/telemetry/spans?trace_id={never_sent_trace_id}")
+    assert spans_resp.status_code == 200
+    assert spans_resp.json()["spans"] == []
+
+
+def test_telemetry_spans_malformed_traceparent_falls_back_to_root_trace():
+    """A malformed traceparent (wrong hex length, missing segment) must not
+    crash the request -- it degrades to a fresh root trace, same as no
+    header at all."""
+    resp = client.post(
+        "/transfer",
+        json={"from_account": "ACC-001", "to_account": "ACC-002", "amount": 1.0},
+        headers={"traceparent": "not-a-real-traceparent"},
+    )
+    assert resp.status_code == 200
+    assert resp.headers["X-Trace-Id"]
 
 
 

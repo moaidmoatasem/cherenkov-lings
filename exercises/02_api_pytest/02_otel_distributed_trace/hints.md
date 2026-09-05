@@ -25,35 +25,36 @@ headers = {
 response = client.post("/transfer", json=payload, headers=headers)
 ```
 
-To assert parent-child span tree correlation and distributed trace execution:
-1. Query the OpenTelemetry collector or Crucible telemetry endpoint (`/api/telemetry/spans?trace_id={trace_id}`).
-2. Verify that a root server span exists whose `parent_span_id` equals your injected `client_span_id`.
-3. Assert that downstream asynchronous spans (e.g. `kafka.ledger.settle`, `db.persist`) share the exact same `trace_id` and have an `OK` status code.
+To assert span correlation, not just a status code:
+1. Query the Crucible telemetry endpoint: `GET /api/telemetry/spans?trace_id={trace_id}`. It returns `{"spans": [...]}`.
+2. Verify that a span exists in that list whose `parent_span_id` equals the `client_span_id` you generated and sent.
+3. Assert this directly -- no `if response.status_code == 200:` guard around it. A guard like that turns "the check failed" into "the check silently never ran," which is the same vacuous-test failure mode as the missing assertion in Hint 1, just one layer deeper.
 
 ## Hint 3 (Code Diff)
-Replace the naive sleep and status-only check with W3C traceparent propagation and distributed span tree assertions:
+Replace the disconnected trace_id (generated but never sent) and the missing correlation check with real propagation and a direct assertion:
 
 ```diff
-- # Old brittle check: sleep and assume background Kafka processed the event
-- response = client.post("/transfer", json=payload)
-- time.sleep(2)
-- assert response.status_code == 200
-
-+ # Resilient OTel Assertion: Propagate W3C traceparent and assert span tree correlation
 + import secrets
-+ trace_id = secrets.token_hex(16)
-+ client_span_id = secrets.token_hex(8)
-+ headers = {
-+     "traceparent": f"00-{trace_id}-{client_span_id}-01",
-+     "Content-Type": "application/json",
-+ }
-+ response = client.post("/transfer", json=payload, headers=headers)
-+ assert response.status_code == 200
-+
-+ # Query Crucible telemetry / OTel collector for distributed span correlation
-+ spans = wait_for_spans(trace_id=trace_id, timeout_sec=5.0)
-+ root_span = next(s for s in spans if s.get("parent_span_id") == client_span_id)
-+ assert root_span["parent_span_id"] == client_span_id, "W3C traceparent client Span ID not correlated"
-+ assert any(s["name"] == "kafka.ledger.settle" for s in spans), "Missing downstream Kafka event span"
-+ assert all(s.get("status", {}).get("code") != "ERROR" for s in spans), "Distributed span reported error"
+  import requests
+
+  def test_distributed_trace_and_span_correlation():
+      base_url = "http://localhost:8081"
+      payload = {"from_account": "ACC-001", "to_account": "ACC-002", "amount": 100.0}
+
+      trace_id = secrets.token_hex(16)
+      client_span_id = secrets.token_hex(8)
+
+-     response = requests.post(f"{base_url}/transfer", json=payload)
++     headers = {
++         "traceparent": f"00-{trace_id}-{client_span_id}-01",
++         "Content-Type": "application/json",
++     }
++     response = requests.post(f"{base_url}/transfer", json=payload, headers=headers)
+      assert response.status_code == 200
+
+      telemetry_resp = requests.get(f"{base_url}/api/telemetry/spans?trace_id={trace_id}")
+      assert telemetry_resp.status_code == 200
+      spans = telemetry_resp.json()["spans"]
+      root_span = next((s for s in spans if s.get("parent_span_id") == client_span_id), None)
+      assert root_span is not None, "No span correlates to the client_span_id we sent"
 ```

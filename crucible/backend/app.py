@@ -61,7 +61,7 @@ from crucible.backend.triage import (
     load_gamification_progress,
 )
 from crucible.backend.ai_generator import generate_pytest_from_spec
-from crucible.backend.tracing import TracingMiddleware
+from crucible.backend.tracing import TracingMiddleware, get_spans, reset_spans
 
 # JWT configuration
 import os as _os
@@ -418,12 +418,20 @@ async def post_transfer(req: TransferRequest, request: Request) -> TransferRespo
 
 @app.post("/reset", response_model=ResetResponse)
 async def post_reset() -> ResetResponse:
-    """Reset in-memory bank ledger balances and pending transfers."""
+    """Reset in-memory bank ledger balances, pending transfers, and spans."""
     global accounts, pending_transfers
     async with _ledger_lock:
         accounts = dict(DEFAULT_ACCOUNTS)
         pending_transfers = []
+    reset_spans()
     return ResetResponse(status="ok", message="Ledger and state reset to initial values")
+
+
+@app.get("/api/telemetry/spans")
+async def get_telemetry_spans(trace_id: str) -> JSONResponse:
+    """Spans recorded under a trace_id, for correlating a client's
+    `traceparent` header against what the server actually did with it."""
+    return JSONResponse(status_code=200, content={"spans": get_spans(trace_id)})
 
 
 @app.get("/search", response_model=SearchResponse)
