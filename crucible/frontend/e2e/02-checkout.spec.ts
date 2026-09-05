@@ -1,7 +1,15 @@
-﻿import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
-test.describe('Checkout Drill — Hydration Timing Gap', () => {
+// These three assert the exact state of an 800ms setTimeout-driven hydration
+// flag. Under real wall-clock time that's a genuine race against test-runner
+// scheduling delay (navigation + assertion overhead can eat into the 800ms
+// window, especially with multiple parallel workers contending for CPU),
+// which made them flaky under `--workers=2`+ even though the underlying
+// behavior was correct. Installing Playwright's clock lets us control time
+// deterministically instead of racing it.
+test.describe('Checkout Drill — Hydration Timing Gap (clock-controlled)', () => {
   test.beforeEach(async ({ page }) => {
+    await page.clock.install();
     await page.goto('/checkout');
   });
 
@@ -14,7 +22,8 @@ test.describe('Checkout Drill — Hydration Timing Gap', () => {
   test('hydration completes after 800ms', async ({ page }) => {
     const btn = page.locator('#checkout-btn');
     await expect(btn).toHaveAttribute('data-hydrated', 'false');
-    await expect(btn).toHaveAttribute('data-hydrated', 'true', { timeout: 5000 });
+    await page.clock.fastForward(801);
+    await expect(btn).toHaveAttribute('data-hydrated', 'true');
   });
 
   test('early click before hydration increments drop count', async ({ page }) => {
@@ -22,6 +31,12 @@ test.describe('Checkout Drill — Hydration Timing Gap', () => {
     await btn.click();
     await expect(page.locator('data-testid=click-dropped-warning')).toBeVisible();
     await expect(page.locator('data-testid=click-dropped-warning')).toContainText('1 click');
+  });
+});
+
+test.describe('Checkout Drill — Hydration Timing Gap', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/checkout');
   });
 
   test('confirm purchase bypasses hydration trap', async ({ page }) => {
