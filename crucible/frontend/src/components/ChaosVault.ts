@@ -68,7 +68,7 @@ export class ChaosVault extends HTMLElement {
           letter-spacing: 0.5px;
         }
         .unlock-btn {
-          background: #0284c7;
+          background: #0369a1;
           color: #ffffff;
           border: none;
           border-radius: 6px;
@@ -79,7 +79,7 @@ export class ChaosVault extends HTMLElement {
           transition: all 0.2s ease;
         }
         .unlock-btn:hover {
-          background: #0369a1;
+          background: #075985;
           transform: translateY(-1px);
         }
         .unlock-btn:active {
