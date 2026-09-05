@@ -1,6 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { apiUrl } from '../lib/api';
-import { fetchTriageTests, submitTriage, type TriageVerdict } from '../lib/triageApi';
+import {
+  fetchTriageTests,
+  submitTriage,
+  fetchAllureSummary,
+  type TriageVerdict,
+  type AllureMetrics,
+} from '../lib/triageApi';
 
 export type FailureCategory = 'ProductBug' | 'FlakyInfra' | 'AntiPattern' | 'Passed';
 export type TestStatus = 'passed' | 'failed' | 'broken' | 'flaky';
@@ -259,31 +265,57 @@ export const AllureTriagePage: React.FC = () => {
     });
   }, [testCases, selectedStatusFilter, selectedCategoryFilter, searchQuery]);
 
-  // Allure KPI Metrics Calculation
-  const metrics = useMemo(() => {
-    const total = 68; // Simulated full enterprise suite
-    const passed = 52;
-    const flaky = 10;
-    const failed = 6;
-    const passRate = ((passed / total) * 100).toFixed(1);
-    const flakyRate = ((flaky / total) * 100).toFixed(1);
+  // Allure KPI Metrics: seeded offline, replaced by GET /api/reports/allure
+  // (the same 70-case chaos dataset the triage tests below come from) as soon
+  // as it answers.
+  const [metrics, setMetrics] = useState<AllureMetrics>({
+    total: 68,
+    passed: 52,
+    flaky: 10,
+    failed: 6,
+    passRate: '76.5',
+    flakyRate: '14.7',
+    productBugs: 6,
+    flakyInfra: 7,
+    antiPatterns: 3,
+    stabilityTrend: [
+      { label: 'Least reliable quintile', passPct: 65 },
+      { label: 'Below-average quintile', passPct: 71 },
+      { label: 'Median quintile', passPct: 82 },
+      { label: 'Above-average quintile', passPct: 94 },
+      { label: 'Most reliable quintile', passPct: 100 },
+    ],
+  });
 
-    const productBugs = 6;
-    const flakyInfra = 7;
-    const antiPatterns = 3;
-
-    return {
-      total,
-      passed,
-      flaky,
-      failed,
-      passRate,
-      flakyRate,
-      productBugs,
-      flakyInfra,
-      antiPatterns
-    };
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetchAllureSummary(ctrl.signal)
+      .then(setMetrics)
+      .catch(() => {
+        // Offline: keep the seeded KPIs.
+      });
+    return () => ctrl.abort();
   }, []);
+
+  // Donut chart slices, sized from the real KPI metrics rather than baked-in
+  // percentages -- so the picture moves when /api/reports/allure does.
+  const DONUT_CIRCUMFERENCE = 2 * Math.PI * 45;
+  const donutSegments = useMemo(() => {
+    const total = metrics.total || 1;
+    const slices = [
+      { key: 'passed', label: 'Passed', color: '#4ade80', value: metrics.passed },
+      { key: 'productBugs', label: 'Product Bugs', color: '#f87171', value: metrics.productBugs },
+      { key: 'flakyInfra', label: 'Flaky Infra', color: '#fbbf24', value: metrics.flakyInfra },
+      { key: 'antiPatterns', label: 'Anti-Patterns', color: '#c084fc', value: metrics.antiPatterns },
+    ];
+    let offset = 0;
+    return slices.map((slice) => {
+      const length = (slice.value / total) * DONUT_CIRCUMFERENCE;
+      const seg = { ...slice, length, dashOffset: -offset };
+      offset += length;
+      return seg;
+    });
+  }, [metrics]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -402,50 +434,19 @@ export const AllureTriagePage: React.FC = () => {
           <div className="donut-chart-wrapper">
             <svg className="donut-svg" viewBox="0 0 120 120">
               <circle cx="60" cy="60" r="45" fill="none" stroke="#1e293b" strokeWidth="18" />
-              {/* Passed slice: 76.5% */}
-              <circle
-                cx="60"
-                cy="60"
-                r="45"
-                fill="none"
-                stroke="#4ade80"
-                strokeWidth="18"
-                strokeDasharray="216 283"
-                strokeDashoffset="0"
-              />
-              {/* Product Bug slice: 8.8% */}
-              <circle
-                cx="60"
-                cy="60"
-                r="45"
-                fill="none"
-                stroke="#f87171"
-                strokeWidth="18"
-                strokeDasharray="25 283"
-                strokeDashoffset="-216"
-              />
-              {/* Flaky Infra slice: 10.3% */}
-              <circle
-                cx="60"
-                cy="60"
-                r="45"
-                fill="none"
-                stroke="#fbbf24"
-                strokeWidth="18"
-                strokeDasharray="29 283"
-                strokeDashoffset="-241"
-              />
-              {/* Anti-pattern slice: 4.4% */}
-              <circle
-                cx="60"
-                cy="60"
-                r="45"
-                fill="none"
-                stroke="#c084fc"
-                strokeWidth="18"
-                strokeDasharray="13 283"
-                strokeDashoffset="-270"
-              />
+              {donutSegments.map((seg) => (
+                <circle
+                  key={seg.key}
+                  cx="60"
+                  cy="60"
+                  r="45"
+                  fill="none"
+                  stroke={seg.color}
+                  strokeWidth="18"
+                  strokeDasharray={`${seg.length} ${DONUT_CIRCUMFERENCE}`}
+                  strokeDashoffset={seg.dashOffset}
+                />
+              ))}
             </svg>
 
             <div className="donut-legend">
@@ -471,24 +472,24 @@ export const AllureTriagePage: React.FC = () => {
 
         {/* Chaos Stability Trend */}
         <div className="chart-card">
-          <h3 className="chart-title">Chaos Stability Trend (5 Iterations)</h3>
-          <p className="chart-sub">Pass-rate performance under increasing L4/L7 jitter</p>
+          <h3 className="chart-title">Test Reliability Distribution</h3>
+          <p className="chart-sub">
+            Real avg. pass rate across each test&apos;s 5 chaos iterations, tests grouped into
+            quintiles from least to most reliable
+          </p>
           <div className="trend-bars-container">
-            {[
-              { iteration: 'Run 1 (0ms chaos)', passPct: 100, color: 'green' },
-              { iteration: 'Run 2 (50ms jitter)', passPct: 94, color: 'green' },
-              { iteration: 'Run 3 (200ms latency)', passPct: 82, color: 'amber' },
-              { iteration: 'Run 4 (504 chaos drop)', passPct: 71, color: 'amber' },
-              { iteration: 'Run 5 (High TCP chaos)', passPct: 65, color: 'red' }
-            ].map((bar, bIdx) => (
-              <div key={bIdx} className="trend-bar-row">
-                <span className="bar-label">{bar.iteration}</span>
-                <div className="bar-track">
-                  <div className={`bar-fill ${bar.color}`} style={{ width: `${bar.passPct}%` }}></div>
+            {metrics.stabilityTrend.map((bar, bIdx) => {
+              const color = bar.passPct >= 90 ? 'green' : bar.passPct >= 75 ? 'amber' : 'red';
+              return (
+                <div key={bIdx} className="trend-bar-row">
+                  <span className="bar-label">{bar.label}</span>
+                  <div className="bar-track">
+                    <div className={`bar-fill ${color}`} style={{ width: `${bar.passPct}%` }}></div>
+                  </div>
+                  <span className="bar-pct">{bar.passPct}%</span>
                 </div>
-                <span className="bar-pct">{bar.passPct}%</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

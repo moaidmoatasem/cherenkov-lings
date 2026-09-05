@@ -1,11 +1,45 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { apiUrl } from '../lib/api';
 
 interface NavbarProps {
   currentPath: string;
   onNavigate: (path: string) => void;
 }
 
+// The badge used to hardcode "Port 8080 : LIVE" no matter what backend this
+// build actually points at, and no matter whether it answered. Derive the
+// port from the same VITE_API_BASE apiUrl() uses, and poll the real /health
+// endpoint so "LIVE" means something.
+const backendPort = (() => {
+  try {
+    return new URL(apiUrl('/')).port || '80';
+  } catch {
+    return '?';
+  }
+})();
+
 export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate }) => {
+  const [isLive, setIsLive] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const checkHealth = () => {
+      fetch(apiUrl('/health'))
+        .then((res) => {
+          if (!cancelled) setIsLive(res.ok);
+        })
+        .catch(() => {
+          if (!cancelled) setIsLive(false);
+        });
+    };
+    checkHealth();
+    const interval = window.setInterval(checkHealth, 15000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, []);
+
   const navItems = [
     // '/' serves the Learn environment, so the sandbox overview lives at
     // /sandbox. Pointing this entry at '/' made it a duplicate of the Learn
@@ -65,8 +99,8 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate }) => {
       </nav>
 
       <div className="header-status">
-        <span className="status-indicator live"></span>
-        <span className="status-text">Port 8080 : LIVE</span>
+        <span className={`status-indicator ${isLive ? 'live' : 'offline'}`}></span>
+        <span className="status-text">Port {backendPort} : {isLive ? 'LIVE' : 'OFFLINE'}</span>
       </div>
     </header>
   );
