@@ -132,6 +132,20 @@ cherenkov-lings watch --track=ci-pipeline
 
 Open any `exercise.*` file in your favorite editor, write your fix, and hit **Save**. The watcher re-runs the drill for you and prints the scorecard as soon as the run finishes.
 
+#### Prerequisites per track
+
+`install.sh` / `install.ps1` only build the Rust CLI. `watch` then runs whatever `lings.toml` declares as that track's command — for five tracks, that command invokes a real external toolchain the installer does not set up for you, and you'll see that tool's own "not found" error rather than a curriculum one if it's missing. Everything else needs only Python and Node.js, which `crucible/start.sh` / `start.bat` already require to run the sandbox itself.
+
+| Track (`--track=`) | Needs, beyond Python/Node | Get it |
+|---|---|---|
+| `restassured-java` | JDK 17+, Maven | https://adoptium.net, https://maven.apache.org/install.html |
+| `maestro-mobile` | Maestro CLI, plus a running Android emulator or iOS simulator | https://maestro.mobile.dev |
+| `k6-js` | k6 | https://k6.io/docs/get-started/installation |
+| `jmeter` | Apache JMeter | https://jmeter.apache.org/download_jmeter.cgi |
+| `contract-pact` | `pact-python` (`pip install pact-python`) | https://pypi.org/project/pact-python |
+
+`ci-pipeline` validates workflow YAML through the CLI's own simulator (`cherenkov-lings pipeline validate`), not a real GitHub Actions runner, so it needs nothing beyond the base install.
+
 ---
 
 ## 🎓 The Learn UI
