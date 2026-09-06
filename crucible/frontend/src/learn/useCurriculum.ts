@@ -120,17 +120,25 @@ const synthesise = (track: ApiTrack, completed: Set<string>): Track => {
  * had, next to a live "modules built" count that disagreed. The manifest
  * supplies the module list, ids and paths; the record supplies what is done;
  * the curated entry supplies only the writing.
+ *
+ * Completion is looked up by `realId`, not by array position: lings.toml lists
+ * a track's drills in whatever order that track's manifest author chose, which
+ * for two of these four curated tracks does not match the order this copy was
+ * drafted in. Zipping by index paired each card with a different drill's
+ * completion (and silently dropped whichever real drill fell in that slot
+ * instead). A curated card with no confident `realId` -- the worked-example
+ * walkthrough with no manifest drill at all, or a theme too loose to claim --
+ * keeps its own designed state instead of borrowing an unrelated drill's.
  */
 const mergeCurated = (track: ApiTrack, hand: Track, completed: Set<string>): Track => {
   const real = synthesise(track, completed);
+  const realByRawId = new Map(real.modules.map((m) => [m.id.split('/').pop(), m]));
 
-  const modules: CurriculumModule[] = real.modules.map((module, i) => {
-    const copy = hand.modules[i];
-    if (!copy) return module;
+  const modules: CurriculumModule[] = hand.modules.map((copy) => {
+    const realModule = copy.realId ? realByRawId.get(copy.realId) : undefined;
     // The curated entry keeps its identity and its writing -- including the
-    // absent `path` that routes it to the hand-written module screen. Only
-    // completion comes from the learner's record.
-    return { ...copy, state: module.state };
+    // absent `path` that routes it to the hand-written module screen.
+    return realModule ? { ...copy, state: realModule.state } : copy;
   });
 
   return {

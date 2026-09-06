@@ -46,6 +46,15 @@ export interface CurriculumModule {
    * which have no drill behind them.
    */
   path?: string;
+  /**
+   * The manifest drill id (e.g. "01_hydration_timing") this hand-written module
+   * illustrates, so its completion state can be looked up by identity instead
+   * of by array position -- lings.toml's authored drill order does not match
+   * the order this copy was drafted in. Absent where a module has no real
+   * drill behind it, or where the correspondence isn't confident enough to
+   * claim; such modules keep their own designed `state` instead.
+   */
+  realId?: string;
   /** Names the situation it teaches, never the API. The most important content rule. */
   situation: string;
   duration: string;
