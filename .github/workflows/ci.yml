@@ -202,8 +202,23 @@ jobs:
         npx playwright install --with-deps chromium
         npx playwright test crucible/frontend/e2e
 
+    # exercises/**/*.ts is already in the root playwright.config.ts's testMatch
+    # and this job already has the frontend and backend it needs up on the
+    # config's default ports -- but nothing ever pointed Playwright at it, so
+    # these 18 solution.ts files (Modern Web Automation, GenAI QA,
+    # Accessibility) had zero CI coverage. Globbed explicitly to solution.ts:
+    # the sibling exercise.ts starter in each drill directory contains the
+    # same test(), deliberately failing, and would break this step if matched.
+    - name: Run Curriculum Drill Solutions (Playwright)
+      run: |
+        npx playwright test \
+          exercises/01_web_playwright_ts/*/solution.ts \
+          exercises/06_genai_qa/*/solution.ts \
+          exercises/10_a11y_axe/*/solution.ts \
+          --project=chromium
+
   python_exercise_validation:
-    name: Python Exercise Validation (5 tracks, 18 drills)
+    name: Python Exercise Validation (6 tracks, 22 drills)
     runs-on: ubuntu-latest
 
     steps:
@@ -243,6 +258,19 @@ jobs:
         done
         cat /tmp/crucible-backend.log >&2
         echo "Crucible backend did not become healthy within 30s" >&2 && exit 1
+
+    # This track was missing from the job entirely -- the first four drills a
+    # new learner ever opens had zero CI protection, even though nothing about
+    # them differs from the tracks below (04_manual_test_to_assertion hits the
+    # live Crucible on :8081 the same way 00_foundations' 04 and 05 do).
+    - name: Validate Getting Started Track (4 drills)
+      run: |
+        for dir in exercises/00_getting_started/*/; do
+          if [ -f "$dir/solution.py" ]; then
+            echo "Testing: $dir"
+            python -m pytest "$dir/solution.py" -v --tb=short || exit 1
+          fi
+        done
 
     - name: Validate Foundations Track (5 drills)
       run: |
