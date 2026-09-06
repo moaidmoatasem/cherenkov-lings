@@ -25,10 +25,13 @@ export const ModuleScreen: React.FC<ModuleScreenProps> = ({ step, onStep, onOpen
         not change per learner or per drill -- for a drill with real theory
         and hints behind it, open it from the catalog instead. */}
     <p className="l-meta" style={{ lineHeight: 1.6 }}>
-      <strong style={{ color: 'var(--l-ink)' }}>A worked example.</strong> One module,
-      shown end to end, so the shape of read → watch → practice → build is clear
-      before you start. A drill opened from All modules shows its own theory and
-      hints instead.
+      <strong style={{ color: 'var(--l-ink)' }}>A worked example.</strong> One Web
+      Automation module, shown end to end, so the shape of read → watch → practice
+      → build is clear before you start. That full shape is specific to this track:
+      a drill opened from All modules shows its own theory and hints, and for
+      tracks that can't run in a browser — Performance, Mobile, API-in-Java — Watch
+      and Practice don't exist there either; Read and Hints hand off straight to
+      the real tool in your terminal.
     </p>
 
     <div className="l-steps" role="tablist" aria-label="Module steps">
@@ -134,11 +137,16 @@ const ReadStep: React.FC<{ onNext: () => void }> = ({ onNext }) => {
 const WatchStep: React.FC = () => (
   <div className="l-split l-watch">
     <div className="l-col" style={{ gap: 16 }}>
+      {/* This frame is a still illustration of a trace recording, not a working
+          player -- there is no video file behind it. It used to expose a real
+          <button aria-label="Play the module video">, which promised an action
+          it could not perform. A non-interactive frame plus the note below it
+          matches how the Build and Device labs disclose the same thing. */}
       <div className="l-player-frame">
-        <div className="l-player">
-          <button type="button" className="l-player-play" aria-label="Play the module video">
+        <div className="l-player" role="img" aria-label="Still frame of a Playwright trace recording, paused at 3:12">
+          <span className="l-player-play" aria-hidden="true">
             ▶
-          </button>
+          </span>
           <div className="l-player-controls">
             <div className="l-scrub">
               <div className="l-scrub-fill" style={{ width: `${VIDEO.progressPct}%` }} />
@@ -156,6 +164,12 @@ const WatchStep: React.FC = () => (
 
       <h3 className="l-watch-title">{VIDEO.title}</h3>
       <p className="l-watch-body">{VIDEO.body}</p>
+      <p className="l-meta" style={{ lineHeight: 1.6 }}>
+        <strong style={{ color: 'var(--l-ink)' }}>A worked example.</strong> This player is a
+        still illustration — the controls above don't play anything. Open the drill in your
+        editor and run the watcher to read a trace of your own:{' '}
+        <code>cherenkov-lings watch --track=playwright-ts</code>
+      </p>
 
       <div className="l-offer">
         <span className="l-offer-kicker">{VIDEO.offer.kicker}</span>

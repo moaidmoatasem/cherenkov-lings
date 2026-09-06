@@ -729,10 +729,9 @@
   background: rgba(251, 248, 243, 0.94);
   color: var(--l-blue);
   font-size: 19px;
-  cursor: pointer;
+  display: grid;
+  place-items: center;
 }
-
-.l-player-play:hover { background: #ffffff; }
 
 .l-player-controls {
   position: absolute;

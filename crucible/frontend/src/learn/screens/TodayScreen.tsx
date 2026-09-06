@@ -57,7 +57,7 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({
                 the same one for everyone, and a new learner has stopped
                 nowhere. The learner's real next drill is in "Next up" below. */}
             <span className="l-label" style={{ fontSize: 12 }}>
-              How a module works
+              How a Web Automation module works
             </span>
             <h2 className="l-continue-title">{CURRENT_MODULE.title}</h2>
             <p className="l-continue-lede">{CURRENT_MODULE.lede}</p>
@@ -88,7 +88,9 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({
           </div>
           <div className="l-continue-foot">
             <span className="l-continue-foot-note">
-              Runs in your browser. Nothing to install, and your place is kept if you stop.
+              Runs in your browser for this track. Nothing to install, and your place is kept
+              if you stop — Performance, Mobile, and API-in-Java tracks run in your terminal
+              instead, against their real tools.
             </span>
             <span className="l-continue-foot-left">{CURRENT_MODULE.minutesLeft}</span>
           </div>

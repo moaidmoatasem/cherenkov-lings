@@ -43,7 +43,7 @@ export const CURRENT_MODULE = {
   trackTotal: 10,
   title: 'Waiting without sleeping',
   lede:
-    'A walkthrough of one module end to end, so the shape of the loop is clear before you start: read the failure, watch the trace, answer for yourself, then make a real test survive a slow, jittery network.',
+    'A walkthrough of one Web Automation module end to end: read the failure, watch the trace, answer for yourself, then make a real test survive a slow, jittery network. Performance, Mobile, and the other CLI-run tracks skip Watch and Practice — read the theory, take the hints, then build it for real in your terminal.',
   minutesLeft: 'about 40 minutes end to end',
 };
 
@@ -152,7 +152,7 @@ export const TOC: TocEntry[] = [
 export const VIDEO = {
   title: 'Watch the sleep run out, in a real trace',
   body:
-    'This is your own failing run from yesterday. We open the trace and find the moment the response arrived — 240 ms after the wait had already given up.',
+    'A recording of the same failure, walked through end to end: opening the trace and finding the moment the response arrived — 240 ms after the wait had already given up.',
   position: '3:12 / 9:24',
   progressPct: 34,
   offer: {

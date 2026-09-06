@@ -860,9 +860,29 @@ impl JvmRunner {
         let timeout_per_iter = (timeout_ms / (iterations as u64)).max(5000);
 
         for i in 1..=iterations {
-            let result = self
+            let result = match self
                 .run_single_iteration(&class_name, chaos, timeout_per_iter, i)
-                .await?;
+                .await
+            {
+                Ok(result) => result,
+                Err(RunnerError::Io(e)) if e.kind() == std::io::ErrorKind::NotFound => {
+                    return Ok(DrillResponse {
+                        id: req_id,
+                        ok: false,
+                        passed: false,
+                        iterations,
+                        passed_iterations: 0,
+                        failed_iterations: iterations,
+                        total_duration_ms: 0,
+                        runs: Vec::new(),
+                        error: Some(format!(
+                            "Maven binary ('{}') was not found on PATH. Please install Apache Maven (https://maven.apache.org/install.html) and a JDK (17+) alongside it (e.g. 'choco install maven' on Windows or 'brew install maven' on macOS).",
+                            self.maven_cmd
+                        )),
+                    });
+                }
+                Err(e) => return Err(e),
+            };
             if result.passed {
                 passed_iterations += 1;
             } else {
@@ -1231,9 +1251,29 @@ impl K6Runner {
         let timeout_per_iter = (timeout_ms / (iterations as u64)).max(5000);
 
         for i in 1..=iterations {
-            let result = self
+            let result = match self
                 .run_single_iteration(file, chaos, timeout_per_iter, i)
-                .await?;
+                .await
+            {
+                Ok(result) => result,
+                Err(RunnerError::Io(e)) if e.kind() == std::io::ErrorKind::NotFound => {
+                    return Ok(DrillResponse {
+                        id: req_id,
+                        ok: false,
+                        passed: false,
+                        iterations,
+                        passed_iterations: 0,
+                        failed_iterations: iterations,
+                        total_duration_ms: 0,
+                        runs: Vec::new(),
+                        error: Some(format!(
+                            "k6 binary ('{}') was not found on PATH. Please install k6 (https://k6.io/docs/get-started/installation/) — e.g. 'winget install k6' or 'choco install k6' on Windows, or 'brew install k6' on macOS.",
+                            self.k6_cmd
+                        )),
+                    });
+                }
+                Err(e) => return Err(e),
+            };
             if result.passed {
                 passed_iterations += 1;
             } else {
@@ -1427,6 +1467,10 @@ impl MaestroRunner {
         let timeout_per_iter = (timeout_ms / (iterations as u64)).max(5000);
 
         for i in 1..=iterations {
+            // Unlike the other runners, run_single_iteration here never spawns the
+            // `maestro` binary -- it validates flow YAML locally in Rust (see
+            // validate_flow_definition above), so a missing-binary Io/NotFound
+            // error is not a real outcome of this loop, and `?` is correct as-is.
             let result = self
                 .run_single_iteration(file, chaos, timeout_per_iter, i)
                 .await?;
@@ -2948,6 +2992,59 @@ Expected status code <200> but was <409>.
         let err = response.error.unwrap();
         assert!(err.contains("not found on PATH"));
         assert!(err.contains("Apache JMeter"));
+    }
+
+    #[tokio::test]
+    async fn test_k6_runner_missing_binary_graceful_handling() {
+        let _guard = SUBPROCESS_GUARD.lock().await;
+        let runner = K6Runner::with_k6_cmd("nonexistent-k6-bin-xyz-99999");
+        let temp_dir = std::env::temp_dir();
+        let test_file = temp_dir.join("test_k6_script_sample.js");
+        std::fs::write(&test_file, "export default function () {}").expect("Write k6 script");
+
+        let response = runner
+            .run_drill(test_file.to_str().unwrap(), "", 2, 5000)
+            .await
+            .expect("Runner execution should not panic or return Err");
+
+        let _ = std::fs::remove_file(&test_file);
+
+        assert!(!response.ok);
+        assert!(!response.passed);
+        assert_eq!(response.passed_iterations, 0);
+        assert_eq!(response.failed_iterations, 2);
+        assert!(response.error.is_some());
+        let err = response.error.unwrap();
+        assert!(err.contains("not found on PATH"));
+        assert!(err.contains("k6"));
+    }
+
+    #[tokio::test]
+    async fn test_jvm_runner_missing_binary_graceful_handling() {
+        let _guard = SUBPROCESS_GUARD.lock().await;
+        let runner = JvmRunner::with_maven_cmd(
+            "exercises/02_api_restassured_java",
+            "nonexistent-mvn-bin-xyz-99999",
+        );
+
+        let response = runner
+            .run_drill(
+                "exercises/02_api_restassured_java/src/test/java/com/cherenkov/drill01_idempotency/IdempotencyTest.java",
+                "",
+                2,
+                5000,
+            )
+            .await
+            .expect("Runner execution should not panic or return Err");
+
+        assert!(!response.ok);
+        assert!(!response.passed);
+        assert_eq!(response.passed_iterations, 0);
+        assert_eq!(response.failed_iterations, 2);
+        assert!(response.error.is_some());
+        let err = response.error.unwrap();
+        assert!(err.contains("not found on PATH"));
+        assert!(err.contains("Apache Maven"));
     }
 
     #[tokio::test]
