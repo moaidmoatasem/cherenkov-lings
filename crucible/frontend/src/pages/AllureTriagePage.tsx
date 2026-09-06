@@ -267,17 +267,23 @@ export const AllureTriagePage: React.FC = () => {
 
   // Allure KPI Metrics: seeded offline, replaced by GET /api/reports/allure
   // (the same 70-case chaos dataset the triage tests below come from) as soon
-  // as it answers.
+  // as it answers. Every case in that dataset exists to be triaged -- the
+  // point of the drill is diagnosing why each one failed -- so a healthy-
+  // looking "76.5% passing" placeholder was never what the live report says;
+  // it's 0% passing, 70 real_bugs/flaky_infra/anti_patterns cases and nothing
+  // else. Kept in the same shape fetchAllureSummary() produces from the live
+  // response (crucible/frontend/src/lib/triageApi.ts) so this placeholder
+  // and the real fetch never tell two different stories.
   const [metrics, setMetrics] = useState<AllureMetrics>({
-    total: 68,
-    passed: 52,
-    flaky: 10,
-    failed: 6,
-    passRate: '76.5',
-    flakyRate: '14.7',
-    productBugs: 6,
-    flakyInfra: 7,
-    antiPatterns: 3,
+    total: 70,
+    passed: 0,
+    flaky: 24,
+    failed: 46,
+    passRate: '0.0',
+    flakyRate: '34.3',
+    productBugs: 19,
+    flakyInfra: 25,
+    antiPatterns: 26,
     stabilityTrend: [
       { label: 'Least reliable quintile', passPct: 65 },
       { label: 'Below-average quintile', passPct: 71 },
