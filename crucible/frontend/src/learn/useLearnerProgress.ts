@@ -17,9 +17,6 @@ import type { Kpi } from './types';
  * can say it is still reading rather than show a number nobody earned.
  */
 
-/** Achievements defined by the Rust engine (`ALL_ACHIEVEMENTS`). */
-export const TOTAL_ACHIEVEMENTS = 8;
-
 interface ApiAchievement {
   id?: string;
   name?: string;
@@ -43,6 +40,13 @@ interface ProgressResponse {
   achievements?: ApiAchievement[];
   /** Keyed `"<track>/<drill>"` by the engine; tolerate a list too. */
   completed_drills?: Record<string, ApiDrillRecord> | ApiDrillRecord[];
+  /**
+   * Size of the achievement catalog -- not just Rust's ALL_ACHIEVEMENTS, but
+   * that plus "first_triage", which is awarded from the Python triage path
+   * alone and isn't in Rust's list. Computed server-side so this file never
+   * has to guess a count that lives in two languages.
+   */
+  total_achievements?: number;
 }
 
 interface CurriculumResponse {
@@ -69,6 +73,8 @@ export interface LearnerProgress {
   /** Distinct tracks the learner has completed at least one drill in. */
   tracksStarted: number;
   badges: EarnedBadge[];
+  /** Size of the achievement catalog, via GET /api/progress. */
+  totalAchievements: number;
   /** `"<track>/<drill>"` keys, for marking the catalog. */
   completedKeys: string[];
   /** Completed drill count per track id. */
@@ -87,6 +93,7 @@ const EMPTY_BASE: Omit<LearnerProgress, 'kpis'> = {
   tracksTotal: 0,
   tracksStarted: 0,
   badges: [],
+  totalAchievements: 0,
   completedKeys: [],
   builtByTrack: {},
   live: false,
@@ -172,6 +179,10 @@ export function useLearnerProgress(): LearnerProgress {
               description: a.description ?? '',
               unlockedOn: shortDate(a.unlocked_at),
             })),
+            totalAchievements:
+              typeof data.total_achievements === 'number'
+                ? data.total_achievements
+                : prev.totalAchievements,
             live: true,
           };
           return { ...next, kpis: buildKpis(next) };

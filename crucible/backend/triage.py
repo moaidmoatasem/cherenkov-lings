@@ -39,6 +39,18 @@ _LEVEL_THRESHOLDS: list[tuple[int, str]] = [
     (0, "Trainee"),
 ]
 
+# The frontend's "N of TOTAL badges" figure used to hardcode TOTAL as the
+# length of src/gamification.rs's ALL_ACHIEVEMENTS (8) -- but this file
+# awards a ninth, "first_triage" ("Triage Detective"), that Rust's list
+# knows nothing about, since a Triage submission never goes through Rust's
+# check_achievements. A learner who earns every achievement then sees
+# "9 of 8" (confirmed against a real .cherenkov-progress.json this session).
+# Exposed via /api/progress as total_achievements instead of leaving the
+# frontend to keep guessing a count that lives in two places.
+RUST_ACHIEVEMENT_COUNT = 8  # len(ALL_ACHIEVEMENTS) in src/gamification.rs
+TRIAGE_ACHIEVEMENT_COUNT = 1  # "first_triage", awarded only from this file
+TOTAL_ACHIEVEMENT_COUNT = RUST_ACHIEVEMENT_COUNT + TRIAGE_ACHIEVEMENT_COUNT
+
 
 def level_name_for_xp(xp: int) -> str:
     """Resolve the rank title for a given XP total, per the canonical ladder."""
@@ -236,12 +248,20 @@ def score_suggested_fix(
 
 
 def load_gamification_progress(file_path: Path | None = None) -> dict[str, Any]:
-    """Load existing gamification progress or return default state."""
+    """Load existing gamification progress or return default state.
+
+    `total_achievements` is computed here, not persisted on disk: it is a
+    constant fact about the achievement catalog, not learner state, so
+    injecting it at read time keeps the saved file free of a value that
+    would otherwise need updating everywhere the file is written.
+    """
     if file_path is None:
         file_path = progress_file_path()
     if file_path.exists():
         try:
-            return json.loads(file_path.read_text(encoding="utf-8"))
+            state = json.loads(file_path.read_text(encoding="utf-8"))
+            state["total_achievements"] = TOTAL_ACHIEVEMENT_COUNT
+            return state
         except Exception:
             pass
 
@@ -254,6 +274,7 @@ def load_gamification_progress(file_path: Path | None = None) -> dict[str, Any]:
         "perfect_locator_count": 0,
         "achievements": [],
         "completed_drills": {},
+        "total_achievements": TOTAL_ACHIEVEMENT_COUNT,
     }
 
 
