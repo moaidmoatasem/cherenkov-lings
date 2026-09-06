@@ -27,4 +27,4 @@ import requests
 
 def test_checkout_total_via_api():
     # Write your API test here
-    pass  # TODO: POST to /checkout and assert on total
+    assert False, "TODO: POST to /checkout and assert on total"

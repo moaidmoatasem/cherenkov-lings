@@ -28,4 +28,4 @@ The Pact JSON records each expected request-response pair: the HTTP method, path
 Pact supports two verification strategies: **stateful** (the provider sets up database state before replaying requests) and **stateless** (the provider's endpoints must work without setup). Stateful verification is more realistic but requires the provider to implement setup/teardown hooks. Stateless verification is faster and catches more edge cases because it tests the endpoint's behavior under arbitrary conditions.
 
 ## You will now simulate this in the Crucible
-Run `cherenkov-lings watch --track=contract-pact` and verify the consumer contract by generating a Pact file from the consumer test and verifying it against the Crucible backend.
+First, `pip install -r exercises/09_contract_pact/requirements.txt` (the `pact` package used below is `pact-python`, not on your system by default). Then run `cherenkov-lings watch --track=contract-pact` and verify the consumer contract by generating a Pact file from the consumer test and verifying it against the Crucible backend.

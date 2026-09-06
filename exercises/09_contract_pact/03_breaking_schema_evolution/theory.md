@@ -26,4 +26,4 @@ $$\text{Breaking (Unsafe)}: \text{Schema}_{\text{v2}} \not\supseteq \text{Schema
 Automated contract testing prevents destructive evolution by ensuring that every newly added capability is strictly additive and existing fields retain their names, semantics, and structural types.
 
 ## You will now simulate this in the Crucible
-Run `cherenkov-lings watch --track=contract-pact` and verify non-breaking backward compatibility.
+First, `pip install -r exercises/09_contract_pact/requirements.txt` to get `pact-python`. Then run `cherenkov-lings watch --track=contract-pact` and verify non-breaking backward compatibility.
