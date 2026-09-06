@@ -237,7 +237,7 @@ export const MissionControlPage: React.FC = () => {
             </div>
             <div style={{ textAlign: 'center', background: 'rgba(15, 23, 42, 0.6)', padding: '12px 18px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>🧪 Total Drills</div>
-              <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--accent-cyan)' }}>{totalDrillsCount || 68}</div>
+              <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--accent-cyan)' }}>{totalDrillsCount || '—'}</div>
             </div>
           </div>
         </div>
@@ -287,8 +287,9 @@ export const MissionControlPage: React.FC = () => {
 
         <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr auto', gap: '10px', marginBottom: '14px' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Method</label>
+            <label htmlFor="chaos-method" style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Method</label>
             <select
+              id="chaos-method"
               value={chaosMethod}
               onChange={(e) => setChaosMethod(e.target.value)}
               className="form-input"
@@ -300,8 +301,9 @@ export const MissionControlPage: React.FC = () => {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Endpoint</label>
+            <label htmlFor="chaos-endpoint" style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Endpoint</label>
             <select
+              id="chaos-endpoint"
               value={chaosEndpoint}
               onChange={(e) => {
                 setChaosEndpoint(e.target.value);
@@ -392,7 +394,7 @@ export const MissionControlPage: React.FC = () => {
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
           <div>
-            <h2 className="card-title" style={{ margin: 0 }}>📚 {totalDrillsCount || 68}-Drill Polyglot Curriculum Catalog</h2>
+            <h2 className="card-title" style={{ margin: 0 }}>📚 {totalDrillsCount || '—'}-Drill Polyglot Curriculum Catalog</h2>
             <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '4px' }}>
               Click any drill to read its Real-World Production Story, failure mechanism, and progressive hints.
             </p>

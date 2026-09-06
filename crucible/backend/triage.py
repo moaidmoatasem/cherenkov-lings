@@ -22,6 +22,31 @@ from crucible.backend.reports import generate_chaos_dataset
 
 DEFAULT_PROGRESS_FILENAME = ".cherenkov-progress.json"
 
+# Mirrors the canonical LEVELS table in src/gamification.rs. The Rust engine
+# and this Python triage path both write level_name into the same shared
+# .cherenkov-progress.json, so a second, differently-named/thresholded scale
+# here isn't a harmless duplicate -- it makes a learner's displayed rank flip
+# between two vocabularies depending on whether their last XP came from a CLI
+# drill or a browser Triage submission. Keep the (min_xp, name) pairs in sync
+# with LEVELS if that table ever changes.
+_LEVEL_THRESHOLDS: list[tuple[int, str]] = [
+    (20000, "SDET Master"),
+    (10000, "QA Architect"),
+    (6000, "Lead QA"),
+    (3000, "Senior QA"),
+    (1500, "Mid QA"),
+    (500, "Junior QA"),
+    (0, "Trainee"),
+]
+
+
+def level_name_for_xp(xp: int) -> str:
+    """Resolve the rank title for a given XP total, per the canonical ladder."""
+    for min_xp, name in _LEVEL_THRESHOLDS:
+        if xp >= min_xp:
+            return name
+    return "Trainee"
+
 
 def progress_file_path() -> Path:
     """Where learner progress lives.
@@ -331,18 +356,9 @@ def evaluate_triage_submission(
         progress_state["streak_days"] = 1
     progress_state["last_active_date"] = now_iso
 
-    # Level calculation
-    xp = progress_state["total_xp"]
-    if xp >= 5000:
-        progress_state["level_name"] = "Principal QA Architect"
-    elif xp >= 2500:
-        progress_state["level_name"] = "Senior SDET"
-    elif xp >= 1000:
-        progress_state["level_name"] = "SDET Engineer"
-    elif xp >= 500:
-        progress_state["level_name"] = "Junior SDET"
-    else:
-        progress_state["level_name"] = "Trainee"
+    # Level calculation -- see level_name_for_xp for why this must match
+    # src/gamification.rs's LEVELS table rather than defining its own scale.
+    progress_state["level_name"] = level_name_for_xp(progress_state["total_xp"])
 
     badge_unlocked = None
     existing_achievements = progress_state.get("achievements", [])

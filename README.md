@@ -155,19 +155,19 @@ Open any `exercise.*` file in your favorite editor, write your fix, and hit **Sa
 * **Today** — the home screen: live points/streak from `/api/progress`, and the next suggested module.
 * **Module** — a single drill walked through four steps (Read the theory, Watch a worked example, Practice, Build the real fix) before it hands off to the CLI watcher loop.
 * **Lab / Device** — in-browser (`BrowserLabScreen`) or mobile-device (`DeviceLabScreen`) practice views for tracks that need them.
-* **All Modules** — the full 14-track / 72-drill catalog, driven by the manifest (`lings.toml`), not a hardcoded list.
+* **All Modules** — the full 14-track / 73-drill catalog, driven by the manifest (`lings.toml`), not a hardcoded list.
 * **Record** — your actual progress record: what you've proven, not a badge wall.
 * **`/sandbox`** — the raw Micro-Crucible pathology demo pages (Checkout, Shadow DOM, Search, Transfer, Catalog, Dashboard, Payment, Profile, Mobile Test) that the Playwright/API drills automate against, plus Mission Control's Code Review / Pipeline Builder / Allure Triage tabs.
 
 ---
 
-## 📚 72-Drill Curriculum Matrix (14 Tracks)
+## 📚 73-Drill Curriculum Matrix (14 Tracks)
 
 | Track | Stack | Drills | Core Concepts & Incident Case Studies |
 |---|---|:---:|---|
 | **0. Getting Started** | Python / Pytest | 4 | Reading a test result, reading a traceback, reading a diff, translating a manual test case into an assertion — zero prior coding-drill assumed |
 | **0a. Foundations** | Python / Pytest | 5 | AAA pattern, assertions as documentation, avoiding mock traps, single-responsibility |
-| **0b. API Validation** | Python / Pytest | 1 | Status codes, response bodies and schema shape as a first API assertion |
+| **0b. API Validation** | Python / Pytest | 2 | Status codes, response bodies and schema shape as a first API assertion; OpenTelemetry distributed trace & span ID correlation |
 | **1. Web UI** | Playwright TS | 10 | React hydration click drops, closed Shadow DOM piercing, debounced race conditions, Page Object Model, cross-origin payment iframes, network request intercepts, visual regression thresholds, worker storageState isolation |
 | **2. API Resilience** | REST Assured Java | 7 | HTTP 409 idempotency collisions, transparent JWT 401 interceptors, Kafka lag polling, multi-page pagination loops, JSON schema contracts, aliased GraphQL queries, `RequestSpecBuilder` reuse |
 | **3. Mobile UI** | Maestro YAML | 6 | Biometric auth fallback flows, deep link cold starts, activity recreation & screen rotation UI state, dynamic list `scrollUntilVisible`, OS permission dialog handlers |
