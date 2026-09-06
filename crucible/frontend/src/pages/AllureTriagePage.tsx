@@ -303,10 +303,10 @@ export const AllureTriagePage: React.FC = () => {
   const donutSegments = useMemo(() => {
     const total = metrics.total || 1;
     const slices = [
-      { key: 'passed', label: 'Passed', color: '#4ade80', value: metrics.passed },
-      { key: 'productBugs', label: 'Product Bugs', color: '#f87171', value: metrics.productBugs },
-      { key: 'flakyInfra', label: 'Flaky Infra', color: '#fbbf24', value: metrics.flakyInfra },
-      { key: 'antiPatterns', label: 'Anti-Patterns', color: '#c084fc', value: metrics.antiPatterns },
+      { key: 'passed', label: 'Passed', color: 'var(--accent-green)', value: metrics.passed },
+      { key: 'productBugs', label: 'Product Bugs', color: 'var(--accent-red)', value: metrics.productBugs },
+      { key: 'flakyInfra', label: 'Flaky Infra', color: 'var(--accent-amber)', value: metrics.flakyInfra },
+      { key: 'antiPatterns', label: 'Anti-Patterns', color: 'var(--accent-purple)', value: metrics.antiPatterns },
     ];
     let offset = 0;
     return slices.map((slice) => {
