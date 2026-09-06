@@ -291,18 +291,21 @@ jobs:
           path: target/
 "#;
     let validation = validate_workflow(workflow);
+    // Both are errors, not warnings: a learner's unfixed drill must not
+    // report `valid` (which is gated on errors alone) until these are fixed.
     assert!(
         validation
-            .warnings
+            .errors
             .iter()
-            .any(|w| w.code == "MISSING_CONCURRENCY")
+            .any(|e| e.code == "MISSING_CONCURRENCY")
     );
     assert!(
         validation
-            .warnings
+            .errors
             .iter()
-            .any(|w| w.code == "MISSING_TIMEOUT")
+            .any(|e| e.code == "MISSING_TIMEOUT")
     );
+    assert!(!validation.valid);
 }
 
 #[test]

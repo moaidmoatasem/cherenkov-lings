@@ -45,9 +45,9 @@ export const MobileTestPage: React.FC = () => {
           {biometricState === 'unavailable' && <p>Biometric unavailable</p>}
           {biometricState === 'pin' && (
             <div>
-              <p>Enter PIN:</p>
+              <label htmlFor="pin-input">Enter PIN:</label>
               <input type="password" id="pin-input" data-testid="pin-input" style={{ padding: '8px', width: '100%', marginBottom: '8px' }} />
-              <button id="pin-submit" data-testid="pin-submit" onClick={handlePinSubmit} style={{ padding: '8px 16px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px' }}>
+              <button id="pin-submit" data-testid="pin-submit" onClick={handlePinSubmit} style={{ padding: '8px 16px', backgroundColor: '#0a58ca', color: 'white', border: 'none', borderRadius: '4px' }}>
                 Submit PIN
               </button>
             </div>
@@ -57,22 +57,22 @@ export const MobileTestPage: React.FC = () => {
 
       {biometricState === 'authenticated' && (
         <div style={{ padding: '10px', margin: '10px 0', backgroundColor: '#d4edda', borderRadius: '4px' }}>
-          <p id="welcome-message" data-testid="welcome-message">Welcome, SDET Engineer</p>
+          <p id="welcome-message" data-testid="welcome-message" style={{ color: '#0f5132' }}>Welcome, SDET Engineer</p>
         </div>
       )}
 
       {screen === 'home' && (
         <div>
           <button id="login-biometric" data-testid="login-biometric" onClick={handleBiometric}
-            style={{ display: 'block', width: '100%', padding: '12px', marginBottom: '10px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', fontSize: '16px' }}>
+            style={{ display: 'block', width: '100%', padding: '12px', marginBottom: '10px', backgroundColor: '#157347', color: 'white', border: 'none', borderRadius: '4px', fontSize: '16px' }}>
             Login with Biometric
           </button>
           <button id="view-balance" data-testid="view-balance" onClick={() => setScreen('balance')}
-            style={{ display: 'block', width: '100%', padding: '12px', marginBottom: '10px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', fontSize: '16px' }}>
+            style={{ display: 'block', width: '100%', padding: '12px', marginBottom: '10px', backgroundColor: '#0a58ca', color: 'white', border: 'none', borderRadius: '4px', fontSize: '16px' }}>
             View Balance
           </button>
           <button id="view-products" data-testid="view-products" onClick={() => { setScreen('products'); setProductScroll(true); }}
-            style={{ display: 'block', width: '100%', padding: '12px', marginBottom: '10px', backgroundColor: '#17a2b8', color: 'white', border: 'none', borderRadius: '4px', fontSize: '16px' }}>
+            style={{ display: 'block', width: '100%', padding: '12px', marginBottom: '10px', backgroundColor: '#0f6674', color: 'white', border: 'none', borderRadius: '4px', fontSize: '16px' }}>
             View Products
           </button>
           <button id="view-alerts" data-testid="view-alerts" onClick={() => setScreen('alerts')}
@@ -106,7 +106,7 @@ export const MobileTestPage: React.FC = () => {
             <div style={{ padding: '15px', textAlign: 'center', backgroundColor: '#f8f9fa' }}>
               <button id="btn-checkout" data-testid="btn-checkout"
                 onClick={() => { setScreen('home'); alert('Order Confirmed'); }}
-                style={{ padding: '10px 24px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', fontSize: '16px' }}>
+                style={{ padding: '10px 24px', backgroundColor: '#157347', color: 'white', border: 'none', borderRadius: '4px', fontSize: '16px' }}>
                 Checkout
               </button>
             </div>

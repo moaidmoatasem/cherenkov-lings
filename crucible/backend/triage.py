@@ -22,6 +22,43 @@ from crucible.backend.reports import generate_chaos_dataset
 
 DEFAULT_PROGRESS_FILENAME = ".cherenkov-progress.json"
 
+# Mirrors the canonical LEVELS table in src/gamification.rs. The Rust engine
+# and this Python triage path both write level_name into the same shared
+# .cherenkov-progress.json, so a second, differently-named/thresholded scale
+# here isn't a harmless duplicate -- it makes a learner's displayed rank flip
+# between two vocabularies depending on whether their last XP came from a CLI
+# drill or a browser Triage submission. Keep the (min_xp, name) pairs in sync
+# with LEVELS if that table ever changes.
+_LEVEL_THRESHOLDS: list[tuple[int, str]] = [
+    (20000, "SDET Master"),
+    (10000, "QA Architect"),
+    (6000, "Lead QA"),
+    (3000, "Senior QA"),
+    (1500, "Mid QA"),
+    (500, "Junior QA"),
+    (0, "Trainee"),
+]
+
+# The frontend's "N of TOTAL badges" figure used to hardcode TOTAL as the
+# length of src/gamification.rs's ALL_ACHIEVEMENTS (8) -- but this file
+# awards a ninth, "first_triage" ("Triage Detective"), that Rust's list
+# knows nothing about, since a Triage submission never goes through Rust's
+# check_achievements. A learner who earns every achievement then sees
+# "9 of 8" (confirmed against a real .cherenkov-progress.json this session).
+# Exposed via /api/progress as total_achievements instead of leaving the
+# frontend to keep guessing a count that lives in two places.
+RUST_ACHIEVEMENT_COUNT = 8  # len(ALL_ACHIEVEMENTS) in src/gamification.rs
+TRIAGE_ACHIEVEMENT_COUNT = 1  # "first_triage", awarded only from this file
+TOTAL_ACHIEVEMENT_COUNT = RUST_ACHIEVEMENT_COUNT + TRIAGE_ACHIEVEMENT_COUNT
+
+
+def level_name_for_xp(xp: int) -> str:
+    """Resolve the rank title for a given XP total, per the canonical ladder."""
+    for min_xp, name in _LEVEL_THRESHOLDS:
+        if xp >= min_xp:
+            return name
+    return "Trainee"
+
 
 def progress_file_path() -> Path:
     """Where learner progress lives.
@@ -211,12 +248,20 @@ def score_suggested_fix(
 
 
 def load_gamification_progress(file_path: Path | None = None) -> dict[str, Any]:
-    """Load existing gamification progress or return default state."""
+    """Load existing gamification progress or return default state.
+
+    `total_achievements` is computed here, not persisted on disk: it is a
+    constant fact about the achievement catalog, not learner state, so
+    injecting it at read time keeps the saved file free of a value that
+    would otherwise need updating everywhere the file is written.
+    """
     if file_path is None:
         file_path = progress_file_path()
     if file_path.exists():
         try:
-            return json.loads(file_path.read_text(encoding="utf-8"))
+            state = json.loads(file_path.read_text(encoding="utf-8"))
+            state["total_achievements"] = TOTAL_ACHIEVEMENT_COUNT
+            return state
         except Exception:
             pass
 
@@ -229,6 +274,7 @@ def load_gamification_progress(file_path: Path | None = None) -> dict[str, Any]:
         "perfect_locator_count": 0,
         "achievements": [],
         "completed_drills": {},
+        "total_achievements": TOTAL_ACHIEVEMENT_COUNT,
     }
 
 
@@ -331,18 +377,9 @@ def evaluate_triage_submission(
         progress_state["streak_days"] = 1
     progress_state["last_active_date"] = now_iso
 
-    # Level calculation
-    xp = progress_state["total_xp"]
-    if xp >= 5000:
-        progress_state["level_name"] = "Principal QA Architect"
-    elif xp >= 2500:
-        progress_state["level_name"] = "Senior SDET"
-    elif xp >= 1000:
-        progress_state["level_name"] = "SDET Engineer"
-    elif xp >= 500:
-        progress_state["level_name"] = "Junior SDET"
-    else:
-        progress_state["level_name"] = "Trainee"
+    # Level calculation -- see level_name_for_xp for why this must match
+    # src/gamification.rs's LEVELS table rather than defining its own scale.
+    progress_state["level_name"] = level_name_for_xp(progress_state["total_xp"])
 
     badge_unlocked = None
     existing_achievements = progress_state.get("achievements", [])

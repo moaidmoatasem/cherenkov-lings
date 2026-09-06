@@ -370,11 +370,11 @@ export const TRACKS: Track[] = [
     state: 'finished',
     skills: ['Pytest', 'Assertions', 'Test design'],
     modules: [
-      { id: 'f1', title: 'What a test really is', situation: 'You inherit a suite nobody trusts', duration: '24m', state: 'done', hasVideo: true, minutes: 24 },
-      { id: 'f2', title: 'Naming that survives review', situation: 'A failure report no one can read', duration: '22m', state: 'done', hasVideo: false, minutes: 22 },
-      { id: 'f3', title: 'Arrange, act, assert', situation: 'Three tests tangled into one', duration: '26m', state: 'done', hasVideo: true, minutes: 26 },
-      { id: 'f4', title: "Don't test the mock", situation: 'Green tests, broken product', duration: '28m', state: 'done', hasVideo: false, minutes: 28 },
-      { id: 'f5', title: 'One thing per test', situation: 'A failure with five possible causes', duration: '20m', state: 'done', hasVideo: true, minutes: 20 },
+      { id: 'f1', realId: '01_what_is_a_test', title: 'What a test really is', situation: 'You inherit a suite nobody trusts', duration: '24m', state: 'done', hasVideo: true, minutes: 24 },
+      { id: 'f2', realId: '02_test_naming_matters', title: 'Naming that survives review', situation: 'A failure report no one can read', duration: '22m', state: 'done', hasVideo: false, minutes: 22 },
+      { id: 'f3', realId: '03_arrange_act_assert', title: 'Arrange, act, assert', situation: 'Three tests tangled into one', duration: '26m', state: 'done', hasVideo: true, minutes: 26 },
+      { id: 'f4', realId: '04_dont_test_the_mock', title: "Don't test the mock", situation: 'Green tests, broken product', duration: '28m', state: 'done', hasVideo: false, minutes: 28 },
+      { id: 'f5', realId: '05_one_thing_per_test', title: 'One thing per test', situation: 'A failure with five possible causes', duration: '20m', state: 'done', hasVideo: true, minutes: 20 },
     ],
   },
   {
@@ -386,12 +386,15 @@ export const TRACKS: Track[] = [
     state: 'in progress',
     skills: ['Playwright', 'Locators', 'Auto-waiting', 'Traces'],
     modules: [
-      { id: 'w1', title: 'Hydration timing', situation: 'The button exists but does nothing yet', duration: '40m', state: 'done', hasVideo: true, minutes: 40 },
-      { id: 'w2', title: 'Shadow DOM', situation: 'A component your selector cannot see', duration: '38m', state: 'done', hasVideo: true, minutes: 38 },
-      { id: 'w3', title: 'Debounced search', situation: 'The race you only lose in CI', duration: '42m', state: 'done', hasVideo: true, minutes: 42 },
+      { id: 'w1', realId: '01_hydration_timing', title: 'Hydration timing', situation: 'The button exists but does nothing yet', duration: '40m', state: 'done', hasVideo: true, minutes: 40 },
+      { id: 'w2', realId: '02_shadow_dom_v2', title: 'Shadow DOM', situation: 'A component your selector cannot see', duration: '38m', state: 'done', hasVideo: true, minutes: 38 },
+      { id: 'w3', realId: '03_debounce_race_condition', title: 'Debounced search', situation: 'The race you only lose in CI', duration: '42m', state: 'done', hasVideo: true, minutes: 42 },
+      // No manifest drill teaches this specific scenario -- it's a worked
+      // walkthrough of the loop itself, not a track module. See LearnApp's
+      // openCatalogModule and types.ts's CurriculumModule.realId.
       { id: 'waiting-without-sleeping', title: 'Waiting without sleeping', situation: 'One run in five fails, nobody knows why', duration: '45m', state: 'now', hasVideo: true, minutes: 45 },
-      { id: 'w5', title: 'Locator hierarchy', situation: 'A refactor breaks forty tests', duration: '35m', state: 'todo', hasVideo: true, minutes: 35 },
-      { id: 'w6', title: 'Page objects, lightly', situation: 'Abstraction that hides the failure', duration: '32m', state: 'todo', hasVideo: false, minutes: 32 },
+      { id: 'w5', realId: '05_locator_hierarchy', title: 'Locator hierarchy', situation: 'A refactor breaks forty tests', duration: '35m', state: 'todo', hasVideo: true, minutes: 35 },
+      { id: 'w6', realId: '06_page_object_intro', title: 'Page objects, lightly', situation: 'Abstraction that hides the failure', duration: '32m', state: 'todo', hasVideo: false, minutes: 32 },
     ],
   },
   {
@@ -403,9 +406,9 @@ export const TRACKS: Track[] = [
     state: 'in progress',
     skills: ['Maestro', 'Device state', 'Deep links'],
     modules: [
-      { id: 'm1', title: 'Biometric fallback', situation: 'Face ID unavailable after a restart', duration: '34m', state: 'now', hasVideo: true, minutes: 34 },
-      { id: 'm2', title: 'Deep link, cold start', situation: 'The link works only when the app is warm', duration: '30m', state: 'todo', hasVideo: false, minutes: 30 },
-      { id: 'm3', title: 'Activity recreation', situation: 'Android kills your app mid-flow', duration: '32m', state: 'todo', hasVideo: true, minutes: 32 },
+      { id: 'm1', realId: '01_biometric_fallback', title: 'Biometric fallback', situation: 'Face ID unavailable after a restart', duration: '34m', state: 'now', hasVideo: true, minutes: 34 },
+      { id: 'm2', realId: '02_deep_link_cold_start', title: 'Deep link, cold start', situation: 'The link works only when the app is warm', duration: '30m', state: 'todo', hasVideo: false, minutes: 30 },
+      { id: 'm3', realId: '03_activity_recreation', title: 'Activity recreation', situation: 'Android kills your app mid-flow', duration: '32m', state: 'todo', hasVideo: true, minutes: 32 },
     ],
   },
   {
@@ -417,9 +420,12 @@ export const TRACKS: Track[] = [
     state: 'not started',
     skills: ['REST Assured', 'Idempotency', 'Schemas'],
     modules: [
-      { id: 'a1', title: 'Idempotency keys', situation: 'A retry charges the customer twice', duration: '36m', state: 'todo', hasVideo: true, minutes: 36 },
+      { id: 'a1', realId: 'drill01_idempotency', title: 'Idempotency keys', situation: 'A retry charges the customer twice', duration: '36m', state: 'todo', hasVideo: true, minutes: 36 },
+      // No manifest drill in this track matches "elevation to an admin route"
+      // closely enough to claim as this one's realId -- see the comment on
+      // CurriculumModule.realId in types.ts.
       { id: 'a2', title: 'Tokens and elevation', situation: 'A standard user reaches an admin route', duration: '40m', state: 'todo', hasVideo: false, minutes: 40 },
-      { id: 'a3', title: 'Consumer lag', situation: 'The event arrives, eventually', duration: '34m', state: 'todo', hasVideo: true, minutes: 34 },
+      { id: 'a3', realId: 'drill03_kafka_lag', title: 'Consumer lag', situation: 'The event arrives, eventually', duration: '34m', state: 'todo', hasVideo: true, minutes: 34 },
     ],
   },
 ];

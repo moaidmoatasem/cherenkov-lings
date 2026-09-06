@@ -90,7 +90,7 @@ export const BadgeCard: React.FC<BadgeCardProps> = ({ badge, state, onClick }) =
           data-testid="badge-unlocked-at"
           style={{
             fontSize: '11px',
-            color: 'var(--accent-green, #10b981)',
+            color: 'var(--accent-green)',
             fontFamily: 'var(--font-mono, monospace)',
             marginTop: '2px',
           }}
@@ -127,7 +127,7 @@ export const BadgeCard: React.FC<BadgeCardProps> = ({ badge, state, onClick }) =
               style={{
                 width: `${pct}%`,
                 height: '100%',
-                background: 'var(--accent-amber, #f59e0b)',
+                background: 'var(--accent-amber)',
                 transition: 'width 0.3s ease',
               }}
             />

@@ -1,6 +1,6 @@
 import React from 'react';
 import { CERTIFICATE } from '../content';
-import { TOTAL_ACHIEVEMENTS, type LearnerProgress } from '../useLearnerProgress';
+import type { LearnerProgress } from '../useLearnerProgress';
 import type { Track } from '../types';
 
 interface RecordScreenProps {
@@ -111,7 +111,7 @@ export const RecordScreen: React.FC<RecordScreenProps> = ({ progress, tracks }) 
             <span className="l-label">Already yours</span>
             <span className="l-spacer" />
             <span className="l-meta l-nowrap">
-              {progress.badges.length} of {TOTAL_ACHIEVEMENTS}
+              {progress.badges.length} of {progress.totalAchievements}
             </span>
           </div>
 

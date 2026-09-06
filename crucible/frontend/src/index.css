@@ -60,10 +60,26 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  row-gap: 8px;
   padding: 12px 24px;
-  position: sticky;
-  top: 0;
   z-index: 100;
+}
+
+/* Sticky only once the 15-item nav reliably fits on one line -- wrapped
+   across 3-4 rows on a narrower viewport, a *sticky* header would stay
+   pinned over the page and permanently cover whatever content starts near
+   the top (e.g. Mission Control's badge filter tabs), eating real clicks
+   without any visible sign why. */
+@media (min-width: 1400px) {
+  .site-header {
+    position: sticky;
+    top: 0;
+  }
+}
+
+.header-brand {
+  flex-shrink: 0;
 }
 
 .header-brand .brand-logo {
@@ -105,7 +121,14 @@ body {
 .header-nav {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+  /* 15 destinations don't fit one line below ~1400px. Wrapping here (plus
+     site-header's own wrap so this block gets a full-width line to wrap
+     within) keeps every link keyboard/discoverable without horizontal
+     scroll, instead of the nav silently running off the viewport edge. */
+  flex: 1 1 100%;
+  order: 3;
 }
 
 .nav-link {
@@ -144,6 +167,11 @@ body {
   padding: 4px 10px;
   border-radius: 20px;
   border: 1px solid rgba(74, 222, 128, 0.2);
+  flex-shrink: 0;
+  /* Sits with the brand on line 1; header-nav's 100% basis pushes it to its
+     own full-width line 2 once wrapped, so this needs to render before that
+     line rather than after it in source order. */
+  order: 2;
 }
 
 .status-indicator.live {
@@ -863,6 +891,7 @@ body {
   font-weight: 800;
   letter-spacing: -0.5px;
   margin-bottom: 12px;
+  color: var(--text-main);
 }
 
 .hero-subtitle {
@@ -891,6 +920,7 @@ body {
   font-size: 17px;
   font-weight: 700;
   margin-bottom: 8px;
+  color: var(--text-main);
 }
 
 .drill-card-desc {
@@ -1260,7 +1290,7 @@ body {
 
 .pill-diff.junior { background: rgba(74, 222, 128, 0.15); color: var(--accent-green); }
 .pill-diff.mid { background: rgba(251, 191, 36, 0.15); color: var(--accent-amber); }
-.pill-diff.senior { background: rgba(192, 132, 252, 0.15); color: var(--accent-purple); }
+.pill-diff.senior { background: rgba(192, 132, 252, 0.15); color: #d0aefc; }
 
 /* Workspace 2-Column Grid */
 .review-workspace-grid {
@@ -1308,7 +1338,7 @@ body {
 
 .lang-tag {
   background: #334155;
-  color: var(--text-muted);
+  color: #cbd5e1;
   font-size: 11px;
   padding: 2px 6px;
   border-radius: 4px;
@@ -1345,7 +1375,7 @@ body {
   min-height: 480px;
   max-height: 600px;
   overflow: auto;
-  background: #0b1120;
+  background: var(--bg-dark);
 }
 
 .line-numbers {
@@ -1394,7 +1424,7 @@ body {
 
 /* Diff View */
 .diff-view-wrapper {
-  background: #0b1120;
+  background: var(--bg-dark);
   min-height: 480px;
   padding: 16px;
 }
@@ -1759,12 +1789,12 @@ body {
 }
 
 .vcard-snippet {
-  background: #0b1120;
+  background: var(--bg-dark);
   padding: 6px 10px;
   border-radius: 4px;
   font-family: var(--font-mono);
   font-size: 12px;
-  color: #f87171;
+  color: var(--accent-red);
   margin-bottom: 10px;
   overflow: auto;
 }
@@ -1790,7 +1820,7 @@ body {
 }
 
 .apply-direct-btn {
-  background: var(--primary);
+  background: var(--primary-hover);
   border: none;
   color: #fff;
   padding: 6px 12px;
@@ -1801,7 +1831,7 @@ body {
 }
 
 .apply-direct-btn:hover {
-  background: var(--primary-hover);
+  background: var(--primary);
 }
 
 /* Mentor Tab */
@@ -2038,7 +2068,7 @@ body {
 }
 
 .patch-diff-preview {
-  background: #0b1120;
+  background: var(--bg-dark);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   overflow: hidden;
@@ -2330,7 +2360,7 @@ body {
 
 .text-input {
   width: 100%;
-  background: #0b1120;
+  background: var(--bg-dark);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   padding: 10px 12px;
@@ -2346,7 +2376,7 @@ body {
 }
 
 .pill-check {
-  background: #0b1120;
+  background: var(--bg-dark);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   padding: 6px 12px;
@@ -2370,7 +2400,7 @@ body {
 }
 
 .strategy-opt-btn {
-  background: #0b1120;
+  background: var(--bg-dark);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   padding: 8px 12px;
@@ -2418,8 +2448,8 @@ body {
 .yaml-textarea {
   width: 100%;
   min-height: 520px;
-  background: #0b1120;
-  color: #f8fafc;
+  background: var(--bg-dark);
+  color: var(--text-main);
   font-family: var(--font-mono);
   font-size: 13px;
   line-height: 1.6;
@@ -2450,7 +2480,7 @@ body {
 
 .sim-progress-track {
   height: 10px;
-  background: #0b1120;
+  background: var(--bg-dark);
   border-radius: 5px;
   overflow: hidden;
   margin-bottom: 8px;
@@ -2545,7 +2575,7 @@ body {
 .step-dot.success { background: var(--accent-green); }
 
 .terminal-card {
-  background: #0b1120;
+  background: var(--bg-dark);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   overflow: hidden;
@@ -2566,9 +2596,9 @@ body {
 }
 
 .dot { width: 10px; height: 10px; border-radius: 50%; }
-.dot.red { background: #f87171; }
-.dot.yellow { background: #fbbf24; }
-.dot.green { background: #4ade80; }
+.dot.red { background: var(--accent-red); }
+.dot.yellow { background: var(--accent-amber); }
+.dot.green { background: var(--accent-green); }
 
 .terminal-title {
   font-family: var(--font-mono);
@@ -2607,7 +2637,7 @@ body {
   overflow: auto;
   font-family: var(--font-mono);
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--text-muted);
   line-height: 1.6;
 }
 
@@ -2730,7 +2760,7 @@ body {
 }
 
 .bar-label { width: 160px; color: var(--text-muted); font-size: 11px; }
-.bar-track { flex: 1; height: 8px; background: #0b1120; border-radius: 4px; overflow: hidden; }
+.bar-track { flex: 1; height: 8px; background: var(--bg-dark); border-radius: 4px; overflow: hidden; }
 .bar-fill { height: 100%; border-radius: 4px; }
 .bar-fill.green { background: var(--accent-green); }
 .bar-fill.amber { background: var(--accent-amber); }
@@ -2765,7 +2795,7 @@ body {
 }
 
 .select-input, .search-input {
-  background: #0b1120;
+  background: var(--bg-dark);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   padding: 8px 12px;
@@ -2845,7 +2875,7 @@ body {
 }
 
 .expanded-details-row td {
-  background: #0b1120;
+  background: var(--bg-dark);
   padding: 16px 20px;
 }
 
@@ -2890,7 +2920,7 @@ body {
 .chaos-log-line code {
   font-family: var(--font-mono);
   font-size: 12px;
-  color: #fbbf24;
+  color: var(--accent-amber);
 }
 
 .details-footer-row {
@@ -2941,7 +2971,7 @@ body {
 .triage-title-group p { font-size: 13px; color: var(--text-muted); }
 
 .target-test-badge {
-  background: #0b1120;
+  background: var(--bg-dark);
   border: 1px solid var(--border-color);
   padding: 8px 14px;
   border-radius: var(--radius-sm);
@@ -2989,7 +3019,7 @@ body {
 }
 
 .category-option-card {
-  background: #0b1120;
+  background: var(--bg-dark);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   padding: 16px;
@@ -3007,7 +3037,7 @@ body {
 
 .triage-textarea {
   width: 100%;
-  background: #0b1120;
+  background: var(--bg-dark);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   padding: 12px 14px;
@@ -3058,7 +3088,7 @@ body {
   height: 48px;
   border-radius: 50%;
   background: var(--accent-cyan);
-  color: #0b1120;
+  color: var(--bg-dark);
   font-size: 18px;
   font-weight: 900;
   display: flex;
@@ -3078,7 +3108,7 @@ body {
 }
 
 .contrastive-box {
-  background: #0b1120;
+  background: var(--bg-dark);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   padding: 16px;

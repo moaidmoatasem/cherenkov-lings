@@ -79,12 +79,28 @@ pub async fn watch_exercises(
         let mut last_path: Option<String> = None;
         let debounce_window = Duration::from_millis(50);
 
+        let debug = std::env::var("CHERENKOV_WATCH_DEBUG").is_ok();
         while running_loop.load(Ordering::Relaxed) {
             match std_rx.recv_timeout(debounce_window) {
                 Ok(Ok(event)) => {
+                    if debug {
+                        eprintln!(
+                            "[watch-debug] kind={:?} paths={:?}",
+                            event.kind, event.paths
+                        );
+                    }
+                    // Atomic (rename-based) saves -- the pattern many editors and
+                    // agent tooling use for crash-safe writes -- fire a correct
+                    // Modify(Name(To)) for the real file, then Windows immediately
+                    // reports the *parent directory's* own metadata as modified too.
+                    // Without the is_dir() check, that trailing directory event wins
+                    // the debounce and replaces the real file path with a directory
+                    // path that matches no drill, so the loop fires but silently runs
+                    // nothing -- no error, no scorecard, just quiet from the tool.
                     if (event.kind.is_modify() || event.kind.is_create())
                         && let Some(path) = event.paths.first()
                         && !should_ignore_path(path)
+                        && !path.is_dir()
                     {
                         let path_str = path.to_string_lossy().to_string();
                         last_event_time = Some(Instant::now());

@@ -137,9 +137,13 @@ def test_fuzz_pipeline_validate_giant_matrix():
     """Verify large matrix definition is parsed and scored properly."""
     large_matrix_yaml = """name: Giant Matrix CI
 on: [push]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       matrix:
         browser: [chromium, firefox, webkit]
