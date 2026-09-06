@@ -24,4 +24,4 @@ Key verification rules:
 3. **Status Enums**: Response status codes and state transitions must adhere to allowable contract sets.
 
 ## You will now simulate this in the Crucible
-Run `cherenkov-lings watch --track=contract-pact` and verify that provider endpoints strictly adhere to contract expectations across all order entries.
+First, `pip install -r exercises/09_contract_pact/requirements.txt` to get `pact-python`. Then run `cherenkov-lings watch --track=contract-pact` and verify that provider endpoints strictly adhere to contract expectations across all order entries.

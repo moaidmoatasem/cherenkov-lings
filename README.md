@@ -125,6 +125,9 @@ cherenkov-lings watch --track=jmeter
 cherenkov-lings watch --track=genai-qa
 cherenkov-lings watch --track=devsecops-python
 cherenkov-lings watch --track=tool-decisions
+
+# contract-pact needs pact-python, which isn't installed by default:
+pip install -r exercises/09_contract_pact/requirements.txt
 cherenkov-lings watch --track=contract-pact
 cherenkov-lings watch --track=a11y-axe
 cherenkov-lings watch --track=ci-pipeline

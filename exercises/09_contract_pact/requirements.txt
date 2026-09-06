@@ -1,0 +1,5 @@
+# The reference solutions for this track (`solution.py` in each drill) import
+# `Pact`, `match`, and `Verifier` from the top-level `pact` package -- that API
+# shape only exists in pact-python v3's rewritten sync interface. Verified against
+# 3.4.0: all three drills' solution.py pass with it installed.
+pact-python>=3.0.0,<4.0.0
