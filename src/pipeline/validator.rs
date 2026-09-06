@@ -114,10 +114,17 @@ pub fn validate_definition(
     if config.enforce_concurrency {
         let triggers_pr_or_push =
             workflow.on.has_trigger("push") || workflow.on.has_trigger("pull_request");
+        // Errors, not warnings: 04_runaway_job_timeout and
+        // 05_redundant_concurrent_runs each target exactly one of these two
+        // checks, and `valid` is gated on `errors` alone (see below). As
+        // warnings they still cost points but left `valid` (and so the exit
+        // code the watcher scores a drill on) true on the unmodified
+        // exercise -- a learner could "complete" either drill without
+        // touching timeout-minutes or cancel-in-progress at all.
         if triggers_pr_or_push {
             if let Some(ref conc) = workflow.concurrency {
                 if !conc.cancels_in_progress() {
-                    warnings.push(PipelineWarning {
+                    errors.push(PipelineError {
                         code: "CONCURRENCY_CANCEL_DISABLED".to_string(),
                         message: format!(
                             "Concurrency group '{}' does not set 'cancel-in-progress: true'. Stale branch runs will not be cancelled on rapid commits.",
@@ -125,15 +132,17 @@ pub fn validate_definition(
                         ),
                         job: None,
                         step: None,
+                        line: None,
                         suggestion: Some("Add 'cancel-in-progress: true' to the concurrency block.".to_string()),
                     });
                 }
             } else {
-                warnings.push(PipelineWarning {
+                errors.push(PipelineError {
                     code: "MISSING_CONCURRENCY".to_string(),
                     message: "Workflow is triggered on push/pull_request but lacks top-level 'concurrency' configuration with 'cancel-in-progress: true'.".to_string(),
                     job: None,
                     step: None,
+                    line: None,
                     suggestion: Some("Add `concurrency: group: ${{ github.workflow }}-${{ github.ref }}, cancel-in-progress: true` to prevent redundant CI runs.".to_string()),
                 });
             }
@@ -243,7 +252,7 @@ pub fn validate_definition(
         if config.enforce_timeout {
             if let Some(timeout) = job.timeout_minutes {
                 if timeout > 120 {
-                    warnings.push(PipelineWarning {
+                    errors.push(PipelineError {
                         code: "EXCESSIVE_TIMEOUT".to_string(),
                         message: format!(
                             "Job '{}' defines timeout-minutes: {} (exceeds recommended 120 min maximum).",
@@ -251,11 +260,12 @@ pub fn validate_definition(
                         ),
                         job: Some(job_id.clone()),
                         step: None,
+                        line: None,
                         suggestion: Some("Reduce timeout-minutes to 15-30 minutes to fail fast on hung CI runners.".to_string()),
                     });
                 }
             } else {
-                warnings.push(PipelineWarning {
+                errors.push(PipelineError {
                     code: "MISSING_TIMEOUT".to_string(),
                     message: format!(
                         "Job '{}' does not specify 'timeout-minutes'. Default GitHub Actions timeout is 360 minutes (6 hours), risking runaway costs.",
@@ -263,6 +273,7 @@ pub fn validate_definition(
                     ),
                     job: Some(job_id.clone()),
                     step: None,
+                    line: None,
                     suggestion: Some("Set `timeout-minutes: 30` to prevent hung test runners from burning CI quota.".to_string()),
                 });
             }

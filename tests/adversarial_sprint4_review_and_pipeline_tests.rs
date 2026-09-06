@@ -607,12 +607,15 @@ jobs:
           path: target/
 "#;
     let val_timeout = validate_workflow(extreme_timeout_yaml);
+    // An error, not a warning: this drill's whole premise is fixing the
+    // timeout, so `valid` (errors.is_empty()) must go false until it is.
     assert!(
         val_timeout
-            .warnings
+            .errors
             .iter()
-            .any(|w| w.code == "EXCESSIVE_TIMEOUT")
+            .any(|e| e.code == "EXCESSIVE_TIMEOUT")
     );
+    assert!(!val_timeout.valid);
 }
 
 #[test]

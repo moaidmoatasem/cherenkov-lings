@@ -78,7 +78,13 @@ def validate_workflow_yaml(yaml_content: str, strict: bool = False) -> PipelineV
         )
 
     # 2. Concurrency validation
-    triggers = data.get("on")
+    # PyYAML's default (YAML 1.1) resolver reads the bare scalar `on` as the
+    # boolean True, so a real GitHub Actions workflow's `on:` trigger key never
+    # lands at data["on"] -- it lands at data[True]. Without this fallback,
+    # has_push_or_pr was always False and this entire check never ran, for any
+    # workflow, so a missing or disabled cancel-in-progress was silently never
+    # reported by this endpoint.
+    triggers = data.get("on", data.get(True))
     has_push_or_pr = False
     if isinstance(triggers, list):
         has_push_or_pr = any(t in ("push", "pull_request") for t in triggers)
@@ -90,8 +96,8 @@ def validate_workflow_yaml(yaml_content: str, strict: bool = False) -> PipelineV
     concurrency = data.get("concurrency")
     if has_push_or_pr:
         if concurrency is None:
-            warnings.append(
-                PipelineWarning(
+            errors.append(
+                PipelineError(
                     code="MISSING_CONCURRENCY",
                     message="Workflow is triggered on push/pull_request but lacks top-level 'concurrency' configuration with 'cancel-in-progress: true'.",
                     suggestion="Add 'concurrency: { group: ${{ github.workflow }}-${{ github.ref }}, cancel-in-progress: true }'.",
@@ -99,8 +105,8 @@ def validate_workflow_yaml(yaml_content: str, strict: bool = False) -> PipelineV
             )
         elif isinstance(concurrency, dict):
             if not concurrency.get("cancel-in-progress", False):
-                warnings.append(
-                    PipelineWarning(
+                errors.append(
+                    PipelineError(
                         code="CONCURRENCY_CANCEL_DISABLED",
                         message="Concurrency group does not set 'cancel-in-progress: true'. Stale branch runs will not be cancelled on rapid commits.",
                         suggestion="Add 'cancel-in-progress: true' to the concurrency block.",
@@ -142,14 +148,26 @@ def validate_workflow_yaml(yaml_content: str, strict: bool = False) -> PipelineV
         if not isinstance(job_def, dict):
             continue
 
-        # Check job timeout
-        if "timeout-minutes" not in job_def:
-            warnings.append(
-                PipelineWarning(
+        # Check job timeout. A timeout drill is meant to fail until the
+        # learner actually bounds the job -- classifying either half of this
+        # as a warning would let the unfixed exercise report "valid" already.
+        timeout_minutes = job_def.get("timeout-minutes")
+        if timeout_minutes is None:
+            errors.append(
+                PipelineError(
                     code="MISSING_JOB_TIMEOUT",
-                    message=f"Job '{job_id}' lacks explicit 'timeout-minutes'. Unbounded jobs can hang indefinitely in CI runners.",
+                    message=f"Job '{job_id}' lacks explicit 'timeout-minutes'. Default GitHub Actions timeout is 360 minutes (6 hours), risking runaway costs.",
                     job=job_id,
                     suggestion="Add 'timeout-minutes: 15' (or appropriate budget) to avoid stuck runners.",
+                )
+            )
+        elif isinstance(timeout_minutes, (int, float)) and timeout_minutes > 120:
+            errors.append(
+                PipelineError(
+                    code="EXCESSIVE_JOB_TIMEOUT",
+                    message=f"Job '{job_id}' defines timeout-minutes: {timeout_minutes} (exceeds recommended 120 min maximum).",
+                    job=job_id,
+                    suggestion="Reduce timeout-minutes to 15-30 minutes to fail fast on hung CI runners.",
                 )
             )
 
@@ -214,9 +232,9 @@ def validate_workflow_yaml(yaml_content: str, strict: bool = False) -> PipelineV
         score -= 30
     if any(e.code == "HARDCODED_SECRET_DETECTED" for e in errors):
         score -= 40
-    if any(w.code.startswith("MISSING_JOB_TIMEOUT") for w in warnings):
+    if any(e.code in ("MISSING_JOB_TIMEOUT", "EXCESSIVE_JOB_TIMEOUT") for e in errors):
         score -= 10
-    if any("CONCURRENCY" in w.code for w in warnings):
+    if any("CONCURRENCY" in e.code for e in errors):
         score -= 10
     if any(e.code in ("YAML_SYNTAX_ERROR", "NO_JOBS_DEFINED", "INVALID_STRUCTURE") for e in errors):
         score = 0
