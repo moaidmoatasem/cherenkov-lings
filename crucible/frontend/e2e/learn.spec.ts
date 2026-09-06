@@ -58,10 +58,10 @@ test.describe('Learn environment — read, watch, practice, build', () => {
   test('Today screen shows only figures the record can support', async ({ page }) => {
     // The guided module is labelled as a walkthrough, not as the learner's own
     // half-finished progress, and its steps carry no completion ticks.
-    await expect(page.getByText('How a module works')).toBeVisible();
+    await expect(page.getByText('How a Web Automation module works')).toBeVisible();
     await expect(page.getByText('Continue where you stopped')).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'Waiting without sleeping' })).toBeVisible();
-    await expect(page.locator('.l-continue-lede')).toContainText('A walkthrough of one module');
+    await expect(page.locator('.l-continue-lede')).toContainText('A walkthrough of one Web Automation module');
     await expect(page.locator('.l-loop-row[data-state="done"]')).toHaveCount(0);
     await expect(page.locator('.l-loop-label').filter({ hasText: 'Read the failure' })).toBeVisible();
     await expect(page.locator('.l-loop-label').filter({ hasText: 'Build it in the lab' })).toBeVisible();
@@ -108,9 +108,13 @@ test.describe('Learn environment — read, watch, practice, build', () => {
   test('Module screen watch step shows player and chapters', async ({ page }) => {
     await page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'This module' }).click();
     await page.getByRole('tab', { name: /Watch/ }).click();
-    await expect(page.getByLabel('Play the module video')).toBeVisible();
+    // The player is a still illustration, not a working video -- it carries an
+    // aria-label saying so instead of a "Play the module video" button that
+    // could not honour a click, and the copy underneath discloses the same.
+    await expect(page.getByRole('img', { name: /Still frame of a Playwright trace recording/ })).toBeVisible();
     await expect(page.getByText('Watch the sleep run out, in a real trace')).toBeVisible();
     await expect(page.getByText('3:12 / 9:24')).toBeVisible();
+    await expect(page.getByText("This player is a still illustration")).toBeVisible();
     await expect(page.getByText('Short on time')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Play the 90-second cut' })).toBeVisible();
     await expect(page.getByText('Chapters')).toBeVisible();
@@ -361,6 +365,17 @@ test.describe('Learn environment — read, watch, practice, build', () => {
 
     await drill.getByRole('button', { name: 'Hints' }).click();
     await expect(drill.locator('.l-md')).toBeVisible();
+    // Hints escalate toward the exact fix, so they reveal one at a time
+    // instead of dumping the whole solution the moment the tab opens.
+    await expect(drill.getByText('Architectural Nudge')).toHaveCount(0);
+    await expect(drill.getByRole('button', { name: 'Show hint 1 of 3' })).toBeVisible();
+    await expect(drill.getByRole('button', { name: /Show hint 2 of 3/ })).toHaveCount(0);
+    await drill.getByRole('button', { name: 'Show hint 1 of 3' }).click();
+    await expect(drill.getByText('Architectural Nudge')).toBeVisible();
+    await expect(drill.getByText('DOCKER_SOCKET_MOUNT_FORBIDDEN')).toHaveCount(0);
+    await drill.getByRole('button', { name: /Show hint 2 of 3/ }).click();
+    await drill.getByRole('button', { name: /Show hint 3 of 3/ }).click();
+    await expect(drill.getByText('DOCKER_SOCKET_MOUNT_FORBIDDEN').first()).toBeVisible();
 
     await drill.getByRole('button', { name: '← All modules' }).click();
     await expect(page.locator('.l-h1')).toContainText(/tracks, \d+ modules/);

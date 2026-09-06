@@ -14,6 +14,39 @@ interface DrillTheory {
 
 type Pane = 'theory' | 'hints';
 
+interface HintSection {
+  title: string;
+  body: string;
+}
+
+/**
+ * hints.md is written as an H1 title followed by "Hint N (...)" sections —
+ * `##` in most tracks, `###` in the REST Assured Java ones. Splitting on
+ * either lets every drill's hints gate the same way regardless of track.
+ */
+const HINT_HEADING = /^#{2,3}\s+(Hint\b.*)$/i;
+
+function splitHints(markdown: string): { preamble: string; sections: HintSection[] } {
+  const lines = markdown.replace(/\r\n/g, '\n').split('\n');
+  const preambleLines: string[] = [];
+  const sections: HintSection[] = [];
+  let current: { title: string; bodyLines: string[] } | null = null;
+
+  for (const line of lines) {
+    const match = HINT_HEADING.exec(line);
+    if (match) {
+      if (current) sections.push({ title: current.title, body: current.bodyLines.join('\n').trim() });
+      current = { title: match[1].trim(), bodyLines: [] };
+      continue;
+    }
+    if (current) current.bodyLines.push(line);
+    else preambleLines.push(line);
+  }
+  if (current) sections.push({ title: current.title, body: current.bodyLines.join('\n').trim() });
+
+  return { preamble: preambleLines.join('\n').trim(), sections };
+}
+
 /**
  * A drill's own material, read from the repository through
  * GET /api/drill/theory — the same theory.md and hints.md the CLI shows.
@@ -28,12 +61,17 @@ export const DrillScreen: React.FC<{ drill: SelectedDrill; onBack: () => void }>
   const [data, setData] = useState<DrillTheory | null>(null);
   const [pane, setPane] = useState<Pane>('theory');
   const [error, setError] = useState<string | null>(null);
+  // How many hint sections the learner has chosen to reveal, in order. Hints
+  // escalate toward the exact fix, so dumping all three the moment the tab
+  // opens skips the struggle the rest of this platform is built around.
+  const [revealed, setRevealed] = useState(0);
 
   useEffect(() => {
     const ctrl = new AbortController();
     setData(null);
     setError(null);
     setPane('theory');
+    setRevealed(0);
 
     fetch(apiUrl(`/api/drill/theory?path=${encodeURIComponent(drill.path)}`), {
       signal: ctrl.signal,
@@ -83,7 +121,40 @@ export const DrillScreen: React.FC<{ drill: SelectedDrill; onBack: () => void }>
         )}
         {!error && !data && <p className="l-empty">Loading {drill.title}…</p>}
         {data && pane === 'theory' && <Markdown source={data.theory_markdown} />}
-        {data && pane === 'hints' && <Markdown source={data.hints_markdown} />}
+        {data && pane === 'hints' && (() => {
+          const { preamble, sections } = splitHints(data.hints_markdown);
+          if (sections.length === 0) {
+            return <Markdown source={data.hints_markdown} />;
+          }
+          return (
+            <div className="l-col" style={{ gap: 14 }}>
+              {preamble && <Markdown source={preamble} />}
+              <p className="l-aside-text">
+                Each hint gets you closer to the fix. Reveal them one at a time — the earlier
+                ones are worth sitting with before you ask for the next.
+              </p>
+              {sections.map((section, i) =>
+                i < revealed ? (
+                  <div key={i} className="l-card l-card-sm l-card-pad">
+                    <span className="l-label">{section.title}</span>
+                    <Markdown source={section.body} />
+                  </div>
+                ) : i === revealed ? (
+                  <button
+                    key={i}
+                    type="button"
+                    className="l-btn l-btn-outline l-btn-md"
+                    onClick={() => setRevealed(i + 1)}
+                  >
+                    {i === sections.length - 1
+                      ? `Show hint ${i + 1} of ${sections.length} — the full fix`
+                      : `Show hint ${i + 1} of ${sections.length}`}
+                  </button>
+                ) : null
+              )}
+            </div>
+          );
+        })()}
       </section>
 
       <section className="l-card l-card-sm l-card-pad" style={{ gap: 10 }}>
