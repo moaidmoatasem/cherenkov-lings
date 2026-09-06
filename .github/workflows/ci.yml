@@ -205,14 +205,31 @@ jobs:
     # exercises/**/*.ts is already in the root playwright.config.ts's testMatch
     # and this job already has the frontend and backend it needs up on the
     # config's default ports -- but nothing ever pointed Playwright at it, so
-    # these 18 solution.ts files (Modern Web Automation, GenAI QA,
-    # Accessibility) had zero CI coverage. Globbed explicitly to solution.ts:
-    # the sibling exercise.ts starter in each drill directory contains the
-    # same test(), deliberately failing, and would break this step if matched.
+    # these solution.ts files (Modern Web Automation, GenAI QA, Accessibility)
+    # had zero CI coverage. Listed explicitly rather than globbed: the sibling
+    # exercise.ts starter in each drill directory contains the same test(),
+    # deliberately failing, and would break this step if matched.
+    #
+    # 09_visual_regression_trap is deliberately excluded: its only committed
+    # snapshot is dashboard-baseline-chromium-win32.png (Windows). Playwright
+    # snapshots are OS-specific, so on ubuntu-latest toHaveScreenshot() finds
+    # no baseline for *-chromium-linux.png and fails on the first run here --
+    # not a regression from this step, a pre-existing gap this step is the
+    # first thing to actually expose. Generating a real Linux baseline needs
+    # a Linux Chromium render (Docker, or a one-off CI run with
+    # --update-snapshots), which is out of scope for wiring up CI coverage.
     - name: Run Curriculum Drill Solutions (Playwright)
       run: |
         npx playwright test \
-          exercises/01_web_playwright_ts/*/solution.ts \
+          exercises/01_web_playwright_ts/01_hydration_timing/solution.ts \
+          exercises/01_web_playwright_ts/02_shadow_dom_v2/solution.ts \
+          exercises/01_web_playwright_ts/03_debounce_race_condition/solution.ts \
+          exercises/01_web_playwright_ts/04_first_playwright_test/solution.ts \
+          exercises/01_web_playwright_ts/05_locator_hierarchy/solution.ts \
+          exercises/01_web_playwright_ts/06_page_object_intro/solution.ts \
+          exercises/01_web_playwright_ts/07_iframe_cross_origin/solution.ts \
+          exercises/01_web_playwright_ts/08_network_intercept/solution.ts \
+          exercises/01_web_playwright_ts/10_parallel_state_pollution/solution.ts \
           exercises/06_genai_qa/*/solution.ts \
           exercises/10_a11y_axe/*/solution.ts \
           --project=chromium
