@@ -391,6 +391,11 @@
   .l-header { padding: 14px 20px; }
   .l-split { grid-template-columns: minmax(0, 1fr) !important; }
   .l-sticky { position: static !important; }
+  /* The verdict grid pairs the run report with a fixed 268px certificate
+     rail. Below this width the rail starves the report column down to ~65px
+     and the failure rows collapse to zero width. !important because the base
+     rule below has equal specificity and would otherwise win on order. */
+  .l-verdict { grid-template-columns: minmax(0, 1fr) !important; }
 }
 
 /* ─── Shared primitives ──────────────────────────────────────────────────── */

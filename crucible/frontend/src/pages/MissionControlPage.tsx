@@ -285,7 +285,7 @@ export const MissionControlPage: React.FC = () => {
           <span className="badge warning">Live Crucible Port :8081</span>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr auto', gap: '10px', marginBottom: '14px' }}>
+        <div className="chaos-form-grid" style={{ display: 'grid', gap: '10px', marginBottom: '14px' }}>
           <div>
             <label htmlFor="chaos-method" style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Method</label>
             <select
@@ -529,7 +529,7 @@ export const MissionControlPage: React.FC = () => {
               <button
                 onClick={closeDrillModal}
                 aria-label="Close modal"
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '22px', cursor: 'pointer', flexShrink: 0, padding: '4px 8px' }}
+                style={{ background: 'rgba(15, 23, 42, 0.9)', border: 'none', color: 'var(--text-muted)', fontSize: '22px', cursor: 'pointer', flexShrink: 0, padding: '4px 8px', position: 'relative', zIndex: 2 }}
               >
                 &times;
               </button>

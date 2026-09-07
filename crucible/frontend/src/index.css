@@ -2809,6 +2809,33 @@ body {
   overflow-x: auto;
 }
 
+/* Chaos console form: fixed 4-column grid on desktop, wraps on phones so the
+   long endpoint options and nowrap fire button cannot force page-level
+   horizontal overflow (which zooms out the layout viewport and misplaces
+   fixed overlays like the theory modal). */
+.chaos-form-grid {
+  grid-template-columns: 120px 1fr 1fr auto;
+}
+
+@media (max-width: 768px) {
+  .chaos-form-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .chaos-form-grid > div {
+    min-width: 0;
+  }
+  .chaos-form-grid .form-input {
+    width: 100%;
+    max-width: 100%;
+  }
+  .chaos-form-grid > div:last-child {
+    grid-column: 1 / -1;
+  }
+  .chaos-form-grid > div:last-child .primary-btn {
+    width: 100%;
+  }
+}
+
 .section-header-row {
   display: flex;
   justify-content: space-between;
