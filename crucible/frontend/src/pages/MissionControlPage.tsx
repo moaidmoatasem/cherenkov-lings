@@ -518,17 +518,17 @@ export const MissionControlPage: React.FC = () => {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(15, 23, 42, 0.9)' }}>
-              <div>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', background: 'rgba(15, 23, 42, 0.9)' }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
                 <span className="badge info" style={{ fontSize: '10px', marginBottom: '4px' }}>Drill Architecture Guide</span>
-                <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
+                <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-main)', margin: 0, overflowWrap: 'break-word' }}>
                   {theoryData ? theoryData.title : activeDrill.name}
                 </h3>
               </div>
               <button
                 onClick={closeDrillModal}
                 aria-label="Close modal"
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '22px', cursor: 'pointer' }}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '22px', cursor: 'pointer', flexShrink: 0, padding: '4px 8px' }}
               >
                 &times;
               </button>

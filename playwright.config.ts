@@ -1,15 +1,19 @@
+import path from 'path';
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: '.',
   testMatch: ['exercises/**/*.ts', 'crucible/frontend/e2e/**/*.ts'],
-  // No '.claude' entry here. testIgnore globs are matched against the ABSOLUTE
-  // path, so '**/.claude/**' matched every file in a checkout that itself lives
-  // under a .claude/ directory (any git worktree Claude Code creates) and the
-  // whole suite silently discovered zero tests. testMatch above already limits
-  // discovery to exercises/ and crucible/frontend/e2e/, so the entry was
-  // redundant as well as harmful.
-  testIgnore: ['**/node_modules/**', '**/dist/**', '**/.git/**'],
+  // Safely ignore .claude only when it is a subdirectory of the current checkout root (__dirname),
+  // avoiding false positives if the checkout itself is hosted inside a .claude/worktrees path.
+  testIgnore: [
+    '**/node_modules/**',
+    '**/dist/**',
+    '**/.git/**',
+    path.resolve(__dirname, '.claude').replace(/\\/g, '/') + '/**',
+  ],
+  fullyParallel: false,
+  workers: 1,
   timeout: 10000,
   retries: 0,
   use: {

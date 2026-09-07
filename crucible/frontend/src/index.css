@@ -1306,6 +1306,14 @@ body {
   }
 }
 
+/* Grid children must shrink below their content's intrinsic width (long
+   unbroken code lines), otherwise the column blows out its track on narrow
+   viewports and overlaps the panel stacked below it. */
+.code-editor-column,
+.intelligence-column {
+  min-width: 0;
+}
+
 .editor-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
@@ -1322,18 +1330,24 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .file-info {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .file-name {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--accent-cyan);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .lang-tag {
@@ -1409,6 +1423,8 @@ body {
 
 .code-textarea {
   flex: 1;
+  width: 100%;
+  max-width: 100%;
   background: transparent;
   color: #f1f5f9;
   font-family: var(--font-mono);
@@ -1460,6 +1476,13 @@ body {
   font-size: 12px;
   overflow: auto;
   line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .diff-split-grid,
+  .diff-header {
+    grid-template-columns: 1fr;
+  }
 }
 
 .editor-bottom-bar {
@@ -1802,6 +1825,7 @@ body {
 .vcard-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .wizard-fix-btn {
@@ -2774,6 +2798,15 @@ body {
   border-radius: var(--radius-md);
   padding: 20px;
   margin-bottom: 24px;
+}
+
+/* Wide telemetry tables (unbreakable test names) scroll inside their own
+   card on narrow viewports instead of pushing action buttons off-screen. */
+.table-responsive-wrapper {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .section-header-row {

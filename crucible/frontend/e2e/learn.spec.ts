@@ -1,4 +1,12 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Locator, type Page } from '@playwright/test';
+
+// Below 1080px the sidebar hides and the chip row takes over navigation.
+// Branch on what is actually visible so the same spec covers both layouts.
+async function sectionsNav(page: Page): Promise<Locator> {
+  const sidebar = (await sectionsNav(page));
+  if (await sidebar.isVisible()) return sidebar;
+  return page.locator('.l-tabs');
+}
 
 test.describe('Learn environment — read, watch, practice, build', () => {
   test.beforeEach(async ({ page }) => {
@@ -15,9 +23,14 @@ test.describe('Learn environment — read, watch, practice, build', () => {
     );
     // The note reports the record, once /api/progress has answered.
     await expect(page.locator('.l-header-note')).toHaveText(/^(\d+ of \d+ modules built)?$/);
-    await expect(page.getByRole('navigation', { name: 'Sections' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Today' })).toHaveAttribute('aria-current', 'page');
-    await expect(page.getByRole('button', { name: 'Cherenkov — back to the sandbox' })).toBeVisible();
+    const nav = await sectionsNav(page);
+    await expect(nav).toBeVisible();
+    await expect(nav.getByRole('button', { name: 'Today' })).toHaveAttribute('aria-current', 'page');
+    // The wordmark lives in the sidebar, which hides below 1080px.
+    const wordmark = page.getByRole('button', { name: 'Cherenkov — back to the sandbox' });
+    if (await wordmark.isVisible()) {
+      await expect(wordmark).toBeVisible();
+    }
     await expect(page.getByRole('button', { name: 'Bigger text' })).toHaveAttribute('aria-pressed', 'false');
     await expect(page.getByRole('button', { name: 'Easier-reading typeface' })).toHaveAttribute('aria-pressed', 'false');
     await expect(page.locator('.learn-root')).toHaveAttribute('data-type', 'md');
@@ -49,9 +62,9 @@ test.describe('Learn environment — read, watch, practice, build', () => {
       { label: 'My record', heading: 'What you can prove' },
     ];
     for (const { label, heading } of nav) {
-      await page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: label }).click();
+      await (await sectionsNav(page)).getByRole('button', { name: label }).click();
       await expect(page.locator('.l-h1')).toContainText(heading);
-      await expect(page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: label })).toHaveAttribute('aria-current', 'page');
+      await expect((await sectionsNav(page)).getByRole('button', { name: label })).toHaveAttribute('aria-current', 'page');
     }
   });
 
@@ -87,7 +100,7 @@ test.describe('Learn environment — read, watch, practice, build', () => {
   });
 
   test('Module screen read step renders article and diff', async ({ page }) => {
-    await page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'This module' }).click();
+    await (await sectionsNav(page)).getByRole('button', { name: 'This module' }).click();
     await page.getByRole('tab', { name: /Read/ }).click();
     await expect(page.getByRole('tab', { name: /Read/ })).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByText('Why a sleep is never a wait')).toBeVisible();
@@ -106,7 +119,7 @@ test.describe('Learn environment — read, watch, practice, build', () => {
   });
 
   test('Module screen watch step shows player and chapters', async ({ page }) => {
-    await page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'This module' }).click();
+    await (await sectionsNav(page)).getByRole('button', { name: 'This module' }).click();
     await page.getByRole('tab', { name: /Watch/ }).click();
     // The player is a still illustration, not a working video -- it carries an
     // aria-label saying so instead of a "Play the module video" button that
@@ -125,7 +138,7 @@ test.describe('Learn environment — read, watch, practice, build', () => {
   });
 
   test('Module screen practice step shows question and answers', async ({ page }) => {
-    await page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'This module' }).click();
+    await (await sectionsNav(page)).getByRole('button', { name: 'This module' }).click();
     await expect(page.getByRole('tab', { name: /Practice/ })).toHaveAttribute('aria-selected', 'true');
     // The screen states plainly that this is one fixed illustration, not the
     // learner's own quiz progress -- and there is no real 5-question sequence
@@ -147,7 +160,7 @@ test.describe('Learn environment — read, watch, practice, build', () => {
   });
 
   test('Browser lab shows code, preview and passing verdict', async ({ page }) => {
-    await page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'Browser lab' }).click();
+    await (await sectionsNav(page)).getByRole('button', { name: 'Browser lab' }).click();
     await expect(page.locator('.l-h1')).toContainText('The lab');
     await expect(page.getByText('Make the search test hold up five times in a row')).toBeVisible();
     await expect(page.getByRole('button', { name: 'passing run' })).toHaveAttribute('aria-pressed', 'true');
@@ -176,7 +189,7 @@ test.describe('Learn environment — read, watch, practice, build', () => {
   });
 
   test('Browser lab failing run shows failures and hints', async ({ page }) => {
-    await page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'Browser lab' }).click();
+    await (await sectionsNav(page)).getByRole('button', { name: 'Browser lab' }).click();
     await page.getByRole('button', { name: 'failing run' }).click();
     await expect(page.getByRole('button', { name: 'failing run' })).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByText('Two of five runs failed — start at the top')).toBeVisible();
@@ -191,7 +204,7 @@ test.describe('Learn environment — read, watch, practice, build', () => {
   });
 
   test('Device lab shows yaml, conditions and handset preview', async ({ page }) => {
-    await page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'Device lab' }).click();
+    await (await sectionsNav(page)).getByRole('button', { name: 'Device lab' }).click();
     await expect(page.locator('.l-h1')).toContainText('The device lab');
     await expect(page.getByText("Face ID isn't available after a restart.")).toBeVisible();
     await expect(page.locator('.l-panel-file')).toContainText('biometric_fallback.yaml');
@@ -220,7 +233,7 @@ test.describe('Learn environment — read, watch, practice, build', () => {
   });
 
   test('All modules shows search, filters and tracks', async ({ page }) => {
-    await page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'All modules' }).click();
+    await (await sectionsNav(page)).getByRole('button', { name: 'All modules' }).click();
     await expect(page.locator('.l-h1')).toContainText(/\d+ tracks, \d+ modules/);
     const search = page.getByPlaceholder('Search modules, notes, error messages…');
     await expect(search).toBeVisible();
@@ -245,7 +258,7 @@ test.describe('Learn environment — read, watch, practice, build', () => {
   });
 
   test('My record shows only earned evidence', async ({ page }) => {
-    await page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'My record' }).click();
+    await (await sectionsNav(page)).getByRole('button', { name: 'My record' }).click();
     await expect(page.locator('.l-h1')).toContainText('What you can prove');
 
     // Every KPI is measured. "Kept sessions" and "Time spent" are gone: the
@@ -287,6 +300,9 @@ test.describe('Learn environment — read, watch, practice, build', () => {
   });
 
   test('brand wordmark exits back to sandbox', async ({ page }) => {
+    // The wordmark lives in the desktop sidebar; the mobile chip row offers
+    // no sandbox exit, so there is nothing to exercise there.
+    test.skip(await page.locator('.l-tabs').isVisible(), 'sidebar wordmark is desktop-only');
     await expect(page.getByRole('button', { name: 'Cherenkov — back to the sandbox' })).toBeVisible();
     await page.getByRole('button', { name: 'Cherenkov — back to the sandbox' }).click();
     await expect(page).toHaveURL('/sandbox');
@@ -331,14 +347,14 @@ test.describe('Learn environment — read, watch, practice, build', () => {
   });
 
   test('the lab read link opens the module read step', async ({ page }) => {
-    await page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'Browser lab' }).click();
+    await (await sectionsNav(page)).getByRole('button', { name: 'Browser lab' }).click();
     await page.getByRole('link', { name: 'Read: auto-waiting, in depth' }).click();
     await expect(page.locator('.l-h1')).toContainText('Waiting without sleeping');
     await expect(page.getByRole('tab', { name: /^Read/ })).toHaveAttribute('aria-current', 'step');
   });
 
   test('the catalog lists every track the manifest declares', async ({ page }) => {
-    await page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'All modules' }).click();
+    await (await sectionsNav(page)).getByRole('button', { name: 'All modules' }).click();
     // A track with no curated copy still arrives, straight from lings.toml.
     // Waiting on it first also pins the moment the manifest has replaced the
     // curated seed the catalog paints with, so the count below is the settled
@@ -350,7 +366,7 @@ test.describe('Learn environment — read, watch, practice, build', () => {
     await expect(page.locator('.l-track-name')).toHaveCount(declared);
   });
   test('a manifest drill opens its own theory and hints', async ({ page }) => {
-    await page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'All modules' }).click();
+    await (await sectionsNav(page)).getByRole('button', { name: 'All modules' }).click();
     await page.getByRole('button', { name: /Docker Socket Mount/ }).click();
 
     const drill = page.getByTestId('drill-screen');
@@ -382,7 +398,7 @@ test.describe('Learn environment — read, watch, practice, build', () => {
   });
 
   test('a curated module still opens the hand-written module screen', async ({ page }) => {
-    await page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'All modules' }).click();
+    await (await sectionsNav(page)).getByRole('button', { name: 'All modules' }).click();
     await page.getByRole('button', { name: /Waiting without sleeping/ }).click();
     await expect(page.locator('.l-h1')).toContainText('Waiting without sleeping');
     await expect(page.getByTestId('drill-screen')).toHaveCount(0);
