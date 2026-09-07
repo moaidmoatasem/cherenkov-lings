@@ -509,6 +509,7 @@ export const MissionControlPage: React.FC = () => {
               borderRadius: '12px',
               maxWidth: '840px',
               width: '100%',
+              minWidth: 0,
               maxHeight: '85vh',
               display: 'flex',
               flexDirection: 'column',
@@ -545,14 +546,14 @@ export const MissionControlPage: React.FC = () => {
                 <>
                   <div style={{ background: '#090e17', borderRadius: '8px', padding: '16px', border: '1px solid #1e293b' }}>
                     <h4 style={{ color: 'var(--accent-cyan)', fontSize: '14px', marginBottom: '10px' }}>📚 Theoretical Context & Case Study</h4>
-                    <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: '13px', lineHeight: 1.6, color: 'var(--text-main)' }}>
+                    <div style={{ whiteSpace: 'pre-wrap', overflowWrap: 'break-word', minWidth: 0, fontFamily: 'inherit', fontSize: '13px', lineHeight: 1.6, color: 'var(--text-main)' }}>
                       {theoryData.theory_markdown}
                     </div>
                   </div>
 
                   <div style={{ background: '#090e17', borderRadius: '8px', padding: '16px', border: '1px solid #1e293b' }}>
                     <h4 style={{ color: 'var(--accent-green)', fontSize: '14px', marginBottom: '10px' }}>💡 Progressive Hints & Solutions</h4>
-                    <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'var(--font-mono)', fontSize: '12px', lineHeight: 1.5, color: 'var(--text-muted)' }}>
+                    <div style={{ whiteSpace: 'pre-wrap', overflowWrap: 'break-word', fontFamily: 'var(--font-mono)', fontSize: '12px', lineHeight: 1.5, color: 'var(--text-muted)' }}>
                       {theoryData.hints_markdown}
                     </div>
                   </div>
@@ -565,14 +566,14 @@ export const MissionControlPage: React.FC = () => {
             </div>
 
             {/* Modal Footer */}
-            <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(15, 23, 42, 0.9)' }}>
-              <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+            <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', background: 'rgba(15, 23, 42, 0.9)' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', minWidth: 0, overflowWrap: 'break-word' }}>
                 Path: {activeDrill.path}
               </span>
               <button
                 onClick={closeDrillModal}
                 className="secondary-btn"
-                style={{ padding: '8px 18px' }}
+                style={{ padding: '8px 18px', flexShrink: 0 }}
               >
                 Close
               </button>

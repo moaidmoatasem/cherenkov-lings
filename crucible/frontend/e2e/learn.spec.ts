@@ -3,7 +3,7 @@ import { test, expect, type Locator, type Page } from '@playwright/test';
 // Below 1080px the sidebar hides and the chip row takes over navigation.
 // Branch on what is actually visible so the same spec covers both layouts.
 async function sectionsNav(page: Page): Promise<Locator> {
-  const sidebar = (await sectionsNav(page));
+  const sidebar = page.getByRole('navigation', { name: 'Sections' });
   if (await sidebar.isVisible()) return sidebar;
   return page.locator('.l-tabs');
 }
